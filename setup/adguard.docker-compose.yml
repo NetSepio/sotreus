@@ -1,0 +1,73 @@
+version: "3.9"
+
+services:
+  firewall:
+    container_name: "${SOTREUS_NAME}-sotreus-firewall"
+    image: adguard/adguardhome:latest
+    ports:
+      - '${FW_ENDPOINT_PORT}:80/tcp'
+      - '${FW_API_PORT}:3000/tcp'
+    volumes:
+      - '/sotreus/${SOTREUS_NAME}/opt-adguardhome/work:/opt/adguardhome/work'
+      - '/sotreus/${SOTREUS_NAME}/opt-adguardhome/conf:/opt/adguardhome/conf'
+    dns:
+      - 127.0.0.1
+      - 1.1.1.1
+    hostname: '${SOTREUS_NAME}-firewall.local'
+    restart: unless-stopped
+  vpn:
+    container_name: "${SOTREUS_NAME}-sotreus-vpn"
+    image: NetSepio/sotreus:latest
+    depends_on:
+      - firewall
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    hostname: "${SOTREUS_NAME}-sotreus.local"
+    env_file:
+      - .env
+    environment:
+      LOAD_CONFIG_FILE: "${LOAD_CONFIG_FILE}"
+      RUNTYPE: "${RUNTYPE}"
+      SERVER: "${SERVER}"
+      WG_HTTP_PORT: "${WG_HTTP_PORT}"
+      WG_GRPC_PORT: "${WG_GRPC_PORT}"
+      WG_CONF_DIR: "${WG_CONF_DIR}"
+      WG_KEYS_DIR: "${WG_KEYS_DIR}"
+      WG_CLIENTS_DIR: "${WG_CLIENTS_DIR}"
+      WG_INTERFACE_NAME: "${WG_INTERFACE_NAME}"
+      WG_ENDPOINT_HOST: "${WG_ENDPOINT_HOST}"
+      WG_ENDPOINT_PORT: "${WG_ENDPOINT_PORT}"
+      WG_IPV4_SUBNET: "${WG_IPV4_SUBNET}"
+      WG_IPV6_SUBNET: "${WG_IPV6_SUBNET}"
+      WG_DNS: "${WG_DNS}"
+      WG_ALLOWED_IP_1: "${WG_ALLOWED_IP_1}"
+      WG_ALLOWED_IP_2: "${WG_ALLOWED_IP_2}"
+      WG_PRE_UP: "${WG_PRE_UP}"
+      WG_POST_UP: "${WG_POST_UP}"
+      WG_PRE_DOWN: "${WG_PRE_DOWN}"
+      WG_POST_DOWN: "${WG_POST_DOWN}"
+      SMTP_HOST: "${SMTP_HOST}"
+      SMTP_PORT: "${SMTP_PORT}"
+      SMTP_USERNAME: "${SMTP_USERNAME}"
+      SMTP_PASSWORD: "${SMTP_PASSWORD}"
+      SMTP_FROM: "${SMTP_FROM}"
+      PASETO_EXPIRATION_IN_HOURS: "${PASETO_EXPIRATION_IN_HOURS}"
+      SIGNED_BY: "${SIGNED_BY}"
+      FOOTER: "${FOOTER}"
+      AUTH_EULA: "${AUTH_EULA}"
+      MASTERNODE_WALLET: "${MASTERNODE_WALLET}"
+    ports:
+      - '${WG_HTTP_PORT}:${WG_HTTP_PORT}/tcp'
+      - '${WG_GRPC_PORT}:${WG_GRPC_PORT}/tcp'
+      - '${WG_ENDPOINT_PORT}:${WG_ENDPOINT_PORT}/udp'
+    volumes:
+      - "/sotreus/${SOTREUS_NAME}/etc-wireguard/:/etc/wireguard/"
+      - "/sotreus/${SOTREUS_NAME}/etc-wireguard/keys/:/etc/wireguard/keys/"
+      - "/sotreus/${SOTREUS_NAME}/etc-wireguard/clients/:/etc/wireguard/clients/"
+    sysctls:
+      - "net.ipv4.conf.all.src_valid_mark=1"
+      - "net.ipv6.conf.all.disable_ipv6=0"
+    restart: unless-stopped
+    tty: true
+    stdin_open: true
