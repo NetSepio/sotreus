@@ -1,9 +1,9 @@
 package authenticate
 
 type AuthenticateRequest struct {
-	ChallengeId string `json:"challengeId" binding:"required"`
-	Signature   string `json:"signature" binding:"required"`
-	PubKey      string `json:"pubKey" binding:"required"`
+	ChallengeId string `json:"challengeId"`
+	Signature   string `json:"signature"`
+	PubKey      string `json:"pubKey"`
 }
 
 type AuthenticatePayload struct {
