@@ -114,13 +114,21 @@ const Header = () => {
   };
 
   const petraSign = async () => {
+    // const signature = await signMessageAsync({ message });
+    // setSignature(signature);
+    // //make a post request to the sotreus server with the signature and challengeId
+
+    // const response = await getToken(signature, challengeId);
+
     const payload = {
       message: "Hello from Aptos Wallet Adapter",
       nonce: "random_string",
     };
     try {
       const response = await petraSignMesssage(payload);
+      // const res = await getToken(response?.message, challengeId);
       console.log("response", response);
+      authContext?.setIsSignedIn(true);
     } catch (error: any) {
       console.log("error", error);
     }
@@ -166,6 +174,16 @@ const Header = () => {
                     >
                       Sign In
                     </button>
+                  </li>
+                )}
+               {(authContext?.isSignedIn) && (
+                  <li>
+                    <div
+
+                      className="border text-blue-200 border-blue hover:bg-blue-300 hover:border-black hover:text-black font-bold transition focus:ring focus:ring-blue-500 focus:ring-opacity-80"
+                    >
+                      Details
+                    </div>
                   </li>
                 )}
               <li>

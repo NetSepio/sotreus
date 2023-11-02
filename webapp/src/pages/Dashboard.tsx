@@ -44,7 +44,7 @@ const Dashboard: React.FC = () => {
       setClients(clientData.clients);
       setIsLoading(false);
     }
-    if (localStorage.getItem("token")) {
+     if (localStorage.getItem("token")) {
       fetchClients();
     }
   }, []);
@@ -54,25 +54,25 @@ const Dashboard: React.FC = () => {
   function Clientclick() {
     setClientOpen(true);
   }
-  if (!address || isDisconnected) {
-    return <NotConnected />;
-  }
+  // if (!address || isDisconnected) {
+  //   return <NotConnected />;
+  // }
 
   if (isLoading || isConnecting) {
     return <DashboardLoader />;
   }
 
-  if (!authContext?.isAuthorized) {
-    return <NotAuthorized />;
-  }
+  // if (!authContext?.isAuthorized) {
+  //   return <NotAuthorized />;
+  // }
 
-  if (!authContext?.isSignedIn) {
-    return (
-      <div>
-        <NotSigned component="Dashboard" />
-      </div>
-    );
-  }
+  // if (!authContext?.isSignedIn) {
+  //   return (
+  //     <div>
+  //       <NotSigned component="Dashboard" />
+  //     </div>
+  //   );
+  // }
 
   return (
     <div>
