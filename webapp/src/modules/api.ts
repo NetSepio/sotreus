@@ -162,13 +162,13 @@ export const getChallengeId = async (address: `0x${string}` | undefined) => {
   return response;
 };
 
-export const getToken = async (signature: string | undefined, challengeId:string) => {
+export const getToken = async (signature: string | undefined, challengeId:string, pubkey:string) => {
   let response;
   try {
     // Make a post request to your server
     response = await axios.post(
       `${baseURL}/api/v1.0/authenticate`,
-      { signature,challengeId },
+      { signature,challengeId,pubkey },
       {
         headers: {
           "Content-Type": "application/json",

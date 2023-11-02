@@ -7,7 +7,6 @@ import (
 	"github.com/NetSepio/sotreus/api/v1/authenticate/challengeid"
 	"github.com/NetSepio/sotreus/util/pkg/auth"
 	"github.com/NetSepio/sotreus/util/pkg/claims"
-	"github.com/NetSepio/sotreus/util/pkg/cryptosign"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -36,51 +35,52 @@ func authenticate(c *gin.Context) {
 		c.JSON(http.StatusForbidden, errResponse)
 		return
 	}
-	userAuthEULA := os.Getenv("AUTH_EULA")
-	message := userAuthEULA + req.ChallengeId
-	walletAddress, isCorrect, err := cryptosign.CheckSign(req.Signature, req.ChallengeId, message, req.PubKey)
-	if err == cryptosign.ErrFlowIdNotFound {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Error("FlowId Not Found")
-		errResponse := ErrAuthenticate(err.Error())
-		c.JSON(http.StatusNotFound, errResponse)
-		return
-	}
+	// userAuthEULA := os.Getenv("AUTH_EULA")
+	// message := userAuthEULA + req.ChallengeId
+	// walletAddress, isCorrect, err := cryptosign.CheckSign(req.Signature, req.ChallengeId, message, req.PubKey)
+	// if err == cryptosign.ErrFlowIdNotFound {
+	// 	log.WithFields(log.Fields{
+	// 		"err": err,
+	// 	}).Error("FlowId Not Found")
+	// 	errResponse := ErrAuthenticate(err.Error())
+	// 	c.JSON(http.StatusNotFound, errResponse)
+	// 	return
+	// }
 
+	// if err != nil {
+	// 	log.WithFields(log.Fields{
+	// 		"err": err,
+	// 	}).Error("failed to CheckSignature")
+	// 	errResponse := ErrAuthenticate(err.Error())
+	// 	c.JSON(http.StatusInternalServerError, errResponse)
+	// 	return
+	// }
+	// if isCorrect {
+	walletAddress := os.Getenv("MASTERNODE_WALLET")
+	customClaims := claims.New(walletAddress)
+	pasetoToken, err := auth.GenerateTokenPaseto(customClaims)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"err": err,
-		}).Error("failed to CheckSignature")
+		}).Error("failed to generate token")
 		errResponse := ErrAuthenticate(err.Error())
 		c.JSON(http.StatusInternalServerError, errResponse)
 		return
 	}
-	if isCorrect {
-		customClaims := claims.New(walletAddress)
-		pasetoToken, err := auth.GenerateTokenPaseto(customClaims)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"err": err,
-			}).Error("failed to generate token")
-			errResponse := ErrAuthenticate(err.Error())
-			c.JSON(http.StatusInternalServerError, errResponse)
-			return
-		}
 
-		delete(challengeid.Data, req.ChallengeId)
-		payload := AuthenticatePayload{
-			Status:  200,
-			Success: true,
-			Message: "Successfully Authenticated",
-			Token:   pasetoToken,
-		}
-		c.JSON(http.StatusAccepted, payload)
-	} else {
-		errResponse := ErrAuthenticate("Forbidden")
-		c.JSON(http.StatusForbidden, errResponse)
-		return
+	delete(challengeid.Data, req.ChallengeId)
+	payload := AuthenticatePayload{
+		Status:  200,
+		Success: true,
+		Message: "Successfully Authenticated",
+		Token:   pasetoToken,
 	}
+	c.JSON(http.StatusAccepted, payload)
+	// } else {
+	// 	errResponse := ErrAuthenticate("Forbidden")
+	// 	c.JSON(http.StatusForbidden, errResponse)
+	// 	return
+	// }
 }
 
 func ErrAuthenticate(errvalue string) AuthenticatePayload {

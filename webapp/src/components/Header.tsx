@@ -10,6 +10,7 @@ const Header = () => {
   const navigate = useNavigate();
   const authContext = useContext(AuthContext);
   const useraddress = useAccount();
+  const [Pubkey, setPubkey] = useState<string>("");
   const [message, setMessage] = useState<string>("");
   const [challengeId, setChallengeId] = useState<string>("");
   const [signature, setSignature] = useState<string | undefined>();
@@ -77,19 +78,19 @@ const Header = () => {
     };
   }, [authContext?.isSignedIn, address]);
 
-  const signMessageFunc = async () => {
-    const signature = await signMessageAsync({ message });
-    setSignature(signature);
-    //make a post request to the sotreus server with the signature and challengeId
+  // const signMessageFunc = async () => {
+  //   const signature = await signMessageAsync({ message });
+  //   setSignature(signature);
+  //   //make a post request to the sotreus server with the signature and challengeId
 
-    const response = await getToken(signature, challengeId);
-    if (response.data.token) {
-      //store the token in the session storage
-      sessionStorage.setItem("token", response.data.token);
-      localStorage.setItem("token", response.data.token);
-      authContext?.setIsSignedIn(true);
-    }
-  };
+  //   const response = await getToken(signature, challengeId);
+  //   if (response.data.token) {
+  //     //store the token in the session storage
+  //     sessionStorage.setItem("token", response.data.token);
+  //     localStorage.setItem("token", response.data.token);
+  //     authContext?.setIsSignedIn(true);
+  //   }
+  // };
   const signOut = () => {
     sessionStorage.removeItem("token");
     localStorage.removeItem("token");
@@ -114,26 +115,25 @@ const Header = () => {
   };
 
   const petraSign = async () => {
-    // const signature = await signMessageAsync({ message });
-    // setSignature(signature);
-    // //make a post request to the sotreus server with the signature and challengeId
-
-    // const response = await getToken(signature, challengeId);
-
     const payload = {
       message: "Hello from Aptos Wallet Adapter",
       nonce: "random_string",
     };
     try {
-      const response = await petraSignMesssage(payload);
-      // const res = await getToken(response?.message, challengeId);
-      console.log("response", response);
+      const res = await petraSignMesssage(payload);
+      console.log("response", res);
+          const response = await getToken(signature, challengeId, Pubkey);
+    if (response.data.token) {
+      //store the token in the session storage
+      sessionStorage.setItem("token", response.data.token);
+      localStorage.setItem("token", response.data.token);
       authContext?.setIsSignedIn(true);
+    }
+
     } catch (error: any) {
       console.log("error", error);
     }
   };
-
   return (
     <div>
       <div className="navbar">
