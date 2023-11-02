@@ -122,7 +122,7 @@ const Header = () => {
     try {
       const res = await petraSignMesssage(payload);
       console.log("response", res);
-          const response = await getToken(signature, challengeId, Pubkey);
+        const response = await getToken(signature, challengeId, Pubkey);
     if (response.data.token) {
       //store the token in the session storage
       sessionStorage.setItem("token", response.data.token);

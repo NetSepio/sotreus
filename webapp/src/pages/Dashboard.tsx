@@ -58,9 +58,9 @@ const Dashboard: React.FC = () => {
   //   return <NotConnected />;
   // }
 
-  if (isLoading || isConnecting) {
-    return <DashboardLoader />;
-  }
+  // if (isLoading || isConnecting) {
+  //   return <DashboardLoader />;
+  // }
 
   // if (!authContext?.isAuthorized) {
   //   return <NotAuthorized />;
