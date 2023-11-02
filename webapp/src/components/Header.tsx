@@ -15,8 +15,6 @@ const Header = () => {
   const [signature, setSignature] = useState<string | undefined>();
   const { signMessageAsync } = useSignMessage();
   const { isConnected, address } = useAccount();
-  const [open, setOpen] = useState(false);
-  const [Chain, setChain] = useState("");
 
   const {
     connect,
@@ -29,10 +27,6 @@ const Header = () => {
     signMessage: petraSignMesssage,
     signMessageAndVerify,
   } = useWallet();
-
-  const handleOpen = () => {
-    setOpen(!open);
-  };
 
   const navigateDashboard = async () => {
     await navigate("/dashboard");
@@ -120,13 +114,21 @@ const Header = () => {
   };
 
   const petraSign = async () => {
+    // const signature = await signMessageAsync({ message });
+    // setSignature(signature);
+    // //make a post request to the sotreus server with the signature and challengeId
+
+    // const response = await getToken(signature, challengeId);
+
     const payload = {
       message: "Hello from Aptos Wallet Adapter",
       nonce: "random_string",
     };
     try {
       const response = await petraSignMesssage(payload);
+      // const res = await getToken(response?.message, challengeId);
       console.log("response", response);
+      authContext?.setIsSignedIn(true);
     } catch (error: any) {
       console.log("error", error);
     }
@@ -147,38 +149,13 @@ const Header = () => {
           <ul className="menu menu-horizontal px-1">
             <div className="flex space-x-2">
               <li className="relative inline-block text-left">
-                <button
-                  onClick={handleOpen}
-                  className="border text-blue-200 border-blue hover:bg-blue-300 hover:border-black hover:text-black font-bold transition focus:ring focus:ring-blue-500 focus:ring-opacity-80 py-4"
-                >
-                  Select Chain
-                </button>
-                {open ? (
                   <div className="absolute left-0 z-10 mt-2 origin-top-right rounded-md bg-none shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
                     <div className="-m-4" role="none">
-                      <button
-                        className="text-black bg-blue-300 hover:bg-transparent hover:text-blue-200 mt-1 py-4 px-4 w-full rounded-t-md"
-                        onClick={() => {
-                          setChain("ethereum");
-                          handleOpen();
-                        }}
-                      >
-                        Ethereum
-                      </button>
-                      <button
-                        className="text-black bg-blue-300 hover:bg-transparent hover:text-blue-200 mb-1 py-4 px-4 w-full rounded-b-md"
-                        onClick={() => {
-                          setChain("aptos");
-                          handleOpen();
-                        }}
-                      >
-                        Aptos
-                      </button>
+
                     </div>
                   </div>
-                ) : null}
               </li>
-              {Chain == "aptos" && (!address || authContext?.isSignedIn) && (
+              {(!address || authContext?.isSignedIn) && (
                 <li>
                   <button
                     onClick={() => connectPetra()}
@@ -189,18 +166,7 @@ const Header = () => {
                   </button>
                 </li>
               )}
-              {Chain == "aptos" && (!address || authContext?.isSignedIn) && (
-                <li>
-                  <button
-                    onClick={() => disconnectPetra()}
-                    className="border text-blue-200 border-blue hover:bg-blue-300 hover:border-black hover:text-black font-bold transition focus:ring focus:ring-blue-500 focus:ring-opacity-80"
-                  >
-                    disconnect
-                  </button>
-                </li>
-              )}
-              {Chain == "aptos" &&
-                !(isConnected && authContext?.isSignedIn) && (
+              {!(isConnected && authContext?.isSignedIn) && (
                   <li>
                     <button
                       onClick={petraSign}
@@ -210,24 +176,16 @@ const Header = () => {
                     </button>
                   </li>
                 )}
+               {(authContext?.isSignedIn) && (
+                  <li>
+                    <div
 
-              {Chain == "ethereum" && (!address || authContext?.isSignedIn) && (
-                <div className="border text-blue-200 border-blue rounded-md hover:bg-black hover:border-black hover:text-black font-bold transition focus:ring focus:ring-blue-500 focus:ring-opacity-80">
-                  <div className="px-4 py-2">
-                    <ConnectButton />
-                  </div>
-                </div>
-              )}
-              {!(isConnected && authContext?.isSignedIn) && address && (
-                <li>
-                  <button
-                    onClick={signMessageFunc}
-                    className="border text-blue-200 border-blue hover:bg-blue-300 hover:border-black hover:text-black font-bold transition focus:ring focus:ring-blue-500 focus:ring-opacity-80"
-                  >
-                    Sign In
-                  </button>
-                </li>
-              )}
+                      className="border text-blue-200 border-blue hover:bg-blue-300 hover:border-black hover:text-black font-bold transition focus:ring focus:ring-blue-500 focus:ring-opacity-80"
+                    >
+                      Details
+                    </div>
+                  </li>
+                )}
               <li>
                 <button
                   onClick={navigateDashboard}
