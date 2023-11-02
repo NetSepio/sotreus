@@ -2,38 +2,36 @@ package cryptosign
 
 import (
 	"errors"
-	"fmt"
-	"strings"
+	"log"
 	"time"
 
 	"github.com/NetSepio/sotreus/api/v1/authenticate/challengeid"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
+	"golang.org/x/crypto/nacl/sign"
+	"golang.org/x/crypto/sha3"
 )
 
 var (
 	ErrFlowIdNotFound = errors.New("flow id not found")
 )
 
-func CheckSign(signature string, flowId string, message string) (string, bool, error) {
+func CheckSign(signature string, flowId string, message string, pubKey string) (string, bool, error) {
 	// get flowid from the local db file
-	newMsg := fmt.Sprintf("\x19Ethereum Signed Message:\n%v%v", len(message), message)
-	newMsgHash := crypto.Keccak256Hash([]byte(newMsg))
 	signatureInBytes, err := hexutil.Decode(signature)
 	if err != nil {
 		return "", false, err
 	}
-	if signatureInBytes[64] == 27 || signatureInBytes[64] == 28 {
-		signatureInBytes[64] -= 27
-	}
-	pubKey, err := crypto.SigToPub(newMsgHash.Bytes(), signatureInBytes)
-
+	sha3_i := sha3.New256()
+	signatureInBytes = append(signatureInBytes, []byte(message)...)
+	pubBytes, err := hexutil.Decode(pubKey)
 	if err != nil {
 		return "", false, err
 	}
-
-	//Get address from public key
-	walletAddress := crypto.PubkeyToAddress(*pubKey)
+	sha3_i.Write(pubBytes)
+	sha3_i.Write([]byte{0})
+	hash := sha3_i.Sum(nil)
+	addr := hexutil.Encode(hash)
+	log.Printf("pub key - %v\n", hexutil.Encode(pubBytes))
 
 	localData, exists := challengeid.Data[flowId]
 	if !exists {
@@ -42,10 +40,18 @@ func CheckSign(signature string, flowId string, message string) (string, bool, e
 	if time.Since(localData.Timestamp) > 1*time.Hour {
 		return "", false, errors.New("challenge id expired for the request")
 	}
-	if strings.EqualFold(localData.WalletAddress, walletAddress.String()) {
-		return localData.WalletAddress, true, nil
-	} else {
-		return "", false, nil
-	} //equate the wallet address from the flow id and the reeived wallet address
+	if addr != localData.WalletAddress {
+		return "", false, err
+	}
+	msgPro := signatureInBytes[sign.Overhead:]
+	log.Printf("msg pro - %v\n", string(msgPro))
 
+	msgGot, matches := sign.Open(nil, signatureInBytes, (*[32]byte)(pubBytes))
+	log.Printf("msg got - %v\n", string(msgGot))
+	log.Printf("msg needed - %v\n", message)
+	if !matches || string(msgGot) != message {
+		log.Println("no match or no equal")
+		return "", false, err
+	} //equate the wallet address from the flow id and the reeived wallet address
+	return localData.WalletAddress, true, nil
 }

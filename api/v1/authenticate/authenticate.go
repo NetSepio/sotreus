@@ -38,7 +38,7 @@ func authenticate(c *gin.Context) {
 	}
 	userAuthEULA := os.Getenv("AUTH_EULA")
 	message := userAuthEULA + req.ChallengeId
-	walletAddress, isCorrect, err := cryptosign.CheckSign(req.Signature, req.ChallengeId, message)
+	walletAddress, isCorrect, err := cryptosign.CheckSign(req.Signature, req.ChallengeId, message, req.PubKey)
 	if err == cryptosign.ErrFlowIdNotFound {
 		log.WithFields(log.Fields{
 			"err": err,

@@ -83,7 +83,7 @@ const Header = () => {
     };
   }, [authContext?.isSignedIn, address]);
 
-  const signMessage = async () => {
+  const signMessageFunc = async () => {
     const signature = await signMessageAsync({ message });
     setSignature(signature);
     //make a post request to the sotreus server with the signature and challengeId
@@ -221,7 +221,7 @@ const Header = () => {
               {!(isConnected && authContext?.isSignedIn) && address && (
                 <li>
                   <button
-                    onClick={signMessage}
+                    onClick={signMessageFunc}
                     className="border text-blue-200 border-blue hover:bg-blue-300 hover:border-black hover:text-black font-bold transition focus:ring focus:ring-blue-500 focus:ring-opacity-80"
                   >
                     Sign In
