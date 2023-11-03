@@ -13,6 +13,8 @@ const Header = () => {
   const [Pubkey, setPubkey] = useState<string>("");
   const [message, setMessage] = useState<string>("");
   const [challengeId, setChallengeId] = useState<string>("");
+  const [show, setShow] = useState<boolean>(false);
+  const [signed, setSigned] = useState<boolean>(false);
   const [signature, setSignature] = useState<string | undefined>();
   const { signMessageAsync } = useSignMessage();
   const { isConnected, address } = useAccount();
@@ -41,19 +43,22 @@ const Header = () => {
     const storedToken = localStorage.getItem("token");
     if (storedToken) {
       authContext?.setIsSignedIn(true);
+      setShow(true)
+      setSigned(true)
     }
     let timeoutId: string | number | NodeJS.Timeout | null = null;
 
     const getSignMessage = async () => {
-      if (address == undefined) {
-        if (timeoutId !== null) {
-          clearTimeout(timeoutId);
-        }
+      // if (address == undefined) {
+      //   if (timeoutId !== null) {
+      //     clearTimeout(timeoutId);
+      //   }
 
-        timeoutId = setTimeout(() => {
-          signOut();
-        }, 500);
-      } else if (!authContext?.isSignedIn) {
+      //   timeoutId = setTimeout(() => {
+      //     signOut();
+      //   }, 500);
+      // } else 
+      if (!authContext?.isSignedIn) {
         if (timeoutId !== null) {
           clearTimeout(timeoutId);
         }
@@ -76,7 +81,7 @@ const Header = () => {
         clearTimeout(timeoutId);
       }
     };
-  }, [authContext?.isSignedIn, address]);
+  }, [authContext?.isSignedIn]);
 
   // const signMessageFunc = async () => {
   //   const signature = await signMessageAsync({ message });
@@ -110,29 +115,21 @@ const Header = () => {
     //   });
     connect(wallets[0].name);
   };
-  const disconnectPetra = () => {
-    disconnect();
-  };
 
   const petraSign = async () => {
     const payload = {
       message: "Hello from Aptos Wallet Adapter",
       nonce: "random_string",
     };
-    try {
       const res = await petraSignMesssage(payload);
       console.log("response", res);
-        const response = await getToken(signature, challengeId, Pubkey);
-    if (response.data.token) {
+
+      const response = await getToken(signature, challengeId, Pubkey);
       //store the token in the session storage
-      sessionStorage.setItem("token", response.data.token);
+      console.log("set tokens", response.data.token)
       localStorage.setItem("token", response.data.token);
       authContext?.setIsSignedIn(true);
-    }
 
-    } catch (error: any) {
-      console.log("error", error);
-    }
   };
   return (
     <div>
@@ -155,34 +152,35 @@ const Header = () => {
                     </div>
                   </div>
               </li>
-              {(!address || authContext?.isSignedIn) && (
+              {!show && (!address || authContext?.isSignedIn)  && (
                 <li>
                   <button
-                    onClick={() => connectPetra()}
+                    onClick={() => {connectPetra()
+                                    setShow(true)}} 
                     className="border text-blue-200 border-blue hover:bg-blue-300 hover:border-black hover:text-black font-bold transition focus:ring focus:ring-blue-500 focus:ring-opacity-80"
                   >
-                    <img src="{wallets[0].icon}"></img> Connect{" "}
+                    <img src="https://pbs.twimg.com/profile_images/1684642750329937921/PCOa4lMG_400x400.png" width={"30px"}></img> Connect{" "}
                     {wallets[0].name}
                   </button>
                 </li>
               )}
-              {!(isConnected && authContext?.isSignedIn) && (
+              {show && !(isConnected && authContext?.isSignedIn) && !signed && (
                   <li>
                     <button
-                      onClick={petraSign}
+                      onClick={()=>{petraSign()
+                      setSigned(true)}}
                       className="border text-blue-200 border-blue hover:bg-blue-300 hover:border-black hover:text-black font-bold transition focus:ring focus:ring-blue-500 focus:ring-opacity-80"
                     >
                       Sign In
                     </button>
                   </li>
                 )}
-               {(authContext?.isSignedIn) && (
+               {show && (
                   <li>
                     <div
-
                       className="border text-blue-200 border-blue hover:bg-blue-300 hover:border-black hover:text-black font-bold transition focus:ring focus:ring-blue-500 focus:ring-opacity-80"
                     >
-                      Details
+                      Account: {account?.address.slice(0,8)}...
                     </div>
                   </li>
                 )}
