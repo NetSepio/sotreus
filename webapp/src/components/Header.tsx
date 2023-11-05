@@ -3,7 +3,6 @@ import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { useAccount, useSignMessage, useNetwork } from "wagmi";
 import { getChallengeId, getToken } from "../modules/api";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
 
 const Header = () => {
@@ -14,7 +13,6 @@ const Header = () => {
   const [challengeId, setChallengeId] = useState<string>("");
   const [signature, setSignature] = useState<string | undefined>();
   const { signMessageAsync } = useSignMessage();
-  const { isConnected, address } = useAccount();
 
   const {
     connect,
@@ -44,7 +42,8 @@ const Header = () => {
     let timeoutId: string | number | NodeJS.Timeout | null = null;
 
     const getSignMessage = async () => {
-      if (address == undefined) {
+      if (connected == false) {
+        console.log("clearing localstorage")
         if (timeoutId !== null) {
           clearTimeout(timeoutId);
         }
@@ -57,7 +56,7 @@ const Header = () => {
           clearTimeout(timeoutId);
         }
 
-        const response = await getChallengeId(address);
+        const response = await getChallengeId(account?.address);
         setMessage(response.data.eula + response.data.challangeId);
         setChallengeId(response.data.challangeId);
         if (response.data.isAuthorized == true) {
@@ -75,59 +74,43 @@ const Header = () => {
         clearTimeout(timeoutId);
       }
     };
-  }, [authContext?.isSignedIn, address]);
+  }, [authContext?.isSignedIn, account?.address, connected]);
 
-  const signMessageFunc = async () => {
-    const signature = await signMessageAsync({ message });
-    setSignature(signature);
-    //make a post request to the sotreus server with the signature and challengeId
 
-    const response = await getToken(signature, challengeId);
-    if (response.data.token) {
-      //store the token in the session storage
-      sessionStorage.setItem("token", response.data.token);
-      localStorage.setItem("token", response.data.token);
-      authContext?.setIsSignedIn(true);
-    }
-  };
   const signOut = () => {
     sessionStorage.removeItem("token");
     localStorage.removeItem("token");
+    localStorage.removeItem("AptosWalletName");
     setMessage("");
     setSignature("");
     setChallengeId("");
     authContext?.setIsSignedIn(false);
   };
   const connectPetra = async () => {
-    // wallets[0]
-    //   .connect()
-    //   .then((res) => {
-    //     console.log(wallets[0]);
-    //   })
-    //   .catch((err) => {
-    //     console.log(err);
-    //   });
     connect(wallets[0].name);
+
   };
+
   const disconnectPetra = () => {
     disconnect();
   };
 
   const petraSign = async () => {
-    // const signature = await signMessageAsync({ message });
-    // setSignature(signature);
-    // //make a post request to the sotreus server with the signature and challengeId
-
-    // const response = await getToken(signature, challengeId);
-
     const payload = {
-      message: "Hello from Aptos Wallet Adapter",
-      nonce: "random_string",
+      message: message,
+      nonce: challengeId,
     };
     try {
-      const response = await petraSignMesssage(payload);
-      // const res = await getToken(response?.message, challengeId);
-      console.log("response", response);
+      const signres = await petraSignMesssage(payload);
+      console.log("response", signres);
+
+      const response = await getToken(signres?.signature, challengeId);
+      if (response.data.token) {
+        sessionStorage.setItem("token", response.data.token);
+        localStorage.setItem("token", response.data.token);
+        authContext?.setIsSignedIn(true);
+      }
+  
       authContext?.setIsSignedIn(true);
     } catch (error: any) {
       console.log("error", error);
@@ -155,7 +138,7 @@ const Header = () => {
                     </div>
                   </div>
               </li>
-              {(!address || authContext?.isSignedIn) && (
+              {(!account?.address || authContext?.isSignedIn) && (
                 <li>
                   <button
                     onClick={() => connectPetra()}
@@ -166,7 +149,7 @@ const Header = () => {
                   </button>
                 </li>
               )}
-              {!(isConnected && authContext?.isSignedIn) && (
+              {!(connected && authContext?.isSignedIn) && (
                   <li>
                     <button
                       onClick={petraSign}

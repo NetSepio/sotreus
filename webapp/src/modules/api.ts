@@ -144,7 +144,7 @@ export const getServerConfig = async () => {
     return response.data;
 };
     
-export const getChallengeId = async (address: `0x${string}` | undefined) => {
+export const getChallengeId = async (address: string | undefined) => {
   let response;
   try {
     // Make a get request to your server
@@ -162,7 +162,7 @@ export const getChallengeId = async (address: `0x${string}` | undefined) => {
   return response;
 };
 
-export const getToken = async (signature: string | undefined, challengeId:string) => {
+export const getToken = async (signature: string | string[] | undefined, challengeId:string) => {
   let response;
   try {
     // Make a post request to your server

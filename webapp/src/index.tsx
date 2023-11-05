@@ -30,6 +30,7 @@ const { chains, provider, webSocketProvider } = configureChains(
 const { connectors } = getDefaultWallets({
   appName: "Sotreus",
   chains,
+  projectId: process.env.WALLET_CONNECT_PROJECT_ID
 });
 
 const wagmiClient = createClient({

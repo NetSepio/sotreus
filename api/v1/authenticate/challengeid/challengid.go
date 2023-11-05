@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/NetSepio/sotreus/core"
-	"github.com/NetSepio/sotreus/util"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gin-gonic/gin"
@@ -60,14 +59,16 @@ func GetChallengeId(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, response)
 		return
 	}
-	if !util.RegexpWalletEth.MatchString(walletAddress) {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Error("Wallet address (walletAddress) is not valid")
-		response := core.MakeErrorResponse(400, err.Error(), nil, nil, nil)
-		c.JSON(http.StatusBadRequest, response)
-		return
-	}
+	//TODO add aptos valid walletaddress check
+
+	// if !util.RegexpWalletEth.MatchString(walletAddress) {
+	// 	log.WithFields(log.Fields{
+	// 		"err": err,
+	// 	}).Error("Wallet address (walletAddress) is not valid")
+	// 	response := core.MakeErrorResponse(400, err.Error(), nil, nil, nil)
+	// 	c.JSON(http.StatusBadRequest, response)
+	// 	return
+	// }
 	challengeId, err := GenerateChallengeId(walletAddress)
 	if err != nil {
 		log.WithFields(log.Fields{

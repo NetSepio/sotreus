@@ -1,6 +1,7 @@
 package authenticate
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 
@@ -37,7 +38,7 @@ func authenticate(c *gin.Context) {
 		return
 	}
 	userAuthEULA := os.Getenv("AUTH_EULA")
-	message := userAuthEULA + req.ChallengeId
+	message := fmt.Sprintf("APTOS\nmessage: %v\nnonce: %v", userAuthEULA, req.ChallengeId)
 	walletAddress, isCorrect, err := cryptosign.CheckSign(req.Signature, req.ChallengeId, message, req.PubKey)
 	if err == cryptosign.ErrFlowIdNotFound {
 		log.WithFields(log.Fields{
