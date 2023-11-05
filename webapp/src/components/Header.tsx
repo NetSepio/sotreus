@@ -104,7 +104,7 @@ const Header = () => {
       const signres = await petraSignMesssage(payload);
       console.log("response", signres);
 
-      const response = await getToken(signres?.signature, challengeId);
+      const response = await getToken(signres?.signature, challengeId, account?.publicKey);
       if (response.data.token) {
         sessionStorage.setItem("token", response.data.token);
         localStorage.setItem("token", response.data.token);
