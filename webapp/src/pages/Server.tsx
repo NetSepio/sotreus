@@ -12,6 +12,7 @@ import NotSigned from "../components/NotSigned";
 import { AuthContext } from "../context/AuthContext";
 import NotAuthorized from "../components/NotAuthorized";
 import CustomTable from "../components/Server/CustomTable";
+import { useWallet } from "@aptos-labs/wallet-adapter-react";
 
 const NotConnected: React.FC = () => {
   return (
@@ -33,6 +34,18 @@ const ServerPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { address, isConnecting, isDisconnected } = useAccount();
   const authContext = useContext(AuthContext);
+
+  const {
+    connect,
+    wallets,
+    disconnect,
+    wallet,
+    account,
+    network,
+    connected,
+    signMessage: petraSignMesssage,
+    signMessageAndVerify,
+  } = useWallet();
 
   const handleDownload = async () => {
     try {
@@ -60,7 +73,7 @@ const ServerPage: React.FC = () => {
     fetchData();
   }, []);
 
-  if (!address || isDisconnected) {
+  if (!connected) {
     return <NotConnected />;
   }
 

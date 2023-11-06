@@ -4,7 +4,6 @@ import { AuthContext } from "../context/AuthContext";
 import { useAccount, useSignMessage, useNetwork } from "wagmi";
 import { getChallengeId, getToken } from "../modules/api";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
-import nacl from 'tweetnacl';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -14,8 +13,6 @@ const Header = () => {
   const [challengeId, setChallengeId] = useState<string>("");
   const [signature, setSignature] = useState<string | undefined>();
   const { signMessageAsync } = useSignMessage();
-  const [profileId, setProfileId] = useState<string | null>(null);
-  const [userWallet, setUserWallet] = useState<string | null>(null);
 
   const {
     connect,
@@ -45,19 +42,26 @@ const Header = () => {
     let timeoutId: string | number | NodeJS.Timeout | null = null;
 
     const getSignMessage = async () => {
-      if (connected == false) {
+      if (localStorage.getItem("token") === "") {
         console.log("clearing localstorage")
         if (timeoutId !== null) {
           clearTimeout(timeoutId);
         }
-
+        if (account?.address){
+          const response = await getChallengeId(account?.address);
+          setMessage(response.data.eula);
+          setChallengeId(response.data.challangeId);
+          if (response.data.isAuthorized == true) {
+            authContext?.setIsAuthorized(true);
+          } else {
+            authContext?.setIsAuthorized(false);
+          }
+        }
         timeoutId = setTimeout(() => {
           signOut();
         }, 500);
-      } else if (!authContext?.isSignedIn) {
-        if (timeoutId !== null) {
-          clearTimeout(timeoutId);
-        }
+      } else {
+        wallets[0].connect()
       }
     };
 
@@ -69,54 +73,6 @@ const Header = () => {
       }
     };
   }, [authContext?.isSignedIn, account?.address, connected]);
-
-  const getAptosWallet = () => {
-    if ('aptos' in window) {
-      return (window as any).aptos;
-    } else {
-      window.open('https://petra.app/', '_blank');
-    }
-  }
-  const connectWallet = async () => {
-    const wallet = getAptosWallet();
-    try {
-      const response = await wallet.connect();
-
-      const account = await wallet.account();
-      console.log("account",account)
-
-      const challangeIdResponse = await getChallengeId(account?.address);
-      if (challangeIdResponse.data.isAuthorized == true) {
-        authContext?.setIsAuthorized(true);
-      } else {
-        authContext?.setIsAuthorized(false);
-      }
-
-
-      const message = challangeIdResponse.data.eula;
-      const nonce = challangeIdResponse.data.challangeId;
-      const publicKey = account.publicKey;
-
-      const { signature, fullMessage } = await wallet.signMessage({
-        message,
-        nonce
-      });
-      console.log("sign", signature, "full message", fullMessage);
-
-      const getTokenResponse = await getToken(`0x${signature}`, nonce, publicKey);
-      if (getTokenResponse.data.token) {
-        sessionStorage.setItem("token", getTokenResponse.data.token);
-        localStorage.setItem("token", getTokenResponse.data.token);
-        authContext?.setIsSignedIn(true);
-      }
-
-      setProfileId("");
-      setUserWallet("");
-
-    } catch (err) {
-      console.log(err);
-    }
-  }
 
   const signOut = () => {
     sessionStorage.removeItem("token");
@@ -145,7 +101,7 @@ const Header = () => {
       const signres = await petraSignMesssage(payload);
       console.log("response", signres);
 
-      const response = await getToken(signres?.signature, challengeId, account?.publicKey);
+      const response = await getToken(`0x${signres?.signature}`, challengeId, account?.publicKey);
       if (response.data.token) {
         sessionStorage.setItem("token", response.data.token);
         localStorage.setItem("token", response.data.token);
@@ -179,10 +135,10 @@ const Header = () => {
                     </div>
                   </div>
               </li>
-              {(!account?.address || authContext?.isSignedIn) && (
+              {!(connected) && (
                 <li>
                   <button
-                    onClick={() => connectWallet()}
+                    onClick={() => connectPetra()}
                     className="border text-blue-200 border-blue hover:bg-blue-300 hover:border-black hover:text-black font-bold transition focus:ring focus:ring-blue-500 focus:ring-opacity-80"
                   >
                     <img src={`${wallets[0].icon}`} width={20}></img> Connect{" "}
@@ -190,7 +146,7 @@ const Header = () => {
                   </button>
                 </li>
               )}
-              {/* {!(connected && authContext?.isSignedIn) && (
+              {(connected) && !(authContext?.isSignedIn) && (
                   <li>
                     <button
                       onClick={petraSign}
@@ -199,14 +155,14 @@ const Header = () => {
                       Sign In
                     </button>
                   </li>
-                )} */}
-               {(authContext?.isSignedIn) && (
+                )}
+               {connected && (
                   <li>
                     <div
 
                       className="border text-blue-200 border-blue hover:bg-blue-300 hover:border-black hover:text-black font-bold transition focus:ring focus:ring-blue-500 focus:ring-opacity-80"
                     >
-                      Details
+                       Account: {account?.address.slice(0,8)}...
                     </div>
                   </li>
                 )}
