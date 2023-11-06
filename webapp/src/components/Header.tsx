@@ -4,15 +4,18 @@ import { AuthContext } from "../context/AuthContext";
 import { useAccount, useSignMessage, useNetwork } from "wagmi";
 import { getChallengeId, getToken } from "../modules/api";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
+import nacl from 'tweetnacl';
 
 const Header = () => {
   const navigate = useNavigate();
   const authContext = useContext(AuthContext);
-  const useraddress = useAccount();
+  // const useraddress = useAccount();
   const [message, setMessage] = useState<string>("");
   const [challengeId, setChallengeId] = useState<string>("");
   const [signature, setSignature] = useState<string | undefined>();
   const { signMessageAsync } = useSignMessage();
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [userWallet, setUserWallet] = useState<string | null>(null);
 
   const {
     connect,
@@ -55,15 +58,6 @@ const Header = () => {
         if (timeoutId !== null) {
           clearTimeout(timeoutId);
         }
-
-        const response = await getChallengeId(account?.address);
-        setMessage(response.data.eula + response.data.challangeId);
-        setChallengeId(response.data.challangeId);
-        if (response.data.isAuthorized == true) {
-          authContext?.setIsAuthorized(true);
-        } else {
-          authContext?.setIsAuthorized(false);
-        }
       }
     };
 
@@ -76,6 +70,53 @@ const Header = () => {
     };
   }, [authContext?.isSignedIn, account?.address, connected]);
 
+  const getAptosWallet = () => {
+    if ('aptos' in window) {
+      return (window as any).aptos;
+    } else {
+      window.open('https://petra.app/', '_blank');
+    }
+  }
+  const connectWallet = async () => {
+    const wallet = getAptosWallet();
+    try {
+      const response = await wallet.connect();
+
+      const account = await wallet.account();
+      console.log("account",account)
+
+      const challangeIdResponse = await getChallengeId(account?.address);
+      if (challangeIdResponse.data.isAuthorized == true) {
+        authContext?.setIsAuthorized(true);
+      } else {
+        authContext?.setIsAuthorized(false);
+      }
+
+
+      const message = challangeIdResponse.data.eula;
+      const nonce = challangeIdResponse.data.challangeId;
+      const publicKey = account.publicKey;
+
+      const { signature, fullMessage } = await wallet.signMessage({
+        message,
+        nonce
+      });
+      console.log("sign", signature, "full message", fullMessage);
+
+      const getTokenResponse = await getToken(`0x${signature}`, nonce, publicKey);
+      if (getTokenResponse.data.token) {
+        sessionStorage.setItem("token", getTokenResponse.data.token);
+        localStorage.setItem("token", getTokenResponse.data.token);
+        authContext?.setIsSignedIn(true);
+      }
+
+      setProfileId("");
+      setUserWallet("");
+
+    } catch (err) {
+      console.log(err);
+    }
+  }
 
   const signOut = () => {
     sessionStorage.removeItem("token");
@@ -141,7 +182,7 @@ const Header = () => {
               {(!account?.address || authContext?.isSignedIn) && (
                 <li>
                   <button
-                    onClick={() => connectPetra()}
+                    onClick={() => connectWallet()}
                     className="border text-blue-200 border-blue hover:bg-blue-300 hover:border-black hover:text-black font-bold transition focus:ring focus:ring-blue-500 focus:ring-opacity-80"
                   >
                     <img src="{wallets[0].icon}"></img> Connect{" "}

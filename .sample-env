@@ -38,3 +38,4 @@ SIGNED_BY=Lazarus Network
 FOOTER=Lazarus Network 2023
 AUTH_EULA="I Accept the Lazarus Network Terms of Service https://lazarus.network/terms.html for accessing the application. Challenge ID: "
 MASTERNODE_WALLET=
+WALLET_CONNECT_PROJECT_ID=
