@@ -185,12 +185,12 @@ const Header = () => {
                     onClick={() => connectWallet()}
                     className="border text-blue-200 border-blue hover:bg-blue-300 hover:border-black hover:text-black font-bold transition focus:ring focus:ring-blue-500 focus:ring-opacity-80"
                   >
-                    <img src="{wallets[0].icon}"></img> Connect{" "}
+                    <img src={`${wallets[0].icon}`} width={20}></img> Connect{" "}
                     {wallets[0].name}
                   </button>
                 </li>
               )}
-              {!(connected && authContext?.isSignedIn) && (
+              {/* {!(connected && authContext?.isSignedIn) && (
                   <li>
                     <button
                       onClick={petraSign}
@@ -199,7 +199,7 @@ const Header = () => {
                       Sign In
                     </button>
                   </li>
-                )}
+                )} */}
                {(authContext?.isSignedIn) && (
                   <li>
                     <div
