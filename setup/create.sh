@@ -83,6 +83,6 @@ if [ $? -ne 0 ]; then
   printf '{"todo": "Create Sotreus Docker Instances", "result": "failure", "message": "Error Occured While Creating Containers"}\n'
   exit 2
 else
-  printf '{"todo": "Create Sotreus Docker Instances", "result": "success", "message": {"vpn_id": %s, "vpn_endpoint": %s, "vpn_api_port": %s, "vpn_external_port": %s,"dashboard_password":"%s"}}\n' "$SOTREUS_NAME" "$WG_ENDPOINT_HOST" "$WG_HTTP_PORT" "$WG_ENDPOINT_PORT" "$FIREWALL_PASSWORD"
+  printf '{"todo": "Create Sotreus Docker Instances", "result": "success", "message": {"vpn_id": "%s", "vpn_endpoint": "%s", "vpn_api_port": %s, "vpn_external_port": %s,"dashboard_password":"%s"}}\n' "$SOTREUS_NAME" "$WG_ENDPOINT_HOST" "$WG_HTTP_PORT" "$WG_ENDPOINT_PORT" "$FIREWALL_PASSWORD"
   exit 0
 fi
