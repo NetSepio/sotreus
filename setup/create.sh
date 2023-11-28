@@ -20,7 +20,7 @@ function print_usage() {
   echo " "
 }
 
-while getopts 'i:e:p:a:f:q:w:hd' option; do
+while getopts 'i:e:p:a:g:f:q:w:hd' option; do
   case "${option}" in
     h) print_usage
        exit 0 ;;
@@ -28,6 +28,7 @@ while getopts 'i:e:p:a:f:q:w:hd' option; do
     e) WG_ENDPOINT_HOST="${OPTARG}" ;;
     p) WG_ENDPOINT_PORT="${OPTARG}" ;;
     a) WG_HTTP_PORT="${OPTARG}" ;;
+    g) WG_GRPC_PORT="${OPTARG}" ;;
     f) FIREWALL_TO_USE="${OPTARG}" ;;
     q) FW_ENDPOINT_PORT="${OPTARG}" ;;
     w) FW_ENDPOINT_HOST="${OPTARG}" ;;
@@ -41,6 +42,7 @@ done
 [ -z ${WG_ENDPOINT_HOST} ] && { printf '{"todo": "Create Sotreus Docker Instances","result": "failure","message": "SOTREUS Endpoint/Domain Not Provided"}\n'; exit 2;}
 [ -z ${WG_ENDPOINT_PORT} ] && { printf '{"todo": "Create Sotreus Docker Instances","result": "failure","message": "SOTREUS Endpoint Port Not Provided"}\n'; exit 2;}
 [ -z ${WG_HTTP_PORT} ] && { printf '{"todo": "Create Sotreus Docker Instances","result": "failure","message": "SOTREUS API Port Not Provided"}\n'; exit 2;}
+[ -z ${WG_GRPC_PORT} ] && { printf '{"todo": "Create Sotreus Docker Instances","result": "failure","message": "SOTREUS API Port Not Provided"}\n'; exit 2;}
 [ -z ${FIREWALL_TO_USE} ] && { printf '{"todo": "Create Sotreus Docker Instances","result": "failure","message": "Firewall name Not Provided"}\n'; exit 2;}
 [ -z ${FW_ENDPOINT_PORT} ] && { printf '{"todo": "Create Sotreus Docker Instances","result": "failure","message": "Firewall endpoint Not Provided"}\n'; exit 2;}
 [ -z ${FW_ENDPOINT_HOST} ] && { printf '{"todo": "Create Sotreus Docker Instances","result": "failure","message": "Firewall host Not Provided"}\n'; exit 2;}
@@ -54,9 +56,9 @@ fi
 echo $DOCKER_COMPOSE_FILE
 if $DEBUG; then
   echo -e "Creating Docker Instances For Sotreus For [$SOTREUS_NAME]..."
-  SOTREUS_NAME=$SOTREUS_NAME WG_ENDPOINT_HOST=$WG_ENDPOINT_HOST WG_ENDPOINT_PORT=$WG_ENDPOINT_PORT WG_HTTP_PORT=$WG_HTTP_PORT FIREWALL_PASSWORD=$FIREWALL_PASSWORD DOMAIN=$WG_ENDPOINT_HOST FW_ENDPOINT_PORT=$FW_ENDPOINT_PORT FW_ENDPOINT_HOST=$FW_ENDPOINT_HOST /usr/bin/docker-compose -f $DOCKER_COMPOSE_FILE -p $SOTREUS_NAME up -d
+  SOTREUS_NAME=$SOTREUS_NAME WG_ENDPOINT_HOST=$WG_ENDPOINT_HOST WG_ENDPOINT_PORT=$WG_ENDPOINT_PORT WG_HTTP_PORT=$WG_HTTP_PORT FIREWALL_PASSWORD=$FIREWALL_PASSWORD DOMAIN=$WG_ENDPOINT_HOST FW_ENDPOINT_PORT=$FW_ENDPOINT_PORT FW_ENDPOINT_HOST=$FW_ENDPOINT_HOST WG_GRPC_PORT=$WG_GRPC_PORT /usr/bin/docker-compose -f $DOCKER_COMPOSE_FILE -p $SOTREUS_NAME up -d
 else
-  SOTREUS_NAME=$SOTREUS_NAME WG_ENDPOINT_HOST=$WG_ENDPOINT_HOST WG_ENDPOINT_PORT=$WG_ENDPOINT_PORT WG_HTTP_PORT=$WG_HTTP_PORT FIREWALL_PASSWORD=$FIREWALL_PASSWORD DOMAIN=$WG_ENDPOINT_HOST FW_ENDPOINT_PORT=$FW_ENDPOINT_PORT FW_ENDPOINT_HOST=$FW_ENDPOINT_HOST /usr/bin/docker-compose -f $DOCKER_COMPOSE_FILE -p $SOTREUS_NAME up -d > /dev/null 2>&1
+  SOTREUS_NAME=$SOTREUS_NAME WG_ENDPOINT_HOST=$WG_ENDPOINT_HOST WG_ENDPOINT_PORT=$WG_ENDPOINT_PORT WG_HTTP_PORT=$WG_HTTP_PORT FIREWALL_PASSWORD=$FIREWALL_PASSWORD DOMAIN=$WG_ENDPOINT_HOST FW_ENDPOINT_PORT=$FW_ENDPOINT_PORT FW_ENDPOINT_HOST=$FW_ENDPOINT_HOST WG_GRPC_PORT=$WG_GRPC_PORT /usr/bin/docker-compose -f $DOCKER_COMPOSE_FILE -p $SOTREUS_NAME up -d > /dev/null 2>&1
 fi
 mkdir -p /sotreus/$SOTREUS_NAME/etc-wireguard/clients
 
