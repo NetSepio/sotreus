@@ -73,20 +73,8 @@ const ServerPage: React.FC = () => {
     fetchData();
   }, []);
 
-  if (!connected) {
-    return <NotConnected />;
-  }
-
   if (isLoading || isConnecting) {
     return <CustomLoader />;
-  }
-
-  if (!authContext?.isAuthorized) {
-    return <NotAuthorized />;
-  }
-
-  if (!authContext?.isSignedIn) {
-    return <NotSigned component="Server" />;
   }
 
   return (
