@@ -21,7 +21,7 @@ services:
     restart: unless-stopped
   vpn:
     container_name: "${SOTREUS_NAME}-sotreus-vpn"
-    image: lazarusnetwork/sotreus:latest
+    image: ghcr.io/netsepio/sotreus:main
     depends_on:
       - firewall
     cap_add:
