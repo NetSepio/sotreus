@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	aidanwoods.dev/go-paseto v1.3.0
+	github.com/aws/aws-sdk-go v1.47.5
 	github.com/danielkov/gin-helmet v0.0.0-20171108135313-1387e224435e
 	github.com/ethereum/go-ethereum v1.11.6
 	github.com/gin-contrib/cors v1.4.0
@@ -23,12 +24,6 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go v1.47.5 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.22.1 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.2.1 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.5.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ses v1.18.0 // indirect
-	github.com/aws/smithy-go v1.16.0 // indirect
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect

@@ -39,5 +39,6 @@ erebrus-linux-x64
 .wgdir
 
 webapp/node_modules/
+webapp/build/
 
 setup/.env
