@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
-import { useAccount, useSignMessage, useNetwork } from "wagmi";
 import { getChallengeId, getToken } from "../modules/api";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
 
@@ -12,7 +11,6 @@ const Header = () => {
   const [message, setMessage] = useState<string>("");
   const [challengeId, setChallengeId] = useState<string>("");
   const [signature, setSignature] = useState<string | undefined>();
-  const { signMessageAsync } = useSignMessage();
 
   const {
     connect,
