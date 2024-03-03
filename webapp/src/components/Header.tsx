@@ -37,33 +37,35 @@ const Header = () => {
     if (storedToken) {
       authContext?.setIsSignedIn(true);
     }
+
     let timeoutId: string | number | NodeJS.Timeout | null = null;
+    // console.log("tok", localStorage.getItem("token"));
+    // const getSignMessage = async () => {
+    //   if (localStorage.getItem("token") !== null) {
+    //     console.log("clearing localstorage");
+    //     if (timeoutId !== null) {
+    //       clearTimeout(timeoutId);
+    //     }
+    //     // if (account?.address) {
+    //     //   const response = await getChallengeId(account?.address);
+    //     //   setMessage(response.data.eula);
+    //     //   setChallengeId(response.data.challangeId);
+    //     //   if (response.data.isAuthorized == true) {
+    //     //     authContext?.setIsAuthorized(true);
+    //     //   } else {
+    //     //     authContext?.setIsAuthorized(false);
+    //     //   }
+    //     // }
+    //     timeoutId = setTimeout(() => {
+    //       signOut();
+    //     }, 500);
+    //   } else {
+    //     console.log("ojk");
+    //     wallets[0].connect();
+    //   }
+    // };
 
-    const getSignMessage = async () => {
-      if (localStorage.getItem("token") === "") {
-        console.log("clearing localstorage");
-        if (timeoutId !== null) {
-          clearTimeout(timeoutId);
-        }
-        // if (account?.address) {
-        //   const response = await getChallengeId(account?.address);
-        //   setMessage(response.data.eula);
-        //   setChallengeId(response.data.challangeId);
-        //   if (response.data.isAuthorized == true) {
-        //     authContext?.setIsAuthorized(true);
-        //   } else {
-        //     authContext?.setIsAuthorized(false);
-        //   }
-        // }
-        timeoutId = setTimeout(() => {
-          signOut();
-        }, 500);
-      } else {
-        wallets[0].connect();
-      }
-    };
-
-    getSignMessage();
+    // getSignMessage();
 
     return () => {
       if (timeoutId !== null) {
