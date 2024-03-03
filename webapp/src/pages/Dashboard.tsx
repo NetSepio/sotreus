@@ -2,7 +2,6 @@ import React, { useContext, useEffect, useState } from "react";
 import { ClientContainer } from "../components/Dashboard/clientContainer";
 import { Client } from "../components/Dashboard/types";
 import { getClients } from "../modules/api";
-import { useAccount } from "wagmi";
 
 import Header from "../components/Header";
 import Footer from "../components/Footer";
@@ -34,7 +33,6 @@ const Dashboard: React.FC = () => {
 
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { address, isConnecting, isDisconnected } = useAccount();
   const [clientOpen, setClientOpen] = useState<boolean>(true);
 
   useEffect(() => {
@@ -44,7 +42,7 @@ const Dashboard: React.FC = () => {
       setClients(clientData.clients);
       setIsLoading(false);
     }
-     if (localStorage.getItem("token")) {
+    if (localStorage.getItem("token")) {
       fetchClients();
     }
   }, []);
@@ -58,7 +56,7 @@ const Dashboard: React.FC = () => {
   //   return <NotConnected />;
   // }
 
-  if (isLoading || isConnecting) {
+  if (isLoading) {
     return <DashboardLoader />;
   }
 
@@ -66,13 +64,13 @@ const Dashboard: React.FC = () => {
   //   return <NotAuthorized />;
   // }
 
-  // if (!authContext?.isSignedIn) {
-  //   return (
-  //     <div>
-  //       <NotSigned component="Dashboard" />
-  //     </div>
-  //   );
-  // }
+  if (!authContext?.isSignedIn) {
+    return (
+      <div>
+        <NotSigned component="Dashboard" />
+      </div>
+    );
+  }
 
   return (
     <div>

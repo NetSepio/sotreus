@@ -7,10 +7,6 @@ import { useWallet } from "@aptos-labs/wallet-adapter-react";
 const Header = () => {
   const navigate = useNavigate();
   const authContext = useContext(AuthContext);
-  // const useraddress = useAccount();
-  const [message, setMessage] = useState<string>("");
-  const [challengeId, setChallengeId] = useState<string>("");
-  const [signature, setSignature] = useState<string | undefined>();
 
   const {
     connect,
@@ -28,44 +24,13 @@ const Header = () => {
     await navigate("/dashboard");
   };
 
-  const navigateServer = async () => {
-    await navigate("/server");
-  };
-
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
-    if (storedToken) {
+    if (storedToken && connected) {
       authContext?.setIsSignedIn(true);
     }
 
     let timeoutId: string | number | NodeJS.Timeout | null = null;
-    // console.log("tok", localStorage.getItem("token"));
-    // const getSignMessage = async () => {
-    //   if (localStorage.getItem("token") !== null) {
-    //     console.log("clearing localstorage");
-    //     if (timeoutId !== null) {
-    //       clearTimeout(timeoutId);
-    //     }
-    //     // if (account?.address) {
-    //     //   const response = await getChallengeId(account?.address);
-    //     //   setMessage(response.data.eula);
-    //     //   setChallengeId(response.data.challangeId);
-    //     //   if (response.data.isAuthorized == true) {
-    //     //     authContext?.setIsAuthorized(true);
-    //     //   } else {
-    //     //     authContext?.setIsAuthorized(false);
-    //     //   }
-    //     // }
-    //     timeoutId = setTimeout(() => {
-    //       signOut();
-    //     }, 500);
-    //   } else {
-    //     console.log("ojk");
-    //     wallets[0].connect();
-    //   }
-    // };
-
-    // getSignMessage();
 
     return () => {
       if (timeoutId !== null) {
@@ -74,15 +39,6 @@ const Header = () => {
     };
   }, [authContext?.isSignedIn, account?.address, connected]);
 
-  const signOut = () => {
-    sessionStorage.removeItem("token");
-    localStorage.removeItem("token");
-    localStorage.removeItem("AptosWalletName");
-    setMessage("");
-    setSignature("");
-    setChallengeId("");
-    authContext?.setIsSignedIn(false);
-  };
   const connectPetra = async () => {
     connect(wallets[0].name);
   };

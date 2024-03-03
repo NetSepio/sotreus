@@ -7,7 +7,6 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { saveAs } from "file-saver";
 import ServerEdit from "../components/Server/ServerEdit";
-import { useAccount } from "wagmi";
 import NotSigned from "../components/NotSigned";
 import { AuthContext } from "../context/AuthContext";
 import NotAuthorized from "../components/NotAuthorized";
@@ -32,7 +31,6 @@ const ServerPage: React.FC = () => {
   const [serverInfo, setServerInfo] = useState<any>(null);
   const [serverConfig, setServerConfig] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { address, isConnecting, isDisconnected } = useAccount();
   const authContext = useContext(AuthContext);
 
   const {
@@ -73,7 +71,7 @@ const ServerPage: React.FC = () => {
     fetchData();
   }, []);
 
-  if (isLoading || isConnecting) {
+  if (isLoading) {
     return <CustomLoader />;
   }
 
