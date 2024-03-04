@@ -3,6 +3,7 @@ import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { getChallengeId, getToken } from "../modules/api";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
+import Cookies from "js-cookie";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ const Header = () => {
   };
 
   useEffect(() => {
-    const storedToken = localStorage.getItem("token");
+    const storedToken = Cookies.get("token");
     if (storedToken && connected) {
       authContext?.setIsSignedIn(true);
     }
@@ -65,12 +66,10 @@ const Header = () => {
         account?.publicKey
       );
       if (response.data.token) {
-        sessionStorage.setItem("token", response.data.token);
-        localStorage.setItem("token", response.data.token);
+        Cookies.set("token", response.data.token);
         authContext?.setIsSignedIn(true);
+        authContext?.setIsAuthorized(true);
       }
-      authContext?.setIsAuthorized(true);
-      authContext?.setIsSignedIn(true);
     } catch (error: any) {
       console.log("error", error);
     }

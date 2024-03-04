@@ -1,5 +1,6 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { getBaseUrl } from './Utils';
+import Cookies from 'js-cookie';
 
 const baseURL = getBaseUrl()
 
@@ -32,8 +33,8 @@ export interface CreateClientPayload {
 }
 interface ClientResponse {
   status: number;
-  success?: boolean; 
-  sucess?: boolean; 
+  success?: boolean;
+  sucess?: boolean;
   message: string;
   clients: any[];
 }
@@ -59,7 +60,7 @@ async function callSotreusAPI(
     method,
     url: clientId ? endpoint.replace(':client_id', clientId) : endpoint,
     headers: {
-      "Authorization": `Bearer ${localStorage.getItem("token")}`
+      "Authorization": `Bearer ${Cookies.get("token")}`
     }
   };
 
@@ -76,16 +77,20 @@ async function callSotreusAPI(
 
 export async function emailClientConfig(clientId: string): Promise<AxiosResponse<any>> {
   return axios.get(`${baseURL}/api/v1.0/client/${clientId}/email`,
-  {headers:{
-    "Authorization": `Bearer ${localStorage.getItem("token")}`
-  }})
+    {
+      headers: {
+        "Authorization": `Bearer ${Cookies.get("token")}`
+      }
+    })
 }
 
 export const updateServer = async (updatedConfig: any) => {
   const response = await axios.patch(`${baseURL}/api/v1.0/server`, updatedConfig,
-  {headers:{
-    "Authorization": `Bearer ${localStorage.getItem("token")}`
-  }});
+    {
+      headers: {
+        "Authorization": `Bearer ${Cookies.get("token")}`
+      }
+    });
   return response.data;
 };
 
@@ -94,20 +99,24 @@ export async function getClientInfo(clientId: string): Promise<AxiosResponse<any
 }
 
 export async function createClient(payload: CreateClientPayload): Promise<AxiosResponse<any>> {
-  return callSotreusAPI('/api/v1.0/client', 'POST', payload, );
+  return callSotreusAPI('/api/v1.0/client', 'POST', payload,);
 }
 
 export async function updateClient(clientId: string, payload: UpdateClientPayload): Promise<AxiosResponse<any>> {
-  return axios.patch(`${baseURL}/api/v1.0/client/${clientId}`,payload, {headers:{
-    "Authorization": `Bearer ${localStorage.getItem("token")}`
-  }})
+  return axios.patch(`${baseURL}/api/v1.0/client/${clientId}`, payload, {
+    headers: {
+      "Authorization": `Bearer ${Cookies.get("token")}`
+    }
+  })
 }
 
-export async function getClients(token: string | null): Promise<ClientResponse> { 
+export async function getClients(token: string | undefined): Promise<ClientResponse> {
   const url = `${baseURL}/api/v1.0/client`
-  const response = await axios.get<ClientResponse>(url, {headers:{
-    "Authorization": `Bearer ${localStorage.getItem("token")}`
-  }});
+  const response = await axios.get<ClientResponse>(url, {
+    headers: {
+      "Authorization": `Bearer ${Cookies.get("token")}`
+    }
+  });
   if (response.status === 200) {
     return response.data;
   } else {
@@ -126,24 +135,28 @@ export async function getClientConfig(clientId: string, qrcode?: boolean): Promi
 // =============================================( SERVER APIs )=================================================== //
 
 export const getStatus = async () => {
-    const response = await axios.get(`${baseURL}/api/v1.0/status`);
-    return response.data;
+  const response = await axios.get(`${baseURL}/api/v1.0/status`);
+  return response.data;
 };
 
 export const getServerInfo = async () => {
-  const response = await axios.get(`${baseURL}/api/v1.0/server`, {headers:{
-    "Authorization": `Bearer ${localStorage.getItem("token")}`
-  }});
+  const response = await axios.get(`${baseURL}/api/v1.0/server`, {
+    headers: {
+      "Authorization": `Bearer ${Cookies.get("token")}`
+    }
+  });
   return response.data;
 };
 
 export const getServerConfig = async () => {
-    const response = await axios.get(`${baseURL}/api/v1.0/server/config`, {headers:{
-      "Authorization": `Bearer ${localStorage.getItem("token")}`
-    }});
-    return response.data;
+  const response = await axios.get(`${baseURL}/api/v1.0/server/config`, {
+    headers: {
+      "Authorization": `Bearer ${Cookies.get("token")}`
+    }
+  });
+  return response.data;
 };
-    
+
 export const getChallengeId = async (address: string | undefined) => {
   let response;
   try {
@@ -153,7 +166,7 @@ export const getChallengeId = async (address: string | undefined) => {
       {
         headers: {
           "Content-Type": "application/json",
-        },  
+        },
       }
     );
   } catch (error) {
@@ -162,13 +175,13 @@ export const getChallengeId = async (address: string | undefined) => {
   return response;
 };
 
-export const getToken = async (signature: string | string[] | undefined, challengeId:string, pubKey: string | string[] | undefined) => {
+export const getToken = async (signature: string | string[] | undefined, challengeId: string, pubKey: string | string[] | undefined) => {
   let response;
   try {
     // Make a post request to your server
     response = await axios.post(
       `${baseURL}/api/v1.0/authenticate`,
-      { signature,challengeId, pubKey },
+      { signature, challengeId, pubKey },
       {
         headers: {
           "Content-Type": "application/json",

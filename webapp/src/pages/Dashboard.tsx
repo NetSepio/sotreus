@@ -11,6 +11,7 @@ import NotSigned from "../components/NotSigned";
 import NotAuthorized from "../components/NotAuthorized";
 import ServerPage from "./Server";
 import DashboardLoader from "../components/DashboardLoader";
+import Cookies from "js-cookie";
 
 const NotConnected: React.FC = () => {
   return (
@@ -37,12 +38,12 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     async function fetchClients() {
-      const token = localStorage.getItem("token");
+      const token = Cookies.get("token");
       const clientData = await getClients(token);
       setClients(clientData.clients);
       setIsLoading(false);
     }
-    if (localStorage.getItem("token")) {
+    if (Cookies.get("token")) {
       fetchClients();
     }
   }, []);
