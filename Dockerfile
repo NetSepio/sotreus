@@ -24,7 +24,7 @@ COPY --from=build-web /app/build ./webapp
 COPY --from=build-app /app/start.sh .
 COPY wg-watcher.sh .
 RUN chmod +x ./sotreus ./wg-watcher.sh
-RUN apk update && apk add --no-cache bash openresolv bind-tools wireguard-tools gettext inotify-tools
+RUN apk update && apk add --no-cache bash openresolv bind-tools wireguard-tools gettext inotify-tools iptables
 ENV LOAD_CONFIG_FILE=$LOAD_CONFIG_FILE RUNTYPE=$RUNTYPE SERVER=$SERVER WG_HTTP_PORT=$WG_HTTP_PORT WG_GRPC_PORT=$WG_GRPC_PORT
 ENV WG_CONF_DIR=$WG_CONF_DIR WG_KEYS_DIR=$WG_KEYS_DIR WG_INTERFACE_NAME=$WG_INTERFACE_NAME
 ENV WG_ENDPOINT_HOST=$WG_ENDPOINT_HOST WG_ENDPOINT_PORT=$WG_ENDPOINT_PORT WG_IPV4_SUBNET=$WG_IPV4_SUBNET WG_IPV6_SUBNET=$WG_IPV6_SUBNET
