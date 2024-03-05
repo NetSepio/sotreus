@@ -4,6 +4,7 @@ import { AuthContext } from "../context/AuthContext";
 import { getChallengeId, getToken } from "../modules/api";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import Cookies from "js-cookie";
+import { WalletSelector } from "./WalletSelector/AptosWalletSelector";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -20,12 +21,12 @@ const Header = () => {
     signMessage: petraSignMesssage,
     signMessageAndVerify,
   } = useWallet();
-
   const navigateDashboard = async () => {
     await navigate("/dashboard");
   };
 
   useEffect(() => {
+    console.log("cts", account);
     const storedToken = Cookies.get("token");
     if (storedToken && connected) {
       authContext?.setIsSignedIn(true);
@@ -96,13 +97,7 @@ const Header = () => {
               </li>
               {!connected && (
                 <li>
-                  <button
-                    onClick={() => connectPetra()}
-                    className="border text-blue-200 border-blue hover:bg-blue-300 hover:border-black hover:text-black font-bold transition focus:ring focus:ring-blue-500 focus:ring-opacity-80"
-                  >
-                    <img src={`${wallets[0].icon}`} width={20}></img> Connect{" "}
-                    {wallets[0].name}
-                  </button>
+                  <WalletSelector />
                 </li>
               )}
               {connected && !authContext?.isSignedIn && (
