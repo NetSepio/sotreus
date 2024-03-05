@@ -65,7 +65,7 @@ const Dashboard: React.FC = () => {
   //   return <NotAuthorized />;
   // }
 
-  if (!authContext?.isSignedIn) {
+  if (!Cookies.get("token") && Cookies.get("wallet_address")) {
     return (
       <div>
         <NotSigned component="Dashboard" />

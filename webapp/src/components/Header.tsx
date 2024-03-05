@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { getChallengeId, getToken } from "../modules/api";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
@@ -9,7 +9,8 @@ import { WalletSelector } from "./WalletSelector/AptosWalletSelector";
 const Header = () => {
   const navigate = useNavigate();
   const authContext = useContext(AuthContext);
-
+  const [storedToken, setStoredToken] = useState<string>();
+  const [walletAddress, setWalletAddress] = useState<string>();
   const {
     connect,
     wallets,
@@ -26,8 +27,8 @@ const Header = () => {
   };
 
   useEffect(() => {
-    console.log("cts", account);
-    const storedToken = Cookies.get("token");
+    setStoredToken(Cookies.get("token"));
+    setWalletAddress(Cookies.get("wallet_address"));
     if (storedToken && connected) {
       authContext?.setIsSignedIn(true);
     }
@@ -45,8 +46,12 @@ const Header = () => {
     connect(wallets[0].name);
   };
 
-  const disconnectPetra = () => {
-    disconnect();
+  const signout = () => {
+    Cookies.remove("token");
+    Cookies.remove("wallet_address");
+    if (connected) {
+      disconnect();
+    }
   };
 
   const petraSign = async () => {
@@ -68,6 +73,7 @@ const Header = () => {
       );
       if (response.data.token) {
         Cookies.set("token", response.data.token);
+        Cookies.set("wallet_address", account?.address!);
         authContext?.setIsSignedIn(true);
         authContext?.setIsAuthorized(true);
       }
@@ -95,7 +101,7 @@ const Header = () => {
                   <div className="-m-4" role="none"></div>
                 </div>
               </li>
-              {!connected && (
+              {!walletAddress && !connected && (
                 <li>
                   <WalletSelector />
                 </li>
@@ -110,11 +116,17 @@ const Header = () => {
                   </button>
                 </li>
               )}
-              {connected && (
+              {storedToken && walletAddress && (
                 <li>
                   <div className="border text-blue-200 border-blue hover:bg-blue-300 hover:border-black hover:text-black font-bold transition focus:ring focus:ring-blue-500 focus:ring-opacity-80">
-                    Account: {account?.address.slice(0, 8)}...
+                    Account: {walletAddress?.slice(0, 8)}...
                   </div>
+                  <button
+                    onClick={signout}
+                    className="border text-blue-200 border-blue hover:bg-blue-300 hover:border-black hover:text-black font-bold transition focus:ring focus:ring-blue-500 focus:ring-opacity-80"
+                  >
+                    Sign out
+                  </button>
                 </li>
               )}
               <li>
