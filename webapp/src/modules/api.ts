@@ -1,9 +1,9 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
-import { getBaseUrl } from './Utils';
+import { getBaseUrl, getGatewayURL } from './Utils';
 import Cookies from 'js-cookie';
 
 const baseURL = getBaseUrl()
-
+const gatewayURL = getGatewayURL()
 export interface UpdateClientPayload {
   id: string;
   name: string;
@@ -193,3 +193,17 @@ export const getToken = async (signature: string | string[] | undefined, challen
   }
   return response;
 };
+
+export async function verifyToken(token: string | null) {
+  const url = `${gatewayURL}/api/v1.0/webapp/auth`
+  const response = await axios.get(url, {
+    headers: {
+      "Authorization": `Bearer ${Cookies.get("token")}`
+    }
+  });
+  if (response.status === 200) {
+    return response.data;
+  } else {
+    throw new Error(`Request failed with status: ${response.status}`);
+  }
+}
