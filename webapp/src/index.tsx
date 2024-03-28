@@ -1,5 +1,5 @@
 import React from "react";
-import ReactDOM from "react-dom";
+import ReactDOM from "react-dom/client";
 import "./index.css";
 import App from "./App";
 
@@ -42,7 +42,7 @@ import { AptosWalletAdapterProvider } from "@aptos-labs/wallet-adapter-react";
 
 const wallets = [new PetraWallet()];
 
-ReactDOM.render(
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     {/* <WagmiConfig client={wagmiClient}>
       <RainbowKitProvider
@@ -63,6 +63,5 @@ ReactDOM.render(
     </AptosWalletAdapterProvider>
     {/* </RainbowKitProvider>
     </WagmiConfig> */}
-  </React.StrictMode>,
-  document.getElementById("root")
+  </React.StrictMode>
 );
