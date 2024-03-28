@@ -198,7 +198,7 @@ export async function verifyToken(token: string | null) {
   const url = `${gatewayURL}/api/v1.0/webapp/auth`
   const response = await axios.get(url, {
     headers: {
-      "Authorization": `Bearer ${Cookies.get("token")}`
+      "Authorization": `Bearer ${token}`
     }
   });
   if (response.status === 200) {

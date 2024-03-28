@@ -3,5 +3,6 @@ export function getBaseUrl(): string {
   return `${protocol}//${host}`;
 }
 export function getGatewayURL(): string | undefined {
-  return process.env.GATEWAY_URL;
+  // return process.env.GATEWAY_URL;
+  return "https://dev.gateway.sotreus.com";
 }
