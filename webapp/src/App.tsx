@@ -1,18 +1,12 @@
 // App.tsx
-import {
-  createBrowserRouter,
-  BrowserRouter,
-  Route,
-  Routes,
-  RouterProvider,
-} from "react-router-dom";
+import { createHashRouter, RouterProvider } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import LandingPage from "./pages/LandingPage";
 import Server from "./pages/Server";
 import AuthComponent from "./components/Auth";
 
 const App = () => {
-  const router = createBrowserRouter([
+  const router = createHashRouter([
     {
       path: "/",
       element: <LandingPage />,
