@@ -195,7 +195,7 @@ export const getToken = async (signature: string | string[] | undefined, challen
 };
 
 export async function verifyToken(token: string | null) {
-  const url = `${gatewayURL}/api/v1.0/webapp/auth`
+  const url = `${gatewayURL}/api/v1.0/authenticate`
   const response = await axios.get(url, {
     headers: {
       "Authorization": `Bearer ${token}`
