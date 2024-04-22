@@ -5,5 +5,10 @@ type GenericAuthHeaders struct {
 }
 
 type webappResponse struct {
-	WalletAddress string `json:"walletAddress"`
+	Status  int    `json:"status"`
+	Message string `json:"message"`
+	Payload struct {
+		UserID        string `json:"userId"`
+		WalletAddress string `json:"walletAddress"`
+	} `json:"payload"`
 }

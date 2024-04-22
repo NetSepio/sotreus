@@ -63,12 +63,12 @@ func PASETO(c *gin.Context) {
 	defer resp.Body.Close()
 	var responseBody webappResponse
 	err = json.NewDecoder(resp.Body).Decode(&responseBody)
-	fmt.Println("Wallet Address: ", responseBody.WalletAddress)
+	fmt.Println("Wallet Address: ", responseBody.Payload.WalletAddress)
 	if err != nil {
 		fmt.Printf("Failed to decode response body: %s\n", err)
 		return
 	} else {
-		c.Set("walletAddress", responseBody.WalletAddress)
+		c.Set("walletAddress", responseBody.Payload.WalletAddress)
 		c.Next()
 	}
 	// parser := gopaseto.NewParser()
