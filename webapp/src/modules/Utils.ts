@@ -4,5 +4,5 @@ export function getBaseUrl(): string {
 }
 export function getGatewayURL(): string | undefined {
   // return process.env.GATEWAY_URL;
-  return "https://dev.gateway.sotreus.com";
+  return "https://gateway.dev.netsepio.com";
 }
