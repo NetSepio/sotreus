@@ -234,7 +234,14 @@ body {
     gap: 32px;
   }
 
-  .hero-heading {
-    font-size: 36px;
+  /* Footer Social Links */
+  .social-link {
+    color: rgba(255, 255, 255, 0.5);
+    transition: color 0.2s;
+    text-decoration: none;
+  }
+
+  .social-link:hover {
+    color: #ffffff;
   }
 }
