@@ -1,0 +1,240 @@
+:root {
+  --background: #000000;
+  --foreground: #ffffff;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  font-family: 'General Sans', sans-serif;
+  color: #ffffff;
+}
+
+/* Background Video & Overlay */
+.video-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.bg-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.video-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  /* 50% black overlay */
+  z-index: 1;
+}
+
+/* Main Content Wrapper */
+.content-wrapper {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Navbar */
+.navbar {
+  padding: 20px 120px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.nav-logo-text {
+  font-size: 25px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  line-height: 25px;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.nav-link {
+  font-size: 14px;
+  font-weight: 500;
+  color: #ffffff;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  opacity: 0.9;
+  transition: opacity 0.2s;
+}
+
+.nav-link:hover {
+  opacity: 1;
+}
+
+/* Button Layering & Glow */
+.btn-wrapper {
+  position: relative;
+  display: inline-block;
+  border-radius: 9999px;
+  padding: 0.6px;
+  /* Outer border thickness */
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 100%);
+  overflow: visible;
+}
+
+.btn-glow {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 2px;
+  background: white;
+  filter: blur(4px);
+  border-radius: 50%;
+  z-index: 0;
+  opacity: 0.8;
+}
+
+.btn-inner {
+  position: relative;
+  border-radius: 9999px;
+  padding: 11px 29px;
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  box-sizing: border-box;
+}
+
+.nav-btn .btn-inner {
+  background-color: #000000;
+  color: #ffffff;
+}
+
+/* Hero Content */
+.hero-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 280px;
+  padding-bottom: 102px;
+  gap: 40px;
+  text-align: center;
+  padding-left: 24px;
+  padding-right: 24px;
+  box-sizing: border-box;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.1);
+  /* 10% white */
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.badge-dot {
+  width: 4px;
+  height: 4px;
+  background-color: #ffffff;
+  border-radius: 50%;
+}
+
+.badge-text-dim {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.hero-heading {
+  max-width: 613px;
+  font-size: 56px;
+  font-weight: 500;
+  line-height: 1.28;
+  margin: 0;
+  /* Gradient text */
+  background: linear-gradient(144.5deg, #ffffff 28%, rgba(0, 0, 0, 0) 115%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-subtitle {
+  max-width: 680px;
+  font-size: 15px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.cta-btn-wrapper .btn-wrapper {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(200, 200, 200, 1) 100%);
+}
+
+.cta-btn-wrapper .btn-inner {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .navbar {
+    padding: 20px 40px;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav-links {
+    display: none;
+    /* Hide nav links on mobile */
+  }
+
+  .navbar {
+    padding: 20px 24px;
+  }
+
+  .hero-content {
+    padding-top: 200px;
+    gap: 32px;
+  }
+
+  .hero-heading {
+    font-size: 36px;
+  }
+}
