@@ -82,6 +82,24 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Footer */}
+        <footer style={{
+          width: '100%',
+          padding: '24px 0',
+          textAlign: 'center',
+          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+          marginTop: 'auto'
+        }}>
+          <p style={{
+            margin: 0,
+            fontSize: '13px',
+            color: 'rgba(255, 255, 255, 0.5)',
+            fontWeight: 400
+          }}>
+            SOTREUS is a product of <a href="https://netsepio.com" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255, 255, 255, 0.8)', textDecoration: 'none', borderBottom: '1px solid rgba(255,255,255,0.3)' }}>NetSepio</a>
+          </p>
+        </footer>
       </div>
     </div>
   );

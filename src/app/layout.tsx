@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Web3 Landing Page",
-  description: "Web3 at the Speed of Experience",
+  title: "SOTREUS | Securing the next node",
+  description: "Zero Trust. Absolute Resilience. SOTREUS is a cybersecurity product built by NetSepio.",
 };
 
 export default function RootLayout({
