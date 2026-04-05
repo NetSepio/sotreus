@@ -1,25 +1,25 @@
 'use client';
 
-import { Zap, ShieldCheck, TrendingUp } from 'lucide-react';
+import { ShieldCheck, TrendingUp, Wallet } from 'lucide-react';
 
 const features = [
   {
-    icon: Zap,
-    title: 'Instant Provisioning',
+    icon: Wallet,
+    title: 'Start Small, Scale When Ready',
     description:
-      'Deploy capital in one click. Your funded account is live in under 60 seconds — no evaluations, no waiting periods, no sim trading.',
+      'Most prop firms force traders into larger fees or oversized account jumps. SOTREUS starts with smaller launch tiers so traders can build process before they size up.',
   },
   {
     icon: ShieldCheck,
-    title: 'Zero Evaluation Phase',
+    title: 'Wallet-First Crypto Flow',
     description:
-      'Skip the multi-phase challenges. Trade live capital from day one with real market conditions and real CEX/DEX liquidity.',
+      'Built for crypto-native traders who already live on-chain. Solana rails, wallet-based onboarding, and major crypto perpetuals keep the product aligned with real market behavior.',
   },
   {
     icon: TrendingUp,
-    title: '90/10 Profit Split',
+    title: 'Rules Before Hype',
     description:
-      'Keep 90% of every dollar you earn. Withdraw your share in USDT-SPL directly to your Solana wallet — instantly.',
+      'Readable loss limits, visible payout terms, and privacy language that is easy to review should matter as much as the headline numbers. Trust is part of the product.',
   },
 ];
 

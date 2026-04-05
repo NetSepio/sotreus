@@ -1,5 +1,79 @@
+import Link from 'next/link';
 import BentoGrid from './components/BentoGrid';
+import DrawdownMeter from './components/DrawdownMeter';
 import PayoutTicker from './components/PayoutTicker';
+
+const launchTiers = [
+  {
+    name: 'Launch',
+    fee: '$99',
+    funded: '$2,000',
+    audience: 'For first-time funded traders who want structure without oversized cost.',
+    points: [
+      "Built for a trader's first serious prop account",
+      'Major crypto perpetuals first',
+      'Clear rules before checkout',
+    ],
+  },
+  {
+    name: 'Builder',
+    fee: '$499',
+    funded: '$10,000',
+    audience: 'For traders with a repeatable setup who need more room to express it.',
+    points: [
+      'More sizing room without a giant leap',
+      'Same discipline-first account logic',
+      'Designed for steady progression',
+    ],
+  },
+  {
+    name: 'Pro',
+    fee: '$999',
+    funded: '$20,000',
+    audience: 'For disciplined traders ready for the biggest launch-phase account.',
+    points: [
+      'Highest launch-tier buying power',
+      'Built for proven routines, not impulse',
+      'Expansion-friendly without going oversized',
+    ],
+  },
+];
+
+const howItWorks = [
+  {
+    step: '01',
+    title: 'Choose Your Tier',
+    description:
+      'Review the Launch, Builder, and Pro plans side by side. Read the active rules, eligible markets, and payout terms before you pay.',
+  },
+  {
+    step: '02',
+    title: 'Activate Your Account',
+    description:
+      'Connect your wallet, complete payment, and finish any required anti-fraud or compliance checks tied to the live product policy.',
+  },
+  {
+    step: '03',
+    title: 'Trade With Discipline',
+    description:
+      'Trade eligible crypto markets within your loss limits. Request payouts under the live plan terms once your account becomes eligible.',
+  },
+];
+
+const positioningCards = [
+  {
+    value: '$99',
+    label: 'A smaller first step for new prop traders',
+  },
+  {
+    value: 'Terms + Privacy',
+    label: 'Readable policy pages before checkout',
+  },
+  {
+    value: 'Up to 90%',
+    label: 'Use this headline only where the live plan supports it',
+  },
+];
 
 export default function Home() {
   return (
@@ -40,10 +114,10 @@ export default function Home() {
         {/* ── NAVBAR ── */}
         <div className="container">
           <nav className="navbar" id="navbar">
-            <a href="/" className="nav-logo">
+            <Link href="/" className="nav-logo">
               SOTREUS
-            </a>
-            <button className="nav-cta" id="nav-activate-terminal">
+            </Link>
+            <a className="nav-cta" id="nav-funding-tiers" href="#tiers">
               <svg
                 width="16"
                 height="16"
@@ -57,8 +131,8 @@ export default function Home() {
                 <polyline points="4 17 10 11 4 5" />
                 <line x1="12" y1="19" x2="20" y2="19" />
               </svg>
-              Activate Terminal
-            </button>
+              See Funding Tiers
+            </a>
           </nav>
         </div>
 
@@ -68,23 +142,26 @@ export default function Home() {
             {/* Live badge */}
             <div className="live-badge">
               <span className="live-dot" />
-              LIVE ON SOLANA
+              SOLANA-NATIVE PROP PLATFORM
             </div>
 
             {/* Massive headline */}
-            <h1 className="hero-headline">
-              The First Prop-AMM for the Fast-Mover.
-            </h1>
+            <h1 className="hero-headline">Crypto Prop Accounts That Let Traders Start Small.</h1>
 
             {/* Sub-headline */}
             <p className="hero-sub">
-              Get <strong className="font-mono">$2,000</strong> in trading
-              capital. No KYC. No evaluations. Just execution.
+              SOTREUS gives new and growing traders a clearer first step into
+              prop trading with <strong className="font-mono">$99</strong>,{' '}
+              <strong className="font-mono">$499</strong>, and{' '}
+              <strong className="font-mono">$999</strong> launch tiers and
+              funded account sizes from{' '}
+              <strong className="font-mono">$2,000</strong> to{' '}
+              <strong className="font-mono">$20,000</strong>.
             </p>
 
             {/* Glowing CTA */}
-            <button className="hero-cta" id="hero-get-started">
-              Get Started
+            <a className="hero-cta" id="hero-get-started" href="#tiers">
+              View Funding Tiers
               <svg
                 width="18"
                 height="18"
@@ -98,25 +175,30 @@ export default function Home() {
                 <line x1="5" y1="12" x2="19" y2="12" />
                 <polyline points="12 5 19 12 12 19" />
               </svg>
-            </button>
+            </a>
+            <p className="hero-note">
+              Review the <Link href="/terms">Terms</Link> and{' '}
+              <Link href="/privacy">Privacy Policy</Link> before purchasing a
+              tier.
+            </p>
 
             {/* Hero stats */}
             <div className="hero-stats">
               <div className="hero-stat">
-                <span className="hero-stat-value">$2,000</span>
-                <span className="hero-stat-label">Funded Capital</span>
+                <span className="hero-stat-value">$99</span>
+                <span className="hero-stat-label">Smallest Entry Tier</span>
               </div>
               <div className="hero-stat">
-                <span className="hero-stat-value">$100</span>
-                <span className="hero-stat-label">Entry Fee</span>
+                <span className="hero-stat-value">$2K-$20K</span>
+                <span className="hero-stat-label">Funded Accounts</span>
               </div>
               <div className="hero-stat">
-                <span className="hero-stat-value">90%</span>
-                <span className="hero-stat-label">Profit Split</span>
+                <span className="hero-stat-value">Up to 90%</span>
+                <span className="hero-stat-label">Trader Share</span>
               </div>
               <div className="hero-stat">
-                <span className="hero-stat-value">&lt;100ms</span>
-                <span className="hero-stat-label">Execution</span>
+                <span className="hero-stat-value">24/7</span>
+                <span className="hero-stat-label">Crypto Markets</span>
               </div>
             </div>
           </section>
@@ -126,48 +208,112 @@ export default function Home() {
         <section className="trust-section" id="trust-ticker">
           <div className="container">
             <div className="trust-label">
-              Sotreus Engine: <span>$0.00</span> Slippage &middot;{' '}
-              <span>&lt;100ms</span> Execution
+              Launch With Clear Rules: <span>$99</span> entry &middot;{' '}
+              <span>$2K-$20K</span> funded accounts &middot;{' '}
+              <span>BTC / ETH / SOL / XRP</span> liquid majors first
             </div>
           </div>
           <PayoutTicker />
         </section>
 
+        {/* ── FUNDING TIERS ── */}
+        <div className="container">
+          <section className="pricing-section" id="tiers">
+            <div className="section-label">Funding Tiers</div>
+            <h2 className="section-title">
+              Three launch plans built for traders who want a credible first
+              step.
+            </h2>
+            <div className="pricing-grid">
+              {launchTiers.map((tier, index) => (
+                <article
+                  className={`pricing-card ${index === 0 ? 'featured' : ''}`}
+                  key={tier.name}
+                >
+                  <div className="pricing-card-top">
+                    <div>
+                      <p className="pricing-tier">{tier.name}</p>
+                      <h3 className="pricing-fee">{tier.fee}</h3>
+                    </div>
+                    <span className="pricing-funded">{tier.funded} funded</span>
+                  </div>
+                  <p className="pricing-copy">{tier.audience}</p>
+                  <div className="pricing-points">
+                    {tier.points.map((point) => (
+                      <span className="pricing-point" key={point}>
+                        {point}
+                      </span>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+            <div className="policy-note">
+              <p>
+                These launch tiers are intentionally conservative. SOTREUS
+                should earn trust with smaller plans before expanding into
+                larger balances.
+              </p>
+              <div className="policy-links">
+                <Link href="/terms">Read Terms</Link>
+                <Link href="/privacy">Read Privacy Policy</Link>
+              </div>
+            </div>
+          </section>
+        </div>
+
         {/* ── BENTO GRID FEATURES ── */}
         <div className="container">
           <section className="features-section" id="features-section">
-            <div className="section-label">Features</div>
-            <h2 className="section-title">
-              Native Execution. Global Liquidity.
-            </h2>
+            <div className="section-label">Positioning</div>
+            <h2 className="section-title">A better first prop account for crypto traders.</h2>
             <BentoGrid />
           </section>
         </div>
 
-        {/* ── PAYOUT CTA SECTION ── */}
+        {/* ── RISK SECTION ── */}
         <div className="container">
-          <section className="payout-section" id="payout-section">
+          <section className="risk-section" id="risk-section">
+            <div className="risk-grid">
+              <div className="risk-copy">
+                <div className="section-label risk-label">Risk Controls</div>
+                <h2 className="risk-title">Smaller accounts. Stronger habits.</h2>
+                <p className="risk-body">
+                  SOTREUS should reward discipline, not lottery-style leverage.
+                  Each account needs visible loss limits, readable breach
+                  conditions, and a payout process traders can understand before
+                  they ever place a trade.
+                </p>
+                <ul className="risk-list">
+                  <li>Starter example shown: $2,000 account with a $1,900 floor.</li>
+                  <li>Higher tiers should preserve the same discipline-first logic.</li>
+                  <li>Read the live payout and verification policy before trading.</li>
+                </ul>
+              </div>
+              <DrawdownMeter equity={1978.24} floor={1900} funded={2000} />
+            </div>
+          </section>
+        </div>
+
+        {/* ── POSITIONING CTA SECTION ── */}
+        <div className="container">
+          <section className="payout-section" id="positioning-section">
+            <div className="section-label">Brand Narrative</div>
             <h2 className="payout-section-title">
-              Real Profits. Real Solana.
+              Built for traders who want clarity before they want scale.
             </h2>
             <p className="payout-section-sub">
-              Withdraw your share in USDT-SPL instantly. No withdrawal windows.
-              No delays. Your profits hit your Solana wallet the moment you
-              claim them.
+              New traders do not need louder promises. They need smaller entry
+              costs, cleaner copy, and product rules that are easy to find,
+              easy to read, and hard to misunderstand.
             </p>
             <div className="payout-cards">
-              <div className="payout-card">
-                <span className="payout-card-value font-mono">$0.00</span>
-                <span className="payout-card-label">Slippage</span>
-              </div>
-              <div className="payout-card">
-                <span className="payout-card-value font-mono">90%</span>
-                <span className="payout-card-label">Your Share</span>
-              </div>
-              <div className="payout-card">
-                <span className="payout-card-value font-mono">Instant</span>
-                <span className="payout-card-label">Settlement</span>
-              </div>
+              {positioningCards.map((card) => (
+                <div className="payout-card" key={card.value}>
+                  <span className="payout-card-value font-mono">{card.value}</span>
+                  <span className="payout-card-label">{card.label}</span>
+                </div>
+              ))}
             </div>
           </section>
         </div>
@@ -176,41 +322,22 @@ export default function Home() {
         <div className="container">
           <section className="features-section" id="how-it-works">
             <div className="section-label">How It Works</div>
-            <h2 className="section-title">Three Steps to Start Winning.</h2>
+            <h2 className="section-title">Three steps to start your prop journey.</h2>
             <div className="bento-grid">
-              <div className="bento-card">
-                <div className="bento-icon">
-                  <span className="font-mono" style={{ fontSize: '1.25rem', fontWeight: 700 }}>01</span>
+              {howItWorks.map((item) => (
+                <div className="bento-card" key={item.step}>
+                  <div className="bento-icon">
+                    <span
+                      className="font-mono"
+                      style={{ fontSize: '1.25rem', fontWeight: 700 }}
+                    >
+                      {item.step}
+                    </span>
+                  </div>
+                  <h3 className="bento-card-title">{item.title}</h3>
+                  <p className="bento-card-desc">{item.description}</p>
                 </div>
-                <h3 className="bento-card-title">Connect & Deploy</h3>
-                <p className="bento-card-desc">
-                  Connect your Solana wallet. Pay the{' '}
-                  <span className="font-mono" style={{ color: 'var(--emerald)' }}>$100</span>{' '}
-                  entry fee. Your funded account is provisioned in under 60 seconds.
-                </p>
-              </div>
-              <div className="bento-card">
-                <div className="bento-icon">
-                  <span className="font-mono" style={{ fontSize: '1.25rem', fontWeight: 700 }}>02</span>
-                </div>
-                <h3 className="bento-card-title">Trade Live Markets</h3>
-                <p className="bento-card-desc">
-                  Execute trades on BTC, ETH, SOL, and XRP perpetuals with real CEX/DEX liquidity.{' '}
-                  <span className="font-mono" style={{ color: 'var(--emerald)' }}>$2,000</span>{' '}
-                  funded capital at your fingertips.
-                </p>
-              </div>
-              <div className="bento-card">
-                <div className="bento-icon">
-                  <span className="font-mono" style={{ fontSize: '1.25rem', fontWeight: 700 }}>03</span>
-                </div>
-                <h3 className="bento-card-title">Claim Profits</h3>
-                <p className="bento-card-desc">
-                  Keep{' '}
-                  <span className="font-mono" style={{ color: 'var(--emerald)' }}>90%</span>{' '}
-                  of every dollar you earn. Withdraw your share in USDT-SPL directly to your Solana wallet — instantly.
-                </p>
-              </div>
+              ))}
             </div>
           </section>
         </div>
@@ -220,7 +347,14 @@ export default function Home() {
           <footer className="footer" id="footer">
             <div className="footer-inner">
               <div className="footer-brand">
-                © {new Date().getFullYear()} SOTREUS. All rights reserved.
+                <span>
+                  &copy; {new Date().getFullYear()} SOTREUS. Smaller crypto prop tiers
+                  for traders who want a better first step.
+                </span>
+                <div className="footer-links">
+                  <Link href="/terms">Terms</Link>
+                  <Link href="/privacy">Privacy</Link>
+                </div>
               </div>
               <div className="footer-socials">
                 <a

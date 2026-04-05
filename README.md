@@ -1,4 +1,4 @@
-# SOTREUS — PropAMM
+# SOTREUS — Prop Trading
 
 The first Prop-AMM for the fast-mover. Trade **$2,000** in funded capital. Risk **$100**. Keep **90%**.
 
