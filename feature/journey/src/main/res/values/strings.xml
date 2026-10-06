@@ -8,7 +8,7 @@
     <string name="start_sit_sub">Observe one room, venue or position.</string>
     <string name="geotag_next">Geotag next session</string>
     <string name="geotag_next_sub">Phone location, foreground only</string>
-    <string name="geotag_never">Geotagging is off in Privacy &amp; retention</string>
+    <string name="journey_geotag_never_note">Geotagging is off in Privacy &amp; retention</string>
     <string name="previous">Previous · %1$d</string>
     <string name="compare_sits">Compare sits</string>
     <string name="badge_sit">SIT</string>

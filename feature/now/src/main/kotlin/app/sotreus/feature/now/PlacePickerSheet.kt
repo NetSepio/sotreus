@@ -27,7 +27,6 @@ import app.sotreus.core.ui.InfoRow
 import app.sotreus.core.ui.InlineLink
 import app.sotreus.core.ui.MonoLabel
 import app.sotreus.core.ui.StateChip
-import app.sotreus.core.ui.TextInputDialog
 
 /** Place picker (not designed): composed from existing rows, chips and buttons. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,7 +35,7 @@ internal fun PlacePickerSheet(
     places: List<PlaceSummary>,
     currentId: Long?,
     onSelect: (Long?) -> Unit,
-    onCreate: (String) -> Unit,
+    onCreate: (String, Boolean) -> Unit,
     onDetails: (Long) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -75,15 +74,49 @@ internal fun PlacePickerSheet(
             Text(stringResource(R.string.picker_note), style = SotreusTheme.typography.caption, color = c.textDim)
         }
     }
-    if (creating) {
-        TextInputDialog(
-            title = stringResource(R.string.picker_new_title),
-            initial = "",
-            placeholder = stringResource(R.string.picker_new_hint),
-            confirm = stringResource(R.string.picker_create),
-            dismiss = stringResource(R.string.picker_cancel),
-            onConfirm = { creating = false; onCreate(it) },
-            onDismiss = { creating = false },
-        )
+    if (creating) NewPlaceDialog(onCreate = { name, withLocation -> creating = false; onCreate(name, withLocation) }, onDismiss = { creating = false })
+}
+
+/** New place: a name, and optionally this phone's current location (asked for in context). */
+@Composable
+private fun NewPlaceDialog(onCreate: (String, Boolean) -> Unit, onDismiss: () -> Unit) {
+    val c = SotreusTheme.colors
+    val context = androidx.compose.ui.platform.LocalContext.current
+    fun granted() = listOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION).any {
+        androidx.core.content.ContextCompat.checkSelfPermission(context, it) == android.content.pm.PackageManager.PERMISSION_GRANTED
     }
+    var name by remember { mutableStateOf("") }
+    var withLocation by remember { mutableStateOf(granted()) }
+    val permission = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()) { r ->
+        withLocation = r.values.any { it }
+    }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = c.surfaceRaised,
+        shape = SotreusTheme.shapes.featureCard,
+        title = { Text(stringResource(R.string.picker_new_title), style = SotreusTheme.typography.titleS.copy(fontSize = SotreusTheme.typography.titleS.fontSize * 0.8f), color = c.text) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.m)) {
+                app.sotreus.core.ui.PillField(name, { name = it }, stringResource(R.string.picker_new_hint), stringResource(R.string.picker_name_label))
+                app.sotreus.core.ui.SwitchRow(
+                    stringResource(R.string.picker_save_location),
+                    withLocation,
+                    { on ->
+                        if (on && !granted()) permission.launch(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION))
+                        else withLocation = on
+                    },
+                    subtitle = stringResource(R.string.picker_save_location_sub),
+                    bordered = false,
+                )
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = { onCreate(name.trim(), withLocation) }, enabled = name.isNotBlank()) {
+                Text(stringResource(R.string.picker_create), style = SotreusTheme.typography.button, color = if (name.isNotBlank()) c.accent else c.textDim)
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) { Text(stringResource(R.string.picker_cancel), style = SotreusTheme.typography.button, color = c.textMuted) }
+        },
+    )
 }

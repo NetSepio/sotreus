@@ -23,6 +23,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class AttentionRoute(val eventId: Long)
 @Serializable data class PlaceRoute(val placeId: Long)
 @Serializable data object PlacesRoute
+@Serializable data class PlaceMapRoute(val placeId: Long)
 
 // Sessions
 @Serializable data class SessionLiveRoute(val sessionId: Long)

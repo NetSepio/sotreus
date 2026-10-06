@@ -44,6 +44,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val forceSolana = booleanPreferencesKey("force_solana_ui")
         val presenceKey = stringPreferencesKey("presence_key_wrapped")
         val walletAuthToken = stringPreferencesKey("wallet_auth_token_wrapped")
+        val notificationsAsked = booleanPreferencesKey("notifications_asked")
     }
 
     private val store get() = context.settingsStore
@@ -89,6 +90,10 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
     suspend fun setPresenceKeyWrapped(v: String?) { store.edit { if (v == null) it.remove(Keys.presenceKey) else it[Keys.presenceKey] = v } }
     suspend fun walletAuthTokenWrapped(): String? = store.data.first()[Keys.walletAuthToken]
     suspend fun setWalletAuthTokenWrapped(v: String?) { store.edit { if (v == null) it.remove(Keys.walletAuthToken) else it[Keys.walletAuthToken] = v } }
+
+    /** The optional session-notice permission is asked for once, in context, never again. */
+    suspend fun notificationsAsked(): Boolean = store.data.first()[Keys.notificationsAsked] ?: false
+    suspend fun setNotificationsAsked() { store.edit { it[Keys.notificationsAsked] = true } }
 
     private inline fun <reified E : Enum<E>> String?.enumOr(default: E): E =
         this?.let { name -> enumValues<E>().firstOrNull { it.name == name } } ?: default

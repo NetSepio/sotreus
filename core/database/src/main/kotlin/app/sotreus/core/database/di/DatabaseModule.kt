@@ -3,6 +3,7 @@ package app.sotreus.core.database.di
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import androidx.room.Room
+import app.sotreus.core.database.Migrations
 import app.sotreus.core.database.SotreusDatabase
 import dagger.Module
 import dagger.Provides
@@ -18,6 +19,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): SotreusDatabase {
         val builder = Room.databaseBuilder(context, SotreusDatabase::class.java, SotreusDatabase.NAME)
+            .addMigrations(*Migrations.ALL)
         // Never destructive in release builds (handoff §23).
         if (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
             builder.fallbackToDestructiveMigration(dropAllTables = true)

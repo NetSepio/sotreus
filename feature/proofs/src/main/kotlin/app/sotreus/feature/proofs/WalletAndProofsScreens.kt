@@ -236,10 +236,10 @@ internal fun ProofsScreen(navigate: (Any) -> Unit, onBack: () -> Unit, vm: Proof
             MonoLabel(stringResource(R.string.stamping_kicker))
             RadioGroupRows(
                 listOf(
-                    RadioOption(StampingMode.OFF, stringResource(R.string.stamping_off)),
-                    RadioOption(StampingMode.MANUAL_ONLY, stringResource(R.string.stamping_manual)),
-                    RadioOption(StampingMode.ASK_END_JOURNEY, stringResource(R.string.stamping_journey)),
-                    RadioOption(StampingMode.ASK_END_SIT, stringResource(R.string.stamping_sit)),
+                    RadioOption(StampingMode.OFF, stringResource(R.string.proofs_stamping_off)),
+                    RadioOption(StampingMode.MANUAL_ONLY, stringResource(R.string.proofs_stamping_manual)),
+                    RadioOption(StampingMode.ASK_END_JOURNEY, stringResource(R.string.proofs_stamping_journey)),
+                    RadioOption(StampingMode.ASK_END_SIT, stringResource(R.string.proofs_stamping_sit)),
                 ),
                 state.settings.stampingMode,
                 vm::mode,

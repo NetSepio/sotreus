@@ -32,10 +32,10 @@
     <string name="airdrop_requested">Requested 1 devnet SOL. It can take a minute to arrive.</string>
     <string name="airdrop_failed">The devnet faucet refused the request. Try again later.</string>
     <string name="stamping_kicker">Proof stamping</string>
-    <string name="stamping_off">Off</string>
-    <string name="stamping_manual">Manual only</string>
-    <string name="stamping_journey">Ask at end of Journey</string>
-    <string name="stamping_sit">Ask at end of Sit</string>
+    <string name="proofs_stamping_off">Off</string>
+    <string name="proofs_stamping_manual">Manual only</string>
+    <string name="proofs_stamping_journey">Ask at end of Journey</string>
+    <string name="proofs_stamping_sit">Ask at end of Sit</string>
     <string name="stamping_note">Nothing is ever sent in the background. Every stamp is approved in your wallet.</string>
     <string name="history_kicker">Proof history</string>
     <string name="history_row">%1$d records · %2$s</string>

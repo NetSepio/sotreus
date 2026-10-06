@@ -21,6 +21,8 @@
 
     <string name="bands_disclaimer">Rings group radios by signal strength. Where a dot sits around a ring is not its direction.</string>
     <string name="bands_a11y">Proximity bands: %1$d radios grouped by signal strength. %2$d near, %3$d mid, %4$d far. %5$d new here. Positions around a ring are not directions. The List view shows the same radios.</string>
+    <string name="bands_zoom_hint">Pinch to zoom</string>
+    <string name="bands_zoom_reset">Double-tap to reset</string>
     <string name="bands_label_new">%1$s · New</string>
     <string name="bands_label_seen">%1$s · Seen before</string>
 
@@ -97,4 +99,9 @@
     <string name="picker_create">Create</string>
     <string name="picker_cancel">Cancel</string>
     <string name="picker_note">Places are user-defined. A place learns what is normal there from your visits.</string>
+    <string name="picker_save_location">Save current location</string>
+    <string name="picker_save_location_sub">Stays on this phone. You can also pick it on a map later.</string>
+    <string name="picker_name_label">Name</string>
+    <string name="picker_ok">OK</string>
+    <string name="picker_location_failed">The place was created without a location: no location fix was available.</string>
 </resources>

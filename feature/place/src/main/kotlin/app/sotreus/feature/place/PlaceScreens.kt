@@ -1,5 +1,18 @@
 package app.sotreus.feature.place
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import app.sotreus.core.navigation.PlaceMapRoute
+import app.sotreus.core.ui.DashedPanel
+import app.sotreus.core.ui.WarningBanner
+import app.sotreus.sensing.LocationSource
+import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -21,6 +34,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -37,6 +51,7 @@ import app.sotreus.core.designsystem.theme.SotreusTheme
 import app.sotreus.core.navigation.EntityRoute
 import app.sotreus.core.navigation.PlaceRoute
 import app.sotreus.core.testing.FakeSotreusData
+import app.sotreus.core.ui.AutoSizeText
 import app.sotreus.core.ui.BackTopBar
 import app.sotreus.core.ui.CaveatBox
 import app.sotreus.core.ui.ChipTone
@@ -71,17 +86,37 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import app.sotreus.core.ui.R as UiR
 
-data class PlaceUiState(val loading: Boolean = true, val view: PlaceBaselineView? = null)
+data class PlaceUiState(
+    val loading: Boolean = true,
+    val view: PlaceBaselineView? = null,
+    val mask: Boolean = true,
+    val locating: Boolean = false,
+    val noFix: Boolean = false,
+)
 
 @HiltViewModel
 class PlaceViewModel @Inject constructor(
     handle: SavedStateHandle,
     private val places: PlaceRepository,
     private val controls: DataControls,
+    private val location: LocationSource,
+    settings: SettingsRepository,
 ) : ViewModel() {
-    private val id = handle.toRoute<PlaceRoute>().placeId
-    val state: StateFlow<PlaceUiState> = places.observeBaseline(id).map { PlaceUiState(false, it) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PlaceUiState())
+    val id = handle.toRoute<PlaceRoute>().placeId
+    private val fix = MutableStateFlow(false to false)
+    val state: StateFlow<PlaceUiState> = combine(places.observeBaseline(id), settings.settings, fix) { v, s, (locating, noFix) ->
+        PlaceUiState(false, v, s.maskCoordinates, locating, noFix)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PlaceUiState())
+
+    /** One foreground fix, saved as this place's location. */
+    fun useCurrentLocation() = viewModelScope.launch {
+        fix.value = true to false
+        val f = location.currentFix()
+        if (f != null) places.setLocation(id, f.lat, f.lon)
+        fix.value = false to (f == null)
+    }
+
+    fun clearLocation() = viewModelScope.launch { places.clearLocation(id) }
 
     fun rename(name: String) = viewModelScope.launch { places.rename(id, name) }
     fun keepLearning(on: Boolean) = viewModelScope.launch { places.setKeepLearning(id, on) }
@@ -96,7 +131,26 @@ class PlaceViewModel @Inject constructor(
 @Composable
 internal fun PlaceScreen(navigate: (Any) -> Unit, onBack: () -> Unit, vm: PlaceViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
-    PlaceContent(state, onBack, vm::rename, vm::keepLearning, vm::deleteHistory, { vm.deletePlace(onBack) }, { navigate(EntityRoute(it)) })
+    val context = LocalContext.current
+    val locationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
+        if (r.values.any { it }) vm.useCurrentLocation()
+    }
+    PlaceContent(
+        state, onBack, vm::rename, vm::keepLearning, vm::deleteHistory, { vm.deletePlace(onBack) }, { navigate(EntityRoute(it)) },
+        location = {
+            LocationSection(
+                state = state,
+                onUseCurrent = {
+                    val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                    if (granted) vm.useCurrentLocation()
+                    else locationPermission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+                },
+                onPick = { navigate(PlaceMapRoute(vm.id)) },
+                onClear = vm::clearLocation,
+            )
+        },
+    )
 }
 
 /** Screen 09. Baseline rules: normally present ≥ 70 % of visits, occasional 20–70 %. */
@@ -109,6 +163,7 @@ internal fun PlaceContent(
     onDeleteHistory: () -> Unit,
     onDeletePlace: () -> Unit,
     onEntity: (String) -> Unit,
+    location: @Composable () -> Unit = {},
 ) {
     val c = SotreusTheme.colors
     var renaming by remember { mutableStateOf(false) }
@@ -123,7 +178,7 @@ internal fun PlaceContent(
         }
         Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.m)) {
             MonoLabel(stringResource(R.string.place_kicker))
-            Text(v.place.name, style = SotreusTheme.typography.displayM, color = c.text)
+            AutoSizeText(v.place.name, SotreusTheme.typography.displayM, c.text)
             Text(
                 if (v.completedVisits == 0) stringResource(R.string.place_learning_line)
                 else pluralStringResource(R.plurals.place_baseline_from, v.completedVisits, v.completedVisits, "${dayLabel(v.place.updatedAtMs).lowercase()} ${clockTime(v.place.updatedAtMs)}"),
@@ -131,6 +186,7 @@ internal fun PlaceContent(
                 color = c.textMuted,
             )
         }
+        location()
         SwitchRow(stringResource(R.string.place_keep_learning), v.place.keepLearning, onKeepLearning, subtitle = stringResource(R.string.place_keep_learning_sub))
         val newCount = v.newThisVisit.size
         Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.l)) {
@@ -211,13 +267,75 @@ private fun ChangeCard(entry: BaselineEntry, attention: Boolean, completed: Int,
     }
 }
 
+@Composable
+private fun LocationSection(state: PlaceUiState, onUseCurrent: () -> Unit, onPick: () -> Unit, onClear: () -> Unit) {
+    val c = SotreusTheme.colors
+    val context = LocalContext.current
+    val place = state.view?.place ?: return
+    var reveal by remember { mutableStateOf(false) }
+    var mapShown by remember { mutableStateOf(false) }
+    var confirmClear by remember { mutableStateOf(false) }
+    val chooser = stringResource(R.string.maps_chooser)
+    Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.m)) {
+        MonoLabel(stringResource(R.string.loc_kicker))
+        val lat = place.lat
+        val lon = place.lon
+        if (lat == null || lon == null) {
+            Text(stringResource(R.string.loc_none), style = SotreusTheme.typography.bodyS, color = c.textMuted)
+        } else {
+            app.sotreus.core.ui.SotreusCard(style = app.sotreus.core.ui.CardStyle.SURFACE, padding = 14.dp) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(
+                            if (state.mask && !reveal) stringResource(R.string.loc_masked) else stringResource(R.string.loc_coords, formatCoord(lat), formatCoord(lon)),
+                            style = SotreusTheme.typography.monoValue.copy(fontSize = SotreusTheme.typography.body.fontSize * 0.93f),
+                            color = c.text,
+                        )
+                        place.radiusM?.let { Text(stringResource(R.string.loc_radius, it), style = SotreusTheme.typography.caption, color = c.textMuted) }
+                    }
+                    if (state.mask && !reveal) InlineLink(stringResource(R.string.loc_reveal), { reveal = true })
+                }
+            }
+            if (mapShown) {
+                PlaceMap(lat, lon, 15.5, stringResource(R.string.map_a11y, place.name), Modifier.fillMaxWidth().height(200.dp))
+                Text(stringResource(R.string.map_attribution), style = SotreusTheme.typography.monoLabelS, color = c.textDim)
+            } else {
+                DashedPanel {
+                    Text(stringResource(R.string.map_note), style = SotreusTheme.typography.caption, color = c.textMuted)
+                    GhostButton(stringResource(R.string.map_show), { mapShown = true }, Modifier.padding(top = 8.dp, bottom = 10.dp), minHeight = 44.dp, strong = true)
+                }
+            }
+        }
+        if (state.noFix) WarningBanner(stringResource(R.string.loc_no_fix))
+        Row(horizontalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.m)) {
+            GhostButton(
+                stringResource(if (state.locating) R.string.loc_locating else R.string.loc_use_current),
+                onUseCurrent, Modifier.weight(1f), enabled = !state.locating, minHeight = 44.dp, strong = true,
+            )
+            GhostButton(stringResource(R.string.loc_pick), onPick, Modifier.weight(1f), minHeight = 44.dp, strong = true)
+        }
+        if (lat != null && lon != null) {
+            Row(horizontalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.m)) {
+                GhostButton(stringResource(R.string.loc_open_maps), { openInMaps(context, lat, lon, place.name, chooser) }, Modifier.weight(1f), minHeight = 44.dp)
+                GhostButton(stringResource(R.string.loc_clear), { confirmClear = true }, Modifier.weight(1f), minHeight = 44.dp)
+            }
+        }
+    }
+    if (confirmClear) {
+        ConfirmDialog(
+            stringResource(R.string.loc_clear_title), stringResource(R.string.loc_clear_body), stringResource(R.string.loc_remove), stringResource(UiR.string.core_ui_cancel),
+            { confirmClear = false; onClear() }, { confirmClear = false },
+        )
+    }
+}
+
 // --- Places list ---------------------------------------------------------------------------
 
-data class PlacesUiState(val places: List<PlaceSummary> = emptyList(), val currentId: Long? = null)
+data class PlacesUiState(val places: List<PlaceSummary> = emptyList(), val currentId: Long? = null, val mask: Boolean = true)
 
 @HiltViewModel
 class PlacesViewModel @Inject constructor(private val places: PlaceRepository, settings: SettingsRepository) : ViewModel() {
-    val state: StateFlow<PlacesUiState> = combine(places.observePlaces(), settings.settings) { p, s -> PlacesUiState(p, s.currentPlaceId) }
+    val state: StateFlow<PlacesUiState> = combine(places.observePlaces(), settings.settings) { p, s -> PlacesUiState(p, s.currentPlaceId, s.maskCoordinates) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PlacesUiState())
 
     fun create(name: String) = viewModelScope.launch { places.create(name, select = false) }
@@ -234,7 +352,13 @@ internal fun PlacesScreen(navigate: (Any) -> Unit, onBack: () -> Unit, vm: Place
         if (state.places.isEmpty()) CaveatBox(stringResource(R.string.places_kicker), stringResource(R.string.places_empty))
         Column {
             state.places.forEach { p ->
-                InfoRow(p.place.name, subtitle = pluralStringResource(R.plurals.places_visits, p.visits, p.visits), onClick = { navigate(PlaceRoute(p.place.id)) }) {
+                val visits = pluralStringResource(R.plurals.places_visits, p.visits, p.visits)
+                val where = when {
+                    p.place.lat == null || p.place.lon == null -> stringResource(R.string.places_no_location)
+                    state.mask -> stringResource(R.string.places_location_saved)
+                    else -> stringResource(R.string.loc_coords, "%.3f".format(p.place.lat), "%.3f".format(p.place.lon))
+                }
+                InfoRow(p.place.name, subtitle = "$visits · $where", onClick = { navigate(PlaceRoute(p.place.id)) }) {
                     if (p.place.id == state.currentId) StateChip(stringResource(R.string.places_current), ChipTone.ACCENT_FILLED)
                 }
             }

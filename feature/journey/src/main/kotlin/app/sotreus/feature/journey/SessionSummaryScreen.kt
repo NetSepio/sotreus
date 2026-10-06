@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -32,6 +33,7 @@ import app.sotreus.core.model.SolanaCluster
 import app.sotreus.core.navigation.CompareRoute
 import app.sotreus.core.navigation.SessionRoute
 import app.sotreus.core.navigation.StampRoute
+import app.sotreus.core.ui.AutoSizeText
 import app.sotreus.core.ui.BackTopBar
 import app.sotreus.core.ui.CaveatBox
 import app.sotreus.core.ui.ConfirmDialog
@@ -97,7 +99,7 @@ internal fun SessionSummaryScreen(navigate: (Any) -> Unit, onBack: () -> Unit, v
         val end = s.endedAtMs ?: System.currentTimeMillis()
         Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.m)) {
             MonoLabel(stringResource(if (s.kind == SessionKind.JOURNEY) R.string.summary_kicker_journey else R.string.summary_kicker_sit, durationLabel(end - s.startedAtMs)))
-            Text(s.name, style = SotreusTheme.typography.title, color = SotreusTheme.colors.text)
+            AutoSizeText(s.name, SotreusTheme.typography.title, SotreusTheme.colors.text)
             Text(
                 stringResource(R.string.summary_when, dayLabel(s.startedAtMs), clockTime(s.startedAtMs), clockTime(end)),
                 style = SotreusTheme.typography.body,

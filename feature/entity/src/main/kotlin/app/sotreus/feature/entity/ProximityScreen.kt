@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -43,6 +44,7 @@ import app.sotreus.core.model.ProximityCue
 import app.sotreus.core.model.RadioKind
 import app.sotreus.core.navigation.ProximityRoute
 import app.sotreus.core.testing.FakeSotreusData
+import app.sotreus.core.ui.AutoSizeText
 import app.sotreus.core.ui.BackTopBar
 import app.sotreus.core.ui.CaveatBox
 import app.sotreus.core.ui.ChipTone
@@ -159,7 +161,7 @@ internal fun ProximityContent(state: ProximityUiState, tick: Boolean, onTick: (B
         BackTopBar(onBack = onStop) { StatusPill(stringResource(R.string.prox_listening), filled = false) }
         Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.s)) {
             MonoLabel(stringResource(R.string.prox_kicker))
-            Text(e?.let { entityTitle(it.userName, it.advertisedName, it.radio, it.family) } ?: "", style = SotreusTheme.typography.titleS, color = c.text)
+            AutoSizeText(e?.let { entityTitle(it.userName, it.advertisedName, it.radio, it.family) } ?: "", SotreusTheme.typography.titleS, c.text)
         }
         if (e != null && e.radio != RadioKind.BLE) {
             CaveatBox(stringResource(R.string.prox_kicker), stringResource(R.string.prox_not_ble))

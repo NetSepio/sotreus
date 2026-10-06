@@ -32,8 +32,8 @@ import app.sotreus.core.database.entity.VisitEntityEntity
  * The single on-device store. Everything here stays on the phone; network clients never take
  * these entities (architecture handoff §26). Timestamps are UTC epoch milliseconds.
  *
- * Schema 1 is the first shipped schema. From here on every change needs an explicit migration;
- * only debuggable builds may fall back to a destructive rebuild.
+ * Every schema change ships with an explicit migration ([Migrations]); only debuggable builds may
+ * fall back to a destructive rebuild when no migration exists.
  */
 @Database(
     entities = [
@@ -58,7 +58,7 @@ abstract class SotreusDatabase : RoomDatabase() {
     abstract fun proofDao(): ProofDao
 
     companion object {
-        const val SCHEMA_VERSION = 1
+        const val SCHEMA_VERSION = 2
         const val NAME = "sotreus.db"
     }
 }

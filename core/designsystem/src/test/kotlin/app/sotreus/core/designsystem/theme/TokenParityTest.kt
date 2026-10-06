@@ -15,14 +15,30 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
-/** Keeps the Compose theme in lockstep with `design/tokens.json`, the design's source of truth. */
+/**
+ * Keeps the Compose theme in lockstep with the design tokens. The module carries its own copy of the
+ * token spec (`src/test/resources/sotreus-tokens.json`) so this runs in CI; where the handoff kit's
+ * `design/tokens.json` is present locally, the copy must match it too.
+ */
 class TokenParityTest {
 
-    private val tokens: JsonObject by lazy {
-        val file = generateSequence(File("").absoluteFile) { it.parentFile }
+    private val specText: String by lazy {
+        requireNotNull(javaClass.classLoader?.getResource("sotreus-tokens.json")) { "sotreus-tokens.json missing from test resources" }.readText()
+    }
+
+    private val tokens: JsonObject by lazy { Json.parseToJsonElement(specText).jsonObject }
+
+    @Test
+    fun bundledSpecMatchesHandoffKitWhenPresent() {
+        val handoff = generateSequence(File("").absoluteFile) { it.parentFile }
             .map { File(it, "design/tokens.json") }
-            .first { it.isFile }
-        Json.parseToJsonElement(file.readText()).jsonObject
+            .firstOrNull { it.isFile }
+            ?: return // The handoff kit is not checked in; nothing to compare against (e.g. CI).
+        assertEquals(
+            "core/designsystem/src/test/resources/sotreus-tokens.json is out of date with design/tokens.json",
+            Json.parseToJsonElement(handoff.readText()),
+            Json.parseToJsonElement(specText),
+        )
     }
 
     @Test

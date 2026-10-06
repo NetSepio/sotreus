@@ -191,6 +191,21 @@ class PlaceRepository @Inject constructor(
         places.get(id)?.let { places.update(it.copy(name = name.trim(), updatedAtMs = System.currentTimeMillis())) }
     }
 
+    /** Saves the place's location. Coordinates stay on this phone. */
+    suspend fun setLocation(id: Long, lat: Double, lon: Double, radiusM: Int? = null) {
+        places.get(id)?.let { places.update(it.copy(lat = lat, lon = lon, radiusM = radiusM ?: it.radiusM ?: DEFAULT_RADIUS_M, updatedAtMs = System.currentTimeMillis())) }
+    }
+
+    suspend fun clearLocation(id: Long) {
+        places.get(id)?.let { places.update(it.copy(lat = null, lon = null, radiusM = null)) }
+    }
+
+    suspend fun createWithLocation(name: String, lat: Double?, lon: Double?, select: Boolean = true): Long {
+        val id = create(name, select)
+        if (lat != null && lon != null) setLocation(id, lat, lon)
+        return id
+    }
+
     suspend fun setKeepLearning(id: Long, keep: Boolean) {
         places.get(id)?.let { places.update(it.copy(keepLearning = keep)) }
     }
@@ -227,4 +242,8 @@ class PlaceRepository @Inject constructor(
     suspend fun currentPlace(): PlaceEntity? = settings.settings.first().currentPlaceId?.let { places.get(it) }
 
     private data class Quad<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)
+
+    companion object {
+        const val DEFAULT_RADIUS_M = 150
+    }
 }

@@ -80,7 +80,11 @@ class NowViewModel @Inject constructor(
     private val settings: SettingsRepository,
     private val placeRepository: PlaceRepository,
     attention: AttentionRepository,
+    private val location: app.sotreus.sensing.LocationSource,
 ) : ViewModel() {
+    /** Set when a place was created but no location fix was available. */
+    val locationFailed = MutableStateFlow(false)
+
     private val filter = MutableStateFlow(NowFilter.ALL)
     private val sort = MutableStateFlow(NowSort.STRONGEST)
 
@@ -98,5 +102,9 @@ class NowViewModel @Inject constructor(
     fun setFilter(f: NowFilter) { filter.value = f }
     fun setSort(s: NowSort) { sort.value = s }
     fun selectPlace(id: Long?) = viewModelScope.launch { placeRepository.select(id) }
-    fun createPlace(name: String) = viewModelScope.launch { placeRepository.create(name, select = true) }
+    fun createPlace(name: String, withLocation: Boolean) = viewModelScope.launch {
+        val fix = if (withLocation) location.currentFix() else null
+        placeRepository.createWithLocation(name, fix?.lat, fix?.lon, select = true)
+        locationFailed.value = withLocation && fix == null
+    }
 }

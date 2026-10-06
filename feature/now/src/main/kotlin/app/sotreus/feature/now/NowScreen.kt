@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.sotreus.core.data.live.LiveRadio
@@ -39,6 +40,7 @@ import app.sotreus.core.navigation.EntityRoute
 import app.sotreus.core.navigation.PermissionsRoute
 import app.sotreus.core.navigation.PlaceRoute
 import app.sotreus.core.testing.FakeSotreusData
+import app.sotreus.core.ui.AutoSizeText
 import app.sotreus.core.ui.AttentionRowCard
 import app.sotreus.core.ui.BandDot
 import app.sotreus.core.ui.BandLabels
@@ -76,7 +78,20 @@ import app.sotreus.core.ui.R as UiR
 @Composable
 internal fun NowScreen(navigate: (Any) -> Unit, vm: NowViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val locationFailed by vm.locationFailed.collectAsStateWithLifecycle()
     var picker by remember { mutableStateOf(false) }
+    if (locationFailed) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { vm.locationFailed.value = false },
+            containerColor = SotreusTheme.colors.surfaceRaised,
+            text = { Text(stringResource(R.string.picker_location_failed), style = SotreusTheme.typography.body, color = SotreusTheme.colors.text) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { vm.locationFailed.value = false }) {
+                    Text(stringResource(R.string.picker_ok), color = SotreusTheme.colors.accent)
+                }
+            },
+        )
+    }
     NowContent(
         state = state,
         onView = vm::setView,
@@ -92,7 +107,7 @@ internal fun NowScreen(navigate: (Any) -> Unit, vm: NowViewModel = hiltViewModel
             places = state.places,
             currentId = state.snapshot.placeId,
             onSelect = { vm.selectPlace(it); picker = false },
-            onCreate = { vm.createPlace(it); picker = false },
+            onCreate = { name, withLocation -> vm.createPlace(name, withLocation); picker = false },
             onDetails = { id -> picker = false; navigate(PlaceRoute(id)) },
             onDismiss = { picker = false },
         )
@@ -155,12 +170,8 @@ private fun Header(state: NowUiState, onPlace: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             MonoLabel(stringResource(R.string.now_place_kicker), small = true)
-            Text(
-                placeName,
-                style = SotreusTheme.typography.titleS.copy(lineHeight = SotreusTheme.typography.titleS.fontSize),
-                color = c.text,
-                maxLines = 1,
-            )
+            // Long place names step down in size instead of being cut off.
+            AutoSizeText(placeName, SotreusTheme.typography.titleS, c.text)
         }
         val pill = when {
             !state.snapshot.observing -> stringResource(R.string.now_paused)
@@ -196,7 +207,8 @@ private fun BandsView(state: NowUiState, onEntity: (String) -> Unit, onAttention
     val live = state.snapshot.radios
     val labelled = live.filter { it.needsAttention || it.userState == UserEntityState.TAGGED || it.userState == UserEntityState.WATCH }
         .sortedByDescending { it.needsAttention }.take(3).map { it.entityId }.toSet()
-    val shown = live.sortedByDescending { it.needsAttention || it.entityId in labelled }.take(BandLayout.MAX_DOTS)
+    // Priority order: attention and tagged first, then strongest, so the full-view cap keeps what matters.
+    val shown = live.sortedWith(compareByDescending<app.sotreus.core.data.live.LiveRadio> { it.needsAttention || it.entityId in labelled }.thenByDescending { it.avgRssi30 })
     val dots = shown.map { r ->
         val title = entityTitle(r.userName, r.advertisedName, r.kind, r.family)
         val labelBase = if (r.userName == null && r.advertisedName == null && r.family != null) {
@@ -210,6 +222,7 @@ private fun BandsView(state: NowUiState, onEntity: (String) -> Unit, onAttention
             angle = BandLayout.angleRadians(r.entityId),
             radial = BandLayout.radialJitter(r.entityId),
             glyph = glyphFor(r.kind, r.userState, r.presence, r.stale, r.needsAttention),
+            zoomLabel = labelBase,
             label = if (r.entityId in labelled) {
                 if (r.presence == PresenceState.NEW) stringResource(R.string.bands_label_new, labelBase) else stringResource(R.string.bands_label_seen, labelBase)
             } else {
@@ -220,11 +233,13 @@ private fun BandsView(state: NowUiState, onEntity: (String) -> Unit, onAttention
     val near = dots.count { it.band == app.sotreus.core.model.ProximityBand.NEAR }
     val mid = dots.count { it.band == app.sotreus.core.model.ProximityBand.MID }
     ProximityBands(
-        dots = dots,
-        overflow = (live.size - shown.size).coerceAtLeast(0),
+        allDots = dots,
+        fullViewLimit = BandLayout.MAX_DOTS,
         labels = BandLabels(stringResource(UiR.string.band_near), stringResource(UiR.string.band_mid), stringResource(UiR.string.band_far), stringResource(UiR.string.band_you)),
         contentDescription = stringResource(R.string.bands_a11y, live.size, near, mid, dots.size - near - mid, state.changed),
         onDotClick = onEntity,
+        zoomHint = stringResource(R.string.bands_zoom_hint),
+        resetLabel = stringResource(R.string.bands_zoom_reset),
     )
     Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.s)) {
         GlyphLegend(
@@ -318,7 +333,7 @@ private fun RadioRow(r: LiveRadio, now: Long, onEntity: (String) -> Unit) {
     val title = entityTitle(r.userName, r.advertisedName, r.kind, r.family)
     val subtitle = when {
         r.kind == RadioKind.WIFI -> stringResource(R.string.row_subtitle_wifi, securityShort(r.security), bandOf(r.frequencyMhz))
-        r.family != null && r.otherPlaces > 0 -> stringResource(R.string.row_subtitle_family, familyName(r.family!!), seenAtPlaces(r.otherPlaces + 1))
+        r.family != null && r.otherPlaces > 0 -> stringResource(R.string.row_subtitle_family, app.sotreus.core.ui.familyAdjective(r.family!!), seenAtPlaces(r.otherPlaces + 1))
         r.family != null -> stringResource(R.string.row_subtitle_signature, familySignature(r.family!!), stringResource(UiR.string.entity_ble_short))
         else -> stringResource(R.string.row_subtitle_signature, stringResource(UiR.string.entity_no_class), stringResource(if (r.randomAddress) UiR.string.entity_random_address else UiR.string.entity_public_address))
     }

@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -47,6 +48,7 @@ import app.sotreus.core.navigation.EvidenceRoute
 import app.sotreus.core.navigation.ProximityRoute
 import app.sotreus.core.navigation.ReceiptRoute
 import app.sotreus.core.testing.FakeSotreusData
+import app.sotreus.core.ui.AutoSizeText
 import app.sotreus.core.ui.BackTopBar
 import app.sotreus.core.ui.CardStyle
 import app.sotreus.core.ui.CaveatBox
@@ -208,7 +210,7 @@ internal fun EntityContent(
         Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.l)) {
             MonoLabel(stringResource(if (e.radio == RadioKind.WIFI) R.string.entity_kicker_wifi else R.string.entity_kicker_ble))
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.l)) {
-                Text(title, style = SotreusTheme.typography.displayM, color = c.text, modifier = Modifier.weight(1f, fill = false).semantics { heading() })
+                AutoSizeText(title, SotreusTheme.typography.displayM, c.text, Modifier.weight(1f, fill = false).semantics { heading() })
                 IconButton(onClick = { renaming = true }, modifier = Modifier.size(SotreusTheme.sizes.minTouch)) {
                     Icon(SotreusIcons.Edit, contentDescription = stringResource(R.string.entity_rename), tint = c.textMuted, modifier = Modifier.size(SotreusTheme.sizes.iconSize))
                 }

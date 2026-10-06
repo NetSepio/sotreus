@@ -50,7 +50,6 @@ import app.sotreus.core.navigation.ProfileRoute
 import app.sotreus.core.navigation.ProofsRoute
 import app.sotreus.core.navigation.SensorsRoute
 import app.sotreus.core.navigation.SignaturesRoute
-import app.sotreus.core.navigation.WalletRoute
 import app.sotreus.core.testing.FakeSotreusData
 import app.sotreus.core.ui.Avatar
 import app.sotreus.core.ui.CardStyle
@@ -211,7 +210,7 @@ private fun ProfileCard(state: SettingsUiState, navigate: (Any) -> Unit) {
     val c = SotreusTheme.colors
     val name = state.profile?.displayName
     val wallet = state.wallet
-    SotreusCard(style = CardStyle.OUTLINE_STRONG, large = true, onClick = { navigate(if (state.solanaDevice && wallet == null) WalletRoute else ProfileRoute) }, padding = 14.dp) {
+    SotreusCard(style = CardStyle.OUTLINE_STRONG, large = true, onClick = { navigate(ProfileRoute) }, padding = 14.dp) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             if (name != null) {
                 Avatar(name, size = 48.dp, serif = true)

@@ -96,6 +96,14 @@ class SessionsViewModel @Inject constructor(
 
     fun setGeotag(on: Boolean) = viewModelScope.launch { settings.setGeotagNextSession(on) }
 
+    /** Calls [ask] only the first time a session starts without the notification permission. */
+    fun askNotificationsOnce(ask: () -> Unit) = viewModelScope.launch {
+        if (!settings.notificationsAsked()) {
+            settings.setNotificationsAsked()
+            ask()
+        }
+    }
+
     fun start(kind: SessionKind, geotag: Boolean, label: String, labelNoPlace: String, onStarted: (Long) -> Unit) = viewModelScope.launch {
         onStarted(sessions.start(kind, geotag, label, labelNoPlace))
     }
@@ -120,7 +128,7 @@ internal fun SessionsScreen(navigate: (Any) -> Unit, vm: SessionsViewModel = hil
         // The session notice is optional; ask for it in context, once.
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        ) vm.askNotificationsOnce { notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) }
         val label = if (kind == SessionKind.JOURNEY) "$labelJourney · $partOfDay" else partOfDay
         val labelNoPlace = if (kind == SessionKind.JOURNEY) "$labelJourney · $partOfDay" else "$labelSit · $partOfDay"
         vm.start(kind, state.geotagOn && hasLocation(), label, labelNoPlace) { navigate(SessionLiveRoute(it)) }
@@ -172,7 +180,7 @@ internal fun SessionsContent(
             stringResource(R.string.geotag_next),
             state.geotagOn,
             onGeotag,
-            subtitle = stringResource(if (state.settings.geotagMode == GeotagMode.NEVER) R.string.geotag_never else R.string.geotag_next_sub),
+            subtitle = stringResource(if (state.settings.geotagMode == GeotagMode.NEVER) R.string.journey_geotag_never_note else R.string.geotag_next_sub),
             enabled = state.settings.geotagMode == GeotagMode.ASK_EACH_TIME,
         )
         Column {

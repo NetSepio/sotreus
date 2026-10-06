@@ -92,6 +92,10 @@ data class PlaceEntity(
     @ColumnInfo(name = "created_at_ms") val createdAtMs: Long,
     @ColumnInfo(name = "keep_learning") val keepLearning: Boolean = true,
     @ColumnInfo(name = "updated_at_ms") val updatedAtMs: Long,
+    /** Where the place is, set by the user (current location or map pick). On this phone only. */
+    val lat: Double? = null,
+    val lon: Double? = null,
+    @ColumnInfo(name = "radius_m") val radiusM: Int? = null,
 )
 
 @Entity(tableName = "place_visits", indices = [Index("place_id")])

@@ -44,4 +44,33 @@
     </plurals>
     <string name="places_empty">No places yet. Create one here or from the place picker on Now.</string>
     <string name="places_kicker">Places</string>
+
+    <!-- Place location -->
+    <string name="loc_kicker">Location</string>
+    <string name="loc_none">No location saved. A location helps you recognise the place; it never leaves this phone.</string>
+    <string name="loc_coords">%1$s, %2$s</string>
+    <string name="loc_radius">Within about %1$d m</string>
+    <string name="loc_masked">Coordinates masked</string>
+    <string name="loc_reveal">Show</string>
+    <string name="loc_use_current">Use current location</string>
+    <string name="loc_locating">Getting a location fix…</string>
+    <string name="loc_no_fix">No location fix. Check that Location is on, then try again.</string>
+    <string name="loc_pick">Pick on map</string>
+    <string name="loc_open_maps">Open in maps</string>
+    <string name="loc_clear">Remove location</string>
+    <string name="loc_clear_title">Remove this place’s location?</string>
+    <string name="loc_clear_body">Only the saved coordinates are removed. Visits, baseline and history stay.</string>
+    <string name="loc_remove">Remove</string>
+    <string name="map_show">Show map</string>
+    <string name="map_note">The map loads tiles from OpenFreeMap over the internet, which can reveal the area being shown to the tile server. Places and observations are never sent.</string>
+    <string name="map_a11y">Map around %1$s. The pin marks the saved location.</string>
+    <string name="map_attribution">Map data © OpenStreetMap contributors · OpenFreeMap</string>
+    <string name="map_picker_title">Pick location</string>
+    <string name="map_picker_lead">Move the map so the pin sits on %1$s.</string>
+    <string name="map_picker_save">Save location</string>
+    <string name="map_picker_center">Centre on my location</string>
+    <string name="map_picker_offline">The map couldn’t load. You can still save your current location without it.</string>
+    <string name="places_no_location">no location</string>
+    <string name="places_location_saved">location saved</string>
+    <string name="maps_chooser">Open location in</string>
 </resources>

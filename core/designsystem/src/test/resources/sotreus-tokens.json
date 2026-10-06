@@ -1,0 +1,106 @@
+{
+  "name": "Sotreus Night Instrument",
+  "version": "1.0.0",
+  "theme": "dark-only",
+  "color": {
+    "ink": "#0B0E13",
+    "surface": "#0D1117",
+    "surfaceRaised": "#10141B",
+    "surfaceHigh": "#121721",
+    "surfaceBanner": "#1A1F28",
+    "lineSubtle": "#161B23",
+    "line": "#1E2530",
+    "lineNav": "#1A2029",
+    "lineMid": "#232A36",
+    "lineStrong": "#2F3846",
+    "text": "#E9E6DF",
+    "textSoft": "#C9CBCF",
+    "textMuted": "#A3A7AE",
+    "textDim": "#7C828C",
+    "accent": "#F2B33D",
+    "sensed": "#F2B33D",
+    "accentTint": "#1FF2B33D",
+    "accentNavPill": "#29F2B33D",
+    "attentionSurface": "#15130E",
+    "attentionSurfaceLarge": "#13110C",
+    "attentionLine": "#3B3220",
+    "attentionDivider": "#2A2418",
+    "familiarGlyph": "#5B626D",
+    "destructive": "#F59A8C",
+    "onAccent": "#0B0E13",
+    "reservedV11Network": "#6CB8F0",
+    "reservedV11Predicted": "#B9A6FF"
+  },
+  "colorNotes": {
+    "accentTint": "ARGB: accent at 12% alpha",
+    "accentNavPill": "ARGB: accent at 16% alpha",
+    "familiarGlyph": "glyphs only, never text",
+    "reservedV11Network": "define in theme, do not use in V1",
+    "reservedV11Predicted": "define in theme, do not use in V1"
+  },
+  "font": {
+    "display": "Instrument Serif",
+    "body": "Geist",
+    "mono": "Geist Mono",
+    "source": "bundle TTFs in res/font (SIL OFL); no downloadable fonts"
+  },
+  "type": {
+    "displayXL": {"font": "display", "weight": 400, "size": 72, "lineHeight": 1.0},
+    "displayL": {"font": "display", "weight": 400, "size": 48, "lineHeight": 0.98},
+    "displayM": {"font": "display", "weight": 400, "size": 44, "lineHeight": 1.0},
+    "title": {"font": "display", "weight": 400, "size": 40, "lineHeight": 1.0},
+    "titleS": {"font": "display", "weight": 400, "size": 34, "lineHeight": 1.05},
+    "bodyL": {"font": "body", "weight": 400, "size": 16, "lineHeight": 1.55},
+    "body": {"font": "body", "weight": 400, "size": 15, "lineHeight": 1.55},
+    "rowTitle": {"font": "body", "weight": 500, "size": 14.5, "lineHeight": 1.3},
+    "bodyS": {"font": "body", "weight": 400, "size": 13, "lineHeight": 1.5},
+    "caption": {"font": "body", "weight": 400, "size": 12, "lineHeight": 1.45},
+    "buttonPrimary": {"font": "body", "weight": 600, "size": 16},
+    "button": {"font": "body", "weight": 500, "size": 15},
+    "monoLabel": {"font": "mono", "weight": 400, "size": 11, "letterSpacingEm": 0.14, "case": "upper"},
+    "monoLabelS": {"font": "mono", "weight": 400, "size": 10, "letterSpacingEm": 0.14, "case": "upper"},
+    "monoValue": {"font": "mono", "weight": 400, "size": 12},
+    "monoTimer": {"font": "mono", "weight": 500, "size": 44}
+  },
+  "radius": {
+    "glyphWell": 10,
+    "tile": 12,
+    "listCard": 14,
+    "panel": 16,
+    "featureCard": 20,
+    "hero": 24,
+    "pill": 999
+  },
+  "spacing": {
+    "screenH": 20,
+    "screenTop": 24,
+    "screenBottom": 28,
+    "section": 18,
+    "xs": 4,
+    "s": 6,
+    "m": 8,
+    "l": 10,
+    "xl": 12,
+    "xxl": 16
+  },
+  "size": {
+    "minTouch": 44,
+    "buttonPrimary": 52,
+    "buttonSecondary": 48,
+    "chip": 32,
+    "navItem": 56,
+    "navPill": {"w": 56, "h": 30},
+    "iconStroke": 1.6,
+    "iconSize": 22
+  },
+  "proximityBands": {
+    "nearMinDbm": -60,
+    "midMinDbm": -75,
+    "rssiAverageWindowSeconds": 30,
+    "angle": "stable hash of entity id; never a bearing"
+  },
+  "freshness": {
+    "bleStaleHoldSecondsDefault": 30,
+    "wifiForegroundScanLimit": "4 per 2 minutes (Android 9+)"
+  }
+}

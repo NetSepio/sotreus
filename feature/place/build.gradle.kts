@@ -5,3 +5,8 @@ plugins {
 android {
     namespace = "app.sotreus.feature.place"
 }
+
+dependencies {
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.maplibre.android)
+}
