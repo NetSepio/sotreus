@@ -109,13 +109,14 @@ jobs:
           sdk="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
           bt=$(find "$sdk/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
           fingerprint() {
-            "$bt/apksigner" verify --print-certs "$1" | awk -F': ' '/certificate SHA-256 digest/ { print $2; exit }'
+            "$bt/apksigner" verify --print-certs "$1" | awk '/certificate SHA-256 digest/ { print $NF; exit }'
           }
           generic=$(fingerprint app/build/outputs/apk/generic/release/app-generic-release.apk)
           solana=$(fingerprint app/build/outputs/apk/solanaMobile/release/app-solanaMobile-release.apk)
           echo "generic APK certificate SHA-256: $generic"
           echo "solanaMobile APK certificate SHA-256: $solana"
-          if [ -z "$generic" ] || [ -z "$solana" ]; then
+          hex64='^[0-9a-f]{64}$'
+          if ! [[ "$generic" =~ $hex64 ]] || ! [[ "$solana" =~ $hex64 ]]; then
             echo "Could not read a certificate from one of the APKs."
             exit 1
           fi
