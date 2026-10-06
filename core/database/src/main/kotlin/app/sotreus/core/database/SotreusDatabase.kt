@@ -14,6 +14,12 @@ import app.sotreus.core.database.dao.SessionDao
 import app.sotreus.core.database.entity.AttentionEventEntity
 import app.sotreus.core.database.entity.ContextEventEntity
 import app.sotreus.core.database.dao.ContextDao
+import app.sotreus.core.database.dao.TrackingDao
+import app.sotreus.core.database.entity.FindSightingEntity
+import app.sotreus.core.database.entity.LostReportEntity
+import app.sotreus.core.database.entity.WitnessAttestationEntity
+import app.sotreus.core.database.entity.WitnessHeardEntity
+import app.sotreus.core.database.entity.WitnessSlotEntity
 import app.sotreus.core.database.entity.EncounterEntity
 import app.sotreus.core.database.entity.EntityEntity
 import app.sotreus.core.database.entity.FriendEntity
@@ -43,7 +49,8 @@ import app.sotreus.core.database.entity.VisitEntityEntity
         PlaceVisitEntity::class, VisitEntityEntity::class, SessionEntity::class, SessionEntityEntity::class,
         SessionEventEntity::class, SessionLocationEntity::class, AttentionEventEntity::class,
         LocalProfileEntity::class, LinkedIdentityEntity::class, FriendEntity::class, ProofBatchEntity::class,
-        ProofLeafEntity::class, ContextEventEntity::class,
+        ProofLeafEntity::class, ContextEventEntity::class, LostReportEntity::class, FindSightingEntity::class,
+        WitnessHeardEntity::class, WitnessAttestationEntity::class, WitnessSlotEntity::class,
     ],
     version = SotreusDatabase.SCHEMA_VERSION,
     exportSchema = true,
@@ -59,9 +66,10 @@ abstract class SotreusDatabase : RoomDatabase() {
     abstract fun friendDao(): FriendDao
     abstract fun proofDao(): ProofDao
     abstract fun contextDao(): ContextDao
+    abstract fun trackingDao(): TrackingDao
 
     companion object {
-        const val SCHEMA_VERSION = 3
+        const val SCHEMA_VERSION = 4
         const val NAME = "sotreus.db"
     }
 }

@@ -272,3 +272,85 @@ data class ContextEventEntity(
     @ColumnInfo(name = "session_id") val sessionId: Long? = null,
     @ColumnInfo(name = "entity_id") val entityId: String? = null,
 )
+
+/**
+ * A device of yours marked lost (Proofs & Tracking). The X25519 key pair receives sealed sightings;
+ * its private half and the relay delete secret are wrapped by the Keystore ([wrapped] columns).
+ */
+@Entity(tableName = "lost_reports", indices = [Index(value = ["lookup_hex"], unique = true)])
+data class LostReportEntity(
+    @PrimaryKey @ColumnInfo(name = "entity_id") val entityId: String,
+    @ColumnInfo(name = "lookup_hex") val lookupHex: String,
+    val label: String,
+    @ColumnInfo(name = "owner_public_hex") val ownerPublicHex: String,
+    @ColumnInfo(name = "owner_private_wrapped") val ownerPrivateWrapped: String,
+    @ColumnInfo(name = "delete_secret_wrapped") val deleteSecretWrapped: String,
+    @ColumnInfo(name = "created_at_ms") val createdAtMs: Long,
+    @ColumnInfo(name = "published_at_ms") val publishedAtMs: Long? = null,
+    @ColumnInfo(name = "last_polled_ms") val lastPolledMs: Long? = null,
+    /** Set when the owner marks it found; the relay entry is removed. */
+    @ColumnInfo(name = "found_at_ms") val foundAtMs: Long? = null,
+)
+
+/** Where a lost device was seen: decrypted from a finder's sealed report, or seen by this phone. */
+@Entity(
+    tableName = "find_sightings",
+    indices = [Index("entity_id"), Index(value = ["relay_id"], unique = true)],
+)
+data class FindSightingEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "entity_id") val entityId: String,
+    @ColumnInfo(name = "lookup_hex") val lookupHex: String,
+    @ColumnInfo(name = "seen_at_ms") val seenAtMs: Long,
+    @ColumnInfo(name = "received_at_ms") val receivedAtMs: Long,
+    val lat: Double? = null,
+    val lon: Double? = null,
+    @ColumnInfo(name = "accuracy_m") val accuracyM: Double? = null,
+    val rssi: Int? = null,
+    @ColumnInfo(name = "by_this_phone") val byThisPhone: Boolean = false,
+    val simulated: Boolean = false,
+    @ColumnInfo(name = "relay_id") val relayId: String? = null,
+)
+
+/** A fixed witness's rotating token heard during a session (traveller side). */
+@Entity(
+    tableName = "witness_heard",
+    indices = [Index(value = ["session_id", "token_hex"], unique = true), Index("token_hex")],
+)
+data class WitnessHeardEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "session_id") val sessionId: Long,
+    @ColumnInfo(name = "token_hex") val tokenHex: String,
+    val slot: Long,
+    @ColumnInfo(name = "first_seen_ms") val firstSeenMs: Long,
+    @ColumnInfo(name = "last_seen_ms") val lastSeenMs: Long,
+    @ColumnInfo(name = "best_rssi") val bestRssi: Int,
+    val lat: Double? = null,
+    val lon: Double? = null,
+)
+
+/** A signed witness record fetched from the relay, checked on this phone. */
+@Entity(tableName = "witness_attestations")
+data class WitnessAttestationEntity(
+    @PrimaryKey @ColumnInfo(name = "token_hex") val tokenHex: String,
+    val slot: Long,
+    @ColumnInfo(name = "witness_public_hex") val witnessPublicHex: String,
+    val lat: Double,
+    val lon: Double,
+    @ColumnInfo(name = "published_at_ms") val publishedAtMs: Long,
+    @ColumnInfo(name = "signature_hex") val signatureHex: String,
+    /** Signature checks out and the token and slot match what was heard. */
+    val valid: Boolean,
+    @ColumnInfo(name = "fetched_at_ms") val fetchedAtMs: Long,
+)
+
+/** One slot this phone broadcast as a witness (witness side), and whether its record is published. */
+@Entity(tableName = "witness_slots")
+data class WitnessSlotEntity(
+    @PrimaryKey val slot: Long,
+    @ColumnInfo(name = "token_hex") val tokenHex: String,
+    @ColumnInfo(name = "place_id") val placeId: Long,
+    val lat: Double,
+    val lon: Double,
+    @ColumnInfo(name = "published_at_ms") val publishedAtMs: Long? = null,
+)

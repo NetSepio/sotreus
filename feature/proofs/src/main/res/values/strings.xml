@@ -18,7 +18,7 @@
     <string name="wallet_unverified">The wallet returned a signature that did not verify, so the wallet was not linked.</string>
 
     <!-- S3 -->
-    <string name="proofs_title">Proofs &amp; Solana</string>
+    <string name="proofs_title">Proofs &amp; Tracking</string>
     <string name="wallet_signed_in">Wallet · signed in</string>
     <string name="switch_network">Switch network</string>
     <string name="disconnect">Disconnect</string>

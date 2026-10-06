@@ -152,7 +152,7 @@ internal fun WalletScreen(onLinked: () -> Unit, onBack: () -> Unit, vm: WalletVi
     }
 }
 
-// --- S3 Proofs & Solana -------------------------------------------------------------------
+// --- S3 Proofs & Tracking -------------------------------------------------------------------
 
 data class ProofsUiState(
     val wallet: LinkedIdentityEntity? = null,

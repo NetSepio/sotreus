@@ -11,9 +11,11 @@ import app.sotreus.core.database.entity.AttentionEventEntity
 import app.sotreus.core.database.entity.ContextEventEntity
 import app.sotreus.core.database.entity.EncounterEntity
 import app.sotreus.core.database.entity.EntityEntity
+import app.sotreus.core.database.entity.FindSightingEntity
 import app.sotreus.core.database.entity.FriendEntity
 import app.sotreus.core.database.entity.LinkedIdentityEntity
 import app.sotreus.core.database.entity.LocalProfileEntity
+import app.sotreus.core.database.entity.LostReportEntity
 import app.sotreus.core.database.entity.ObservationEntity
 import app.sotreus.core.database.entity.PlaceEntity
 import app.sotreus.core.database.entity.PlaceVisitEntity
@@ -24,6 +26,9 @@ import app.sotreus.core.database.entity.SessionEntityEntity
 import app.sotreus.core.database.entity.SessionEventEntity
 import app.sotreus.core.database.entity.SessionLocationEntity
 import app.sotreus.core.database.entity.VisitEntityEntity
+import app.sotreus.core.database.entity.WitnessAttestationEntity
+import app.sotreus.core.database.entity.WitnessHeardEntity
+import app.sotreus.core.database.entity.WitnessSlotEntity
 import app.sotreus.core.model.UserEntityState
 import kotlinx.coroutines.flow.Flow
 
@@ -585,4 +590,83 @@ interface ContextDao {
 
     @Query("DELETE FROM context_events WHERE at_ms < :beforeMs")
     suspend fun deleteOlderThan(beforeMs: Long)
+}
+
+/** Proofs & Tracking: lost devices, sightings and fixed witnesses. */
+@Dao
+interface TrackingDao {
+    // Lost devices (owner side)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertLost(report: LostReportEntity)
+
+    @Query("SELECT * FROM lost_reports WHERE entity_id = :entityId")
+    suspend fun lost(entityId: String): LostReportEntity?
+
+    @Query("SELECT * FROM lost_reports WHERE entity_id = :entityId")
+    fun observeLost(entityId: String): Flow<LostReportEntity?>
+
+    @Query("SELECT * FROM lost_reports ORDER BY found_at_ms IS NOT NULL, created_at_ms DESC")
+    fun observeLostReports(): Flow<List<LostReportEntity>>
+
+    @Query("SELECT * FROM lost_reports WHERE found_at_ms IS NULL")
+    suspend fun activeLost(): List<LostReportEntity>
+
+    @Query("DELETE FROM lost_reports WHERE entity_id = :entityId")
+    suspend fun deleteLost(entityId: String)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertSighting(s: FindSightingEntity): Long
+
+    @Query("SELECT * FROM find_sightings WHERE entity_id = :entityId ORDER BY seen_at_ms DESC")
+    fun observeSightings(entityId: String): Flow<List<FindSightingEntity>>
+
+    @Query("SELECT * FROM find_sightings ORDER BY seen_at_ms DESC")
+    fun observeAllSightings(): Flow<List<FindSightingEntity>>
+
+    @Query("DELETE FROM find_sightings WHERE entity_id = :entityId")
+    suspend fun deleteSightings(entityId: String)
+
+    // Witness (traveller side)
+    @Query("SELECT * FROM witness_heard WHERE session_id = :sessionId AND token_hex = :tokenHex")
+    suspend fun heard(sessionId: Long, tokenHex: String): WitnessHeardEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertHeard(h: WitnessHeardEntity): Long
+
+    @Query("SELECT * FROM witness_heard WHERE session_id = :sessionId ORDER BY first_seen_ms")
+    suspend fun heardForSession(sessionId: Long): List<WitnessHeardEntity>
+
+    @Query("SELECT * FROM witness_heard WHERE session_id = :sessionId ORDER BY first_seen_ms")
+    fun observeHeardForSession(sessionId: Long): Flow<List<WitnessHeardEntity>>
+
+    @Query("SELECT COUNT(*) FROM witness_heard")
+    fun observeHeardCount(): Flow<Int>
+
+    @Query("DELETE FROM witness_heard WHERE session_id = :sessionId")
+    suspend fun deleteHeardForSession(sessionId: Long)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAttestations(a: List<WitnessAttestationEntity>)
+
+    @Query("SELECT * FROM witness_attestations WHERE token_hex IN (:tokens)")
+    suspend fun attestations(tokens: List<String>): List<WitnessAttestationEntity>
+
+    // Witness (witness side)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertWitnessSlot(s: WitnessSlotEntity): Long
+
+    @Query("SELECT * FROM witness_slots WHERE published_at_ms IS NULL AND slot <= :maxSlot ORDER BY slot LIMIT 200")
+    suspend fun unpublishedSlots(maxSlot: Long): List<WitnessSlotEntity>
+
+    @Query("UPDATE witness_slots SET published_at_ms = :atMs WHERE slot IN (:slots)")
+    suspend fun markSlotsPublished(slots: List<Long>, atMs: Long)
+
+    @Query("SELECT COUNT(*) FROM witness_slots WHERE published_at_ms IS NOT NULL")
+    fun observePublishedSlotCount(): Flow<Int>
+
+    @Query("SELECT MAX(published_at_ms) FROM witness_slots")
+    fun observeLastPublishedMs(): Flow<Long?>
+
+    @Query("DELETE FROM witness_slots WHERE slot < :beforeSlot AND published_at_ms IS NOT NULL")
+    suspend fun deleteOldSlots(beforeSlot: Long)
 }

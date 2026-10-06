@@ -37,4 +37,5 @@ object DatabaseModule {
     @Provides fun friendDao(db: SotreusDatabase) = db.friendDao()
     @Provides fun proofDao(db: SotreusDatabase) = db.proofDao()
     @Provides fun contextDao(db: SotreusDatabase) = db.contextDao()
+    @Provides fun trackingDao(db: SotreusDatabase) = db.trackingDao()
 }
