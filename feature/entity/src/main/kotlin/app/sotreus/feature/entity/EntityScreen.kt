@@ -1,5 +1,7 @@
 package app.sotreus.feature.entity
 
+import androidx.compose.ui.unit.dp
+import app.sotreus.core.ui.CompactButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -216,6 +218,7 @@ internal fun EntityContent(
                 }
             }
             e.guess?.takeIf { it.isNotBlank() }?.let { Text(it, style = SotreusTheme.typography.bodyL, color = c.textSoft) }
+            AddressLine(e, state.maskCoordinates)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.s), verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.s)) {
                 StateChip(stringResource(R.string.entity_chip_confidence, confidenceLabel(e.guessConfidence)), ChipTone.NEUTRAL, small = false)
                 e.family?.let { StateChip(familySignature(it), ChipTone.NEUTRAL, small = false) }
@@ -301,6 +304,47 @@ internal fun EntityContent(
     }
 }
 
+/**
+ * The radio's address (BLE MAC or Wi-Fi BSSID), so you can recognise and label your own devices.
+ * BSSIDs follow the on-screen privacy mask until revealed. Random BLE addresses are flagged as
+ * changeable: a label sticks to this address, not to the physical device.
+ */
+@Composable
+private fun AddressLine(e: EntityEntity, mask: Boolean) {
+    val c = SotreusTheme.colors
+    val context = LocalContext.current
+    var revealed by remember(e.id) { mutableStateOf(false) }
+    var copied by remember(e.id) { mutableStateOf(false) }
+    val masked = e.radio == RadioKind.WIFI && mask && !revealed
+    val note = when {
+        e.radio == RadioKind.WIFI -> null
+        e.addressType == BleAddressType.PUBLIC -> stringResource(R.string.entity_address_public)
+        Fingerprint.randomSubtype(e.address) == Fingerprint.RandomSubtype.STATIC -> stringResource(R.string.entity_address_static)
+        else -> stringResource(R.string.entity_address_random)
+    }
+    val clipLabel = stringResource(R.string.entity_copy_label)
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.m)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            MonoLabel(stringResource(if (e.radio == RadioKind.WIFI) R.string.entity_bssid_kicker else R.string.entity_address_kicker), small = true)
+            Text(
+                if (masked) maskMac(e.address) else e.address,
+                style = SotreusTheme.typography.monoValue.copy(fontSize = SotreusTheme.typography.body.fontSize),
+                color = c.text,
+            )
+            note?.let { Text(it, style = SotreusTheme.typography.caption, color = c.textMuted) }
+        }
+        if (masked) {
+            CompactButton(stringResource(R.string.entity_show), { revealed = true })
+        } else {
+            CompactButton(stringResource(if (copied) R.string.entity_copied else R.string.entity_copy), {
+                context.getSystemService(android.content.ClipboardManager::class.java)
+                    ?.setPrimaryClip(android.content.ClipData.newPlainText(clipLabel, e.address))
+                copied = true
+            })
+        }
+    }
+}
+
 @Composable
 private fun identityText(e: EntityEntity): String = when {
     e.radio == RadioKind.WIFI -> stringResource(R.string.entity_identity_wifi)
@@ -333,6 +377,7 @@ private fun metadata(e: EntityEntity, state: EntityUiState): List<Pair<String, S
             else -> stringResource(R.string.meta_unknown)
         }
         listOf(
+            stringResource(R.string.meta_address) to e.address,
             stringResource(R.string.meta_address_type) to type,
             stringResource(R.string.meta_advertised_name) to (e.advertisedName ?: dash),
             stringResource(R.string.meta_company_id) to (e.companyId?.let { "0x%04X".format(it) } ?: dash),

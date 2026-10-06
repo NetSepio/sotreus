@@ -231,7 +231,7 @@ private fun rowsFor(state: HistoryUiState): List<HistoryEntity> {
             }
         }
         .filter { h ->
-            q.isEmpty() || listOfNotNull(h.entity.userName, h.entity.advertisedName, h.entity.family?.name, h.entity.signatureName, h.entity.note)
+            q.isEmpty() || listOfNotNull(h.entity.userName, h.entity.advertisedName, h.entity.family?.name, h.entity.signatureName, h.entity.note, h.entity.address)
                 .any { it.lowercase().contains(q) }
         }
         .let { list ->

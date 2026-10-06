@@ -6,7 +6,7 @@
     <string name="tab_places">Places</string>
     <string name="tab_attention">Attention</string>
     <string name="search_label">Search entities</string>
-    <string name="search_hint">Name, family or note</string>
+    <string name="search_hint">Name, family, note or address</string>
     <string name="hfilter_all">All %1$s</string>
     <string name="hfilter_tagged">Tagged %1$d</string>
     <string name="hfilter_mine">Mine %1$d</string>

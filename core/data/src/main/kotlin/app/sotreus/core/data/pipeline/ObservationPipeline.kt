@@ -489,6 +489,7 @@ class ObservationPipeline @Inject constructor(
             LiveRadio(
                 entityId = s.key,
                 kind = kind,
+                address = s.mac,
                 advertisedName = s.name.trim().ifBlank { null },
                 userName = label?.userName,
                 family = c?.family ?: row?.family,

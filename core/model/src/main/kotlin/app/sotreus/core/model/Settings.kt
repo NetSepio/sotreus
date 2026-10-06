@@ -24,4 +24,6 @@ data class SotreusSettings(
     val tickSound: Boolean = true,
     val simulatedRadios: Boolean = false,
     val forceSolanaUi: Boolean = false,
+    /** Now › List shows each radio's address, to spot your own devices. */
+    val showAddresses: Boolean = false,
 )

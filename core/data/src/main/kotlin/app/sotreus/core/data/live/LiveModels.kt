@@ -11,6 +11,8 @@ import app.sotreus.sensing.RadioStatus
 data class LiveRadio(
     val entityId: String,
     val kind: RadioKind,
+    /** BLE MAC or Wi-Fi BSSID as received. */
+    val address: String = "",
     val advertisedName: String?,
     val userName: String?,
     val family: DeviceFamily?,

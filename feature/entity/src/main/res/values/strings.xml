@@ -3,6 +3,16 @@
     <string name="entity_kicker_ble">BLE advertiser · Entity</string>
     <string name="entity_kicker_wifi">Wi-Fi access point · Entity</string>
     <string name="entity_rename">Rename</string>
+    <string name="entity_address_kicker">Address</string>
+    <string name="entity_bssid_kicker">BSSID</string>
+    <string name="entity_address_random">Random address · can change</string>
+    <string name="entity_address_static">Random static address · stays until the device restarts</string>
+    <string name="entity_address_public">Public address · stays the same</string>
+    <string name="entity_copy">Copy</string>
+    <string name="entity_copied">Copied</string>
+    <string name="entity_show">Show</string>
+    <string name="entity_copy_label">Sotreus radio address</string>
+    <string name="meta_address">Address</string>
     <string name="entity_rename_title">Name this entity</string>
     <string name="entity_rename_hint">Grey tag, My earbuds…</string>
     <string name="entity_chip_confidence">Confidence · %1$s</string>

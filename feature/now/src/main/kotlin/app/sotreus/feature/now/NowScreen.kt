@@ -101,6 +101,7 @@ internal fun NowScreen(navigate: (Any) -> Unit, vm: NowViewModel = hiltViewModel
         onEntity = { navigate(EntityRoute(it)) },
         onAttention = { navigate(AttentionRoute(it)) },
         onPermissions = { navigate(PermissionsRoute) },
+        onShowAddresses = vm::setShowAddresses,
     )
     if (picker) {
         PlacePickerSheet(
@@ -124,6 +125,7 @@ internal fun NowContent(
     onEntity: (String) -> Unit,
     onAttention: (Long) -> Unit,
     onPermissions: () -> Unit,
+    onShowAddresses: (Boolean) -> Unit = {},
 ) {
     val snap = state.snapshot
     ScreenColumn(top = SotreusTheme.spacing.screenH) {
@@ -143,7 +145,7 @@ internal fun NowContent(
                 snap.access?.radiosOff?.takeIf { it.isNotEmpty() && !state.settings.simulatedRadios }?.let { off ->
                     WarningBanner(stringResource(R.string.now_radios_off_body, off.map { radioName(it) }.joinToString(", ")))
                 }
-                if (state.view == NowView.BANDS) BandsView(state, onEntity, onAttention) else ListView(state, onFilter, onSort, onEntity)
+                if (state.view == NowView.BANDS) BandsView(state, onEntity, onAttention) else ListView(state, onFilter, onSort, onEntity, onShowAddresses)
             }
         }
     }
@@ -277,7 +279,7 @@ private fun BandsView(state: NowUiState, onEntity: (String) -> Unit, onAttention
 }
 
 @Composable
-private fun ListView(state: NowUiState, onFilter: (NowFilter) -> Unit, onSort: (NowSort) -> Unit, onEntity: (String) -> Unit) {
+private fun ListView(state: NowUiState, onFilter: (NowFilter) -> Unit, onSort: (NowSort) -> Unit, onEntity: (String) -> Unit, onShowAddresses: (Boolean) -> Unit) {
     if (state.wifiThrottled) {
         val age = state.wifiAgeMs?.let { ageShort(it) } ?: stringResource(R.string.fresh_none)
         WarningBanner(
@@ -299,6 +301,7 @@ private fun ListView(state: NowUiState, onFilter: (NowFilter) -> Unit, onSort: (
         SortMenu(state.sort, onSort)
         MonoLabel(stringResource(R.string.hold_label, state.settings.staleHoldSeconds), small = true)
     }
+    app.sotreus.core.ui.SwitchRow(stringResource(R.string.addresses_toggle), state.settings.showAddresses, onShowAddresses, bordered = false)
     val rows = state.rows()
     if (rows.isEmpty()) {
         CaveatBox(stringResource(R.string.now_empty_kicker), stringResource(R.string.now_empty_body))
@@ -308,16 +311,16 @@ private fun ListView(state: NowUiState, onFilter: (NowFilter) -> Unit, onSort: (
         RowDivider(strong = true)
         if (state.filter == NowFilter.BY_CLASS) {
             rows.groupBy { it.family }.toList().sortedBy { (f, _) -> f == null }.forEach { (family, group) ->
-                ClassGroup(family, group, state.snapshot.atMs, onEntity)
+                ClassGroup(family, group, state.snapshot.atMs, onEntity, state.addressMode())
             }
         } else {
-            rows.forEach { RadioRow(it, state.snapshot.atMs, onEntity) }
+            rows.forEach { RadioRow(it, state.snapshot.atMs, onEntity, state.addressMode()) }
         }
     }
 }
 
 @Composable
-private fun ClassGroup(family: DeviceFamily?, rows: List<LiveRadio>, now: Long, onEntity: (String) -> Unit) {
+private fun ClassGroup(family: DeviceFamily?, rows: List<LiveRadio>, now: Long, onEntity: (String) -> Unit, addresses: AddressMode) {
     var expanded by remember { mutableStateOf(true) }
     Row(
         Modifier.fillMaxWidth().heightIn(min = SotreusTheme.sizes.minTouch).clickable(role = Role.Button) { expanded = !expanded }.padding(top = SotreusTheme.spacing.m),
@@ -325,17 +328,23 @@ private fun ClassGroup(family: DeviceFamily?, rows: List<LiveRadio>, now: Long, 
     ) {
         MonoLabel("${family?.let { familyName(it) } ?: stringResource(R.string.class_unclassified)} · ${rows.size} ${if (expanded) "▾" else "▸"}")
     }
-    if (expanded) rows.forEach { RadioRow(it, now, onEntity) }
+    if (expanded) rows.forEach { RadioRow(it, now, onEntity, addresses) }
 }
 
 @Composable
-private fun RadioRow(r: LiveRadio, now: Long, onEntity: (String) -> Unit) {
+private fun RadioRow(r: LiveRadio, now: Long, onEntity: (String) -> Unit, addresses: AddressMode = AddressMode.HIDDEN) {
     val title = entityTitle(r.userName, r.advertisedName, r.kind, r.family)
-    val subtitle = when {
+    val detail = when {
         r.kind == RadioKind.WIFI -> stringResource(R.string.row_subtitle_wifi, securityShort(r.security), bandOf(r.frequencyMhz))
         r.family != null && r.otherPlaces > 0 -> stringResource(R.string.row_subtitle_family, app.sotreus.core.ui.familyAdjective(r.family!!), seenAtPlaces(r.otherPlaces + 1))
         r.family != null -> stringResource(R.string.row_subtitle_signature, familySignature(r.family!!), stringResource(UiR.string.entity_ble_short))
         else -> stringResource(R.string.row_subtitle_signature, stringResource(UiR.string.entity_no_class), stringResource(if (r.randomAddress) UiR.string.entity_random_address else UiR.string.entity_public_address))
+    }
+    val subtitle = when (addresses) {
+        AddressMode.HIDDEN -> detail
+        // Wi-Fi BSSIDs follow the on-screen privacy mask; BLE addresses are shown in full.
+        AddressMode.SHOWN, AddressMode.SHOWN_MASK_WIFI ->
+            stringResource(R.string.row_address_subtitle, if (addresses == AddressMode.SHOWN_MASK_WIFI && r.kind == RadioKind.WIFI) maskMac(r.address) else r.address, detail)
     }
     EntityRow(
         title = title,
@@ -345,6 +354,19 @@ private fun RadioRow(r: LiveRadio, now: Long, onEntity: (String) -> Unit) {
         trailingValue = if (r.stale) r.lastRssi.toString().replace("-", "−") else stringResource(R.string.row_rssi_age, r.avgRssi30.toInt(), ageShort(now - r.lastHeardMs)).replace("-", "−"),
         chip = { EntityStateChip(r.userState, r.presence, r.stale) },
     )
+}
+
+internal enum class AddressMode { HIDDEN, SHOWN, SHOWN_MASK_WIFI }
+
+private fun NowUiState.addressMode() = when {
+    !settings.showAddresses -> AddressMode.HIDDEN
+    settings.maskCoordinates -> AddressMode.SHOWN_MASK_WIFI
+    else -> AddressMode.SHOWN
+}
+
+private fun maskMac(mac: String): String {
+    val p = mac.split(":")
+    return if (p.size == 6) listOf(p[0], p[1], p[2], "••", "••", p[5]).joinToString(":") else mac
 }
 
 @Composable

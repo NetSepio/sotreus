@@ -59,6 +59,8 @@
     <string name="sort_menu_newest">Newest</string>
     <string name="sort_menu_name">Name</string>
     <string name="sort_menu_signatures">Signatures first</string>
+    <string name="addresses_toggle">Show addresses</string>
+    <string name="row_address_subtitle">%1$s · %2$s</string>
     <string name="hold_label">Hold %1$d s after last</string>
     <string name="class_unclassified">No product class</string>
 

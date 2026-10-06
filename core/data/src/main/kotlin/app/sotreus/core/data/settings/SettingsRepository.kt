@@ -42,6 +42,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val tick = booleanPreferencesKey("tick_sound")
         val simulated = booleanPreferencesKey("simulated_radios")
         val forceSolana = booleanPreferencesKey("force_solana_ui")
+        val showAddresses = booleanPreferencesKey("show_addresses")
         val presenceKey = stringPreferencesKey("presence_key_wrapped")
         val walletAuthToken = stringPreferencesKey("wallet_auth_token_wrapped")
         val notificationsAsked = booleanPreferencesKey("notifications_asked")
@@ -66,6 +67,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
             tickSound = p[Keys.tick] ?: d.tickSound,
             simulatedRadios = p[Keys.simulated] ?: d.simulatedRadios,
             forceSolanaUi = p[Keys.forceSolana] ?: d.forceSolanaUi,
+            showAddresses = p[Keys.showAddresses] ?: d.showAddresses,
         )
     }
 
@@ -83,6 +85,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
     suspend fun setNearbyPresence(v: Boolean) { store.edit { it[Keys.presence] = v } }
     suspend fun setTickSound(v: Boolean) { store.edit { it[Keys.tick] = v } }
     suspend fun setSimulatedRadios(v: Boolean) { store.edit { it[Keys.simulated] = v } }
+    suspend fun setShowAddresses(v: Boolean) { store.edit { it[Keys.showAddresses] = v } }
     suspend fun setForceSolanaUi(v: Boolean) { store.edit { it[Keys.forceSolana] = v } }
 
     // Wrapped (Keystore-encrypted) secrets. Callers wrap/unwrap with SecretBox.

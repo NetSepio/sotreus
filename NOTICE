@@ -12,3 +12,25 @@ Instrument Serif font
   Copyright 2022 The Instrument Serif Project Authors (https://github.com/Instrument/instrument-serif)
   SIL Open Font License 1.1 - licenses/OFL-InstrumentSerif.txt
   Files: core/designsystem/src/main/res/font/instrument_serif_*.ttf
+
+Fieldwatch (https://github.com/OffGridPete/Fieldwatch)
+  Copyright (c) 2026 Off Grid Pete LLC
+  MIT License - licenses/MIT-Fieldwatch.txt
+  Ported into intelligence/fieldwatch, sensing/android (radio) and core/data (live sightings);
+  each ported file keeps its notice. The offline lookup tables in
+  sensing/android/src/main/assets/lookups/radiodb.bin are packed from IEEE Registration Authority
+  and Bluetooth SIG Assigned Numbers data and remain subject to those organisations' terms.
+
+Map data
+  (c) OpenStreetMap contributors (https://www.openstreetmap.org/copyright), served by OpenFreeMap
+  (https://openfreemap.org) using the OpenMapTiles schema.
+
+Apache License 2.0 libraries (https://www.apache.org/licenses/LICENSE-2.0)
+  AndroidX / Jetpack, Dagger / Hilt, kotlinx libraries, OkHttp, ZXing, ZXing Android Embedded,
+  Solana Mobile Wallet Adapter.
+
+BSD-2-Clause
+  MapLibre Native (https://github.com/maplibre/maplibre-native)
+
+MIT-style
+  Bouncy Castle (https://www.bouncycastle.org/licence.html)

@@ -99,6 +99,7 @@ class NowViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NowUiState())
 
     fun setView(v: NowView) = viewModelScope.launch { settings.setNowView(v) }
+    fun setShowAddresses(on: Boolean) = viewModelScope.launch { settings.setShowAddresses(on) }
     fun setFilter(f: NowFilter) { filter.value = f }
     fun setSort(s: NowSort) { sort.value = s }
     fun selectPlace(id: Long?) = viewModelScope.launch { placeRepository.select(id) }
