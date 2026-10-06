@@ -20,11 +20,8 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - uses: android-actions/setup-android@v3
-
-      - name: Accept Android SDK licenses
-        run: yes | sdkmanager --licenses || true
-
+      # The GitHub runner already has the Android SDK. setup-android@v3 still
+      # asks sdkmanager for the removed "tools" package and fails the job.
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Check signing secrets
