@@ -30,6 +30,7 @@ data class AppCapabilities(
 }
 
 enum class SolanaCluster(val chainId: String, val rpcUrl: String) {
+    // Retained only to decode historical Room records. New wallet and RPC operations reject it.
     DEVNET("solana:devnet", "https://api.devnet.solana.com"),
     MAINNET_BETA("solana:mainnet", "https://api.mainnet-beta.solana.com"),
 }

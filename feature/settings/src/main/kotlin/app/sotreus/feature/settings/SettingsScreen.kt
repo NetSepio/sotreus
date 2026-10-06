@@ -234,7 +234,7 @@ private fun ProfileCard(state: SettingsUiState, navigate: (Any) -> Unit) {
                 }
             }
             when {
-                state.solanaDevice && wallet != null -> StateChip(stringResource(R.string.devnet), ChipTone.DASHED, small = false)
+                state.solanaDevice && wallet != null -> StateChip(stringResource(R.string.mainnet), ChipTone.DASHED, small = false)
                 state.solanaDevice -> StateChip(stringResource(R.string.profile_connect), ChipTone.TEXT, small = false)
                 else -> StateChip(stringResource(R.string.profile_edit), ChipTone.TEXT, small = false)
             }
@@ -261,7 +261,7 @@ private fun SettingsSolanaPreview() {
                 build = AppBuildInfo("1.0.0", 1, "com.sotreus.app", "debug", Distribution.SOLANA_MOBILE, 1),
                 solanaDevice = true,
                 profile = LocalProfileEntity("p", "Night owl", "nightowl", null, 0),
-                wallet = LinkedIdentityEntity(1, app.sotreus.core.model.LinkedIdentityKind.SOLANA_WALLET, FakeSotreusData.WALLET, app.sotreus.core.model.SolanaCluster.DEVNET, "Seed Vault", true, 0),
+                wallet = LinkedIdentityEntity(1, app.sotreus.core.model.LinkedIdentityKind.SOLANA_WALLET, FakeSotreusData.WALLET, app.sotreus.core.model.SolanaCluster.MAINNET_BETA, "Seed Vault", true, 0),
                 friends = 3, places = 4, stamped = 3, families = 19, wifiLimited = true,
             ),
         ) {}

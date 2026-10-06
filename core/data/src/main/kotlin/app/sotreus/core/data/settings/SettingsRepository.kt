@@ -52,7 +52,9 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val satelliteGroups = stringPreferencesKey("satellite_groups")
         val remoteIdEnabled = booleanPreferencesKey("remote_id_enabled")
         val presenceKey = stringPreferencesKey("presence_key_wrapped")
-        val walletAuthToken = stringPreferencesKey("wallet_auth_token_wrapped")
+        val walletAuthToken = stringPreferencesKey("wallet_auth_token_mainnet_wrapped")
+        val walletPackage = stringPreferencesKey("wallet_package")
+        val legacyWalletAuthToken = stringPreferencesKey("wallet_auth_token_wrapped")
         val notificationsAsked = booleanPreferencesKey("notifications_asked")
     }
 
@@ -113,7 +115,16 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
     suspend fun presenceKeyWrapped(): String? = store.data.first()[Keys.presenceKey]
     suspend fun setPresenceKeyWrapped(v: String?) { store.edit { if (v == null) it.remove(Keys.presenceKey) else it[Keys.presenceKey] = v } }
     suspend fun walletAuthTokenWrapped(): String? = store.data.first()[Keys.walletAuthToken]
-    suspend fun setWalletAuthTokenWrapped(v: String?) { store.edit { if (v == null) it.remove(Keys.walletAuthToken) else it[Keys.walletAuthToken] = v } }
+    suspend fun setWalletAuthTokenWrapped(v: String?) {
+        store.edit {
+            it.remove(Keys.legacyWalletAuthToken)
+            if (v == null) it.remove(Keys.walletAuthToken) else it[Keys.walletAuthToken] = v
+        }
+    }
+
+    /** The wallet app chosen at sign-in; later wallet requests go only to it. */
+    suspend fun walletPackage(): String? = store.data.first()[Keys.walletPackage]
+    suspend fun setWalletPackage(v: String?) { store.edit { if (v == null) it.remove(Keys.walletPackage) else it[Keys.walletPackage] = v } }
 
     /** The optional session-notice permission is asked for once, in context, never again. */
     suspend fun notificationsAsked(): Boolean = store.data.first()[Keys.notificationsAsked] ?: false

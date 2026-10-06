@@ -39,11 +39,21 @@ and no network. Observations, places, labels and notes stay on the phone.
     object for its details.
   - Session summaries list context that overlapped the session in time — never as a cause.
 - **Solana Mobile devices** — optional wallet sign-in (Sign In With Solana via Mobile Wallet
-  Adapter) and salted-Merkle proof stamping on **devnet**. Only a 32-byte commitment goes on-chain.
+  Adapter) and salted-Merkle proof stamping on **mainnet**. Only a 32-byte commitment goes on-chain.
 
 ## Build
 
 Requires JDK 17+ and the Android SDK (`sdk.dir` in `local.properties` or `ANDROID_HOME`).
+
+Wallet authorization, balance, blockhash and confirmation use Solana mainnet only. Copy `.env.example` to `.env`
+(or set the same name in `local.properties`) and put the full NOWNodes mainnet URL in
+`NOWNODES_SOLANA_RPC_URL`, including a key in the path. Alternatively, set `NOWNODES_SOLANA_RPC_URL=https://sol.nownodes.io`
+and `NOWNODES_SOLANA_API_KEY` for the documented `api-key` header. An empty configuration uses
+`https://api.mainnet-beta.solana.com`. That URL is compiled into both APKs, so a build can reveal
+a key embedded in it or in the header configuration. `.env` is gitignored. Set the same
+Actions secrets for CI builds. Old devnet wallets must reconnect on mainnet; historical
+receipts stay local and read-only. Mainnet transactions require wallet approval and pay
+a real SOL network fee.
 
 ```
 ./gradlew test lint assembleGenericDebug assembleSolanaMobileDebug
@@ -148,7 +158,7 @@ profile. Debug builds can force the Solana screens from Settings › Diagnostics
 | `:intelligence:core` | Classification, baselines, attention engine, proximity, compare |
 | `:sensing:android` | BLE / Wi-Fi radios (ported from Fieldwatch), permissions, location, simulator |
 | `:social:presence` | Nearby presence advertising and token resolution |
-| `:integration:solana` | Mobile Wallet Adapter gateway, devnet RPC, Memo transaction |
+| `:integration:solana` | Mobile Wallet Adapter gateway, mainnet RPC, Memo transaction |
 | `:context:core` | Context sources: OpenSky client, CelesTrak catalog, SGP4 pass prediction, Remote ID tracker |
 | `:feature:*` | onboarding, now, entity, attention, history, place, journey, settings, friends, proofs, context |
 

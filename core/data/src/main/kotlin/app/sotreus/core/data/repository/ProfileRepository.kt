@@ -24,7 +24,7 @@ class ProfileRepository @Inject constructor(
     val profile: Flow<LocalProfileEntity?> = profiles.observe()
 
     val wallet: Flow<LinkedIdentityEntity?> = profiles.observeIdentities().map { list ->
-        list.firstOrNull { it.kind == LinkedIdentityKind.SOLANA_WALLET }
+        list.firstOrNull { it.kind == LinkedIdentityKind.SOLANA_WALLET && it.cluster == SolanaCluster.MAINNET_BETA }
     }
 
     /** "Start local-only": create the profile and finish onboarding. */
@@ -46,6 +46,7 @@ class ProfileRepository @Inject constructor(
     }
 
     suspend fun linkWallet(publicKey: String, cluster: SolanaCluster, walletLabel: String?) {
+        require(cluster == SolanaCluster.MAINNET_BETA) { "Only Solana mainnet wallets can be linked" }
         ensureProfile()
         profiles.deleteWallets()
         profiles.insertIdentity(

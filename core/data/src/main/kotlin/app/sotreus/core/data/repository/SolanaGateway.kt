@@ -14,12 +14,18 @@ interface SolanaGateway {
     /** Asks the wallet to sign and send a Memo transaction carrying only the batch commitment. */
     suspend fun stampCommitment(commitmentHex: String, payer: String, cluster: SolanaCluster): String
 
+    /**
+     * Asks the wallet to sign a mainnet transaction that sends 0 lamports to itself and a fixed
+     * memo ([walletCheckMemo]). No observation, place or identifier is included.
+     */
+    suspend fun sendWalletCheck(payer: String, cluster: SolanaCluster): String
+
+    /** The only memo text [sendWalletCheck] puts on-chain. */
+    fun walletCheckMemo(): String
+
     suspend fun confirmation(signature: String, cluster: SolanaCluster): ChainConfirmation
 
     suspend fun balanceLamports(address: String, cluster: SolanaCluster): Long?
-
-    /** Devnet only: asks the public faucet for test SOL so a stamp fee can be paid. */
-    suspend fun requestDevnetAirdrop(address: String): String
 
     suspend fun disconnect()
 

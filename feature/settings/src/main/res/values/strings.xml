@@ -9,7 +9,7 @@
     <string name="profile_wallet_line">Wallet %1$s</string>
     <string name="profile_wallet_none">Wallet not connected</string>
     <string name="profile_connect">Connect</string>
-    <string name="devnet">Devnet</string>
+    <string name="mainnet">Mainnet</string>
 
     <string name="group_proofs">Proofs</string>
     <string name="row_proofs">Proofs &amp; Tracking</string>
@@ -199,7 +199,7 @@
     <string name="profile_this_phone">This phone</string>
     <string name="profile_local_note">Your profile lives on this phone. Nothing from your observation history is uploaded, and disconnecting a wallet never deletes local data.</string>
     <string name="profile_disconnect_title">Disconnect wallet?</string>
-    <string name="profile_disconnect_body">Sotreus forgets the wallet address and its sign-in. Every local observation and proof receipt stays on this phone.</string>
+    <string name="profile_disconnect_body">Sotreus forgets the wallet address and its sign-in without opening the wallet. Every local observation and proof receipt stays on this phone. To remove Sotreus from the wallet too, use the wallet’s connected apps list.</string>
     <string name="cancel">Cancel</string>
     <string name="confirm">Confirm</string>
 </resources>

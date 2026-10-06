@@ -49,9 +49,9 @@ fun FreshnessLine(items: List<Freshness>, modifier: Modifier = Modifier) {
     }
 }
 
-/** Full-width devnet banner with a dashed bottom edge. Non-dismissible (screen S4). */
+/** Full-width network banner with a dashed bottom edge. Non-dismissible (screen S4). */
 @Composable
-fun DevnetBanner(text: String, modifier: Modifier = Modifier) {
+fun NetworkBanner(text: String, modifier: Modifier = Modifier) {
     val c = SotreusTheme.colors
     Box(
         modifier.fillMaxWidth().heightIn(min = 40.dp).background(c.surfaceBanner).drawBehind {

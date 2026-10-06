@@ -34,7 +34,7 @@ import app.sotreus.sensing.RadioStatus
  * The sample world the mocks show: place Office (14 visits), 42 radios / 7 families / 31 familiar /
  * 3 new / 1 seen elsewhere; Grey tag (finder tag, tagged, 9 encounters at Home/Office/Café); an
  * attention event at 0.74; NS-Office 38 s old and throttled; stale HP-Print-3C; sessions; friends
- * Ana, Kiran, Mei; a 304-record devnet proof batch. Times are relative to [NOW].
+ * Ana, Kiran, Mei; a 304-record mainnet proof batch. Times are relative to [NOW].
  */
 object FakeSotreusData {
     const val NOW = 1_791_324_060_000L // 6 Oct 2026, 21:41 local-ish
@@ -143,7 +143,7 @@ object FakeSotreusData {
     val proofBatch = ProofBatchEntity(
         id = 1, sessionId = 2, title = "Home → Café", createdAtMs = NOW - 4 * DAY, recordCount = 304, observationCount = 290, attentionCount = 14,
         merkleRootHex = "71bd" + "0".repeat(56) + "0c3a", commitmentHex = "a3f91c075be2" + "0".repeat(44) + "88d19e42", nonceHex = "ab".repeat(32),
-        schema = "SOTREUS_BATCH_V1", cluster = SolanaCluster.DEVNET, txSignature = "5Kt9" + "x".repeat(80) + "q2Rf", state = ProofState.FINALIZED,
+        schema = "SOTREUS_BATCH_V1", cluster = SolanaCluster.MAINNET_BETA, txSignature = "5Kt9" + "x".repeat(80) + "q2Rf", state = ProofState.FINALIZED,
         blockTimeMs = NOW - 4 * DAY + 70 * MIN, walletAddress = "7xKpQh2mD9a5Vw8Lr3TnB6cY1sFzE4uJg0Ho3fQe",
     )
 

@@ -48,6 +48,7 @@ import app.sotreus.core.database.entity.ProofBatchEntity
 import app.sotreus.core.database.entity.SessionEntity
 import app.sotreus.core.designsystem.icon.SotreusIcons
 import app.sotreus.core.designsystem.theme.SotreusTheme
+import app.sotreus.core.model.SolanaCluster
 import app.sotreus.core.model.ProofState
 import app.sotreus.core.model.SessionKind
 import app.sotreus.core.navigation.ReceiptRoute
@@ -55,7 +56,7 @@ import app.sotreus.core.navigation.StampRoute
 import app.sotreus.core.navigation.WalletRoute
 import app.sotreus.core.ui.CaveatBox
 import app.sotreus.core.ui.ChipTone
-import app.sotreus.core.ui.DevnetBanner
+import app.sotreus.core.ui.NetworkBanner
 import app.sotreus.core.ui.GhostButton
 import app.sotreus.core.ui.KeyValueTable
 import app.sotreus.core.ui.LightButton
@@ -115,6 +116,7 @@ class StampViewModel @Inject constructor(
     fun approve(onSubmitted: () -> Unit) = viewModelScope.launch {
         val b = state.value.batch ?: return@launch
         val w = state.value.wallet ?: return@launch
+        if (b.cluster != SolanaCluster.MAINNET_BETA) return@launch
         status.value = StampStatus.Working
         try {
             val signature = gateway.stampCommitment(b.commitmentHex, w.publicKey, b.cluster)
@@ -129,7 +131,7 @@ class StampViewModel @Inject constructor(
     }
 }
 
-/** Screen S4. The devnet banner is always visible; wording follows handoff §15. */
+/** Screen S4. Mainnet fees and the public commitment are shown before approval. */
 @Composable
 internal fun StampScreen(navigate: (Any) -> Unit, replace: (Any) -> Unit, onBack: () -> Unit, vm: StampViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -137,13 +139,18 @@ internal fun StampScreen(navigate: (Any) -> Unit, replace: (Any) -> Unit, onBack
     val c = SotreusTheme.colors
     val b = state.batch
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        DevnetBanner(stringResource(R.string.devnet_banner))
+        NetworkBanner(stringResource(R.string.network_banner))
         Column(
             Modifier.padding(start = SotreusTheme.spacing.screenH, end = SotreusTheme.spacing.screenH, top = 8.dp, bottom = SotreusTheme.spacing.screenBottom),
             verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.section),
         ) {
             if (b == null) {
                 if (!state.loading) CaveatBox(stringResource(R.string.stamp_public_kicker), stringResource(R.string.stamp_missing))
+                return@Column
+            }
+            if (b.cluster != SolanaCluster.MAINNET_BETA) {
+                WarningBanner(stringResource(R.string.legacy_batch))
+                QuietButton(stringResource(R.string.receipt_done), onBack)
                 return@Column
             }
             val s = state.session
@@ -248,7 +255,7 @@ class ReceiptViewModel @Inject constructor(
             var tries = 0
             while (isActive && tries < 60) {
                 val b = proofs.batch(batchId) ?: break
-                if (b.state != ProofState.SUBMITTED || b.txSignature == null) break
+                if (b.cluster != SolanaCluster.MAINNET_BETA || b.state != ProofState.SUBMITTED || b.txSignature == null) break
                 val conf = runCatching { gateway.confirmation(b.txSignature!!, b.cluster) }.getOrNull()
                 when {
                     conf?.failed == true -> { proofs.markFailed(batchId, "Transaction failed on-chain"); break }
@@ -282,7 +289,7 @@ internal fun ReceiptScreen(navigate: (Any) -> Unit, onClose: () -> Unit, vm: Rec
                 Icon(SotreusIcons.Close, contentDescription = stringResource(app.sotreus.core.ui.R.string.core_ui_close), tint = c.text, modifier = Modifier.size(SotreusTheme.sizes.iconSize))
             }
             Spacer(Modifier.weight(1f))
-            StateChip(stringResource(R.string.devnet), ChipTone.DASHED, small = false)
+            StateChip(stringResource(if (b?.cluster == SolanaCluster.DEVNET) R.string.legacy_devnet else R.string.mainnet), ChipTone.DASHED, small = false)
         }
         val batch = b ?: return@Column
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -324,7 +331,7 @@ internal fun ReceiptScreen(navigate: (Any) -> Unit, onClose: () -> Unit, vm: Rec
         CaveatBox(stringResource(R.string.receipt_caveat_kicker), stringResource(R.string.receipt_caveat_body, (batch.recordCount - 1).coerceAtLeast(0)))
         Spacer(Modifier.weight(1f))
         Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.l)) {
-            if (batch.state == ProofState.PENDING || batch.state == ProofState.FAILED) {
+            if (batch.cluster == SolanaCluster.MAINNET_BETA && (batch.state == ProofState.PENDING || batch.state == ProofState.FAILED)) {
                 PrimaryButton(stringResource(R.string.receipt_stamp_now), { navigate(StampRoute(batch.id)) })
             }
             LightButton(stringResource(R.string.receipt_done), onClose)
@@ -333,11 +340,11 @@ internal fun ReceiptScreen(navigate: (Any) -> Unit, onClose: () -> Unit, vm: Rec
                     stringResource(R.string.receipt_explorer),
                     {
                         batch.txSignature?.let { sig ->
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://explorer.solana.com/tx/$sig?cluster=devnet")))
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://explorer.solana.com/tx/$sig")))
                         }
                     },
                     Modifier.weight(1f),
-                    enabled = batch.txSignature != null,
+                    enabled = batch.cluster == SolanaCluster.MAINNET_BETA && batch.txSignature != null,
                 )
                 GhostButton(stringResource(R.string.receipt_export), { vm.export { shareFile(context, it, shareTitle) } }, Modifier.weight(1f))
             }

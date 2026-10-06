@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="devnet">Devnet</string>
+    <string name="mainnet">Mainnet</string>
+    <string name="legacy_devnet">Devnet · archived</string>
     <!-- S2 -->
     <string name="wallet_kicker">Wallet · optional</string>
     <string name="wallet_title">Connect a wallet to stamp proofs.</string>
@@ -9,7 +10,7 @@
     <string name="wallet_step2">You approve a Sign In With Solana message — not a transaction.</string>
     <string name="wallet_step3">Sotreus keeps your public key. Keys and seed never leave the wallet.</string>
     <string name="wallet_sign_kicker">You will be asked to sign</string>
-    <string name="wallet_open">Open wallet</string>
+    <string name="wallet_open">Connect wallet</string>
     <string name="wallet_local_only">Continue local only</string>
     <string name="wallet_working">Waiting for your wallet…</string>
     <string name="wallet_no_wallet">No Solana wallet app was found on this phone.</string>
@@ -20,17 +21,16 @@
     <!-- S3 -->
     <string name="proofs_title">Proofs &amp; Tracking</string>
     <string name="wallet_signed_in">Wallet · signed in</string>
-    <string name="switch_network">Switch network</string>
     <string name="disconnect">Disconnect</string>
-    <string name="disconnect_note">Disconnecting keeps every local observation and proof receipt.</string>
-    <string name="mainnet_title">Devnet only</string>
-    <string name="mainnet_body">This version stamps proofs on Solana devnet only. Mainnet stays unavailable until a later, explicit decision.</string>
+    <string name="disconnect_note">Disconnecting keeps every local observation and proof receipt, and does not open the wallet.</string>
     <string name="ok">OK</string>
-    <string name="balance">Devnet balance</string>
+    <string name="balance">Mainnet balance</string>
     <string name="balance_value">%1$s SOL</string>
-    <string name="airdrop">Request devnet SOL</string>
-    <string name="airdrop_requested">Requested 1 devnet SOL. It can take a minute to arrive.</string>
-    <string name="airdrop_failed">The devnet faucet refused the request. Try again later.</string>
+    <string name="wallet_check">Send wallet check</string>
+    <string name="wallet_check_working">Waiting for your wallet…</string>
+    <string name="wallet_check_note">Sends 0 SOL to this same wallet, with the memo %1$s. Pays a mainnet network fee in SOL. Includes no observations.</string>
+    <string name="wallet_check_sent">Wallet check submitted. Signature %1$s</string>
+    <string name="wallet_check_failed">The wallet check was not sent: %1$s</string>
     <string name="stamping_kicker">Proof stamping</string>
     <string name="proofs_stamping_off">Off</string>
     <string name="proofs_stamping_manual">Manual only</string>
@@ -52,7 +52,8 @@
     <string name="connect_first">Connect a wallet</string>
 
     <!-- S4 -->
-    <string name="devnet_banner">Devnet · test network · no real value</string>
+    <string name="network_banner">Solana mainnet · network fees use real SOL</string>
+    <string name="legacy_batch">This batch belongs to a previous test network. Create a new mainnet proof from the session summary.</string>
     <string name="stamp_kicker_journey">Journey ended · %1$s</string>
     <string name="stamp_kicker_sit">Sit ended · %1$s</string>
     <string name="stamp_kicker_session">Session · %1$s</string>
@@ -72,7 +73,7 @@
     <string name="stamp_limit_1_b">prove where or when they were observed.</string>
     <string name="stamp_limit_2">Deleting these records later will not remove the public commitment.</string>
     <string name="stamp_fee">Network fee</string>
-    <string name="stamp_fee_value">≈ 0.000005 SOL · devnet</string>
+    <string name="stamp_fee_value">Final fee shown in your wallet</string>
     <string name="stamp_approve">Approve in wallet</string>
     <string name="stamp_not_now">Not now · keep as pending</string>
     <string name="stamp_need_wallet">Connect a wallet to approve this stamp. The batch stays pending on this phone until then.</string>

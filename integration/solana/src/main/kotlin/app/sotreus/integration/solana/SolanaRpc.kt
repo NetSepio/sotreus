@@ -28,7 +28,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class SolanaRpc @Inject constructor() {
-    private val http = OkHttpClient.Builder().callTimeout(20, TimeUnit.SECONDS).build()
+    private val http = OkHttpClient.Builder().callTimeout(20, TimeUnit.SECONDS)
+        .followRedirects(false).followSslRedirects(false).build()
     private val json = Json { ignoreUnknownKeys = true }
 
     data class Status(val confirmationStatus: String?, val failed: Boolean, val slot: Long?)
@@ -56,22 +57,36 @@ class SolanaRpc @Inject constructor() {
     suspend fun balance(cluster: SolanaCluster, address: String): Long =
         call(cluster, "getBalance", buildJsonArray { add(kotlinx.serialization.json.JsonPrimitive(address)) }).jsonObject["value"]!!.jsonPrimitive.long
 
-    suspend fun requestAirdrop(address: String, lamports: Long): String =
-        call(SolanaCluster.DEVNET, "requestAirdrop", buildJsonArray { add(kotlinx.serialization.json.JsonPrimitive(address)); add(kotlinx.serialization.json.JsonPrimitive(lamports)) })
-            .jsonPrimitive.content
+    private fun endpoint(cluster: SolanaCluster): SolanaRpcEndpoints.Choice.Use {
+        SolanaRpcEndpoints.requireMainnet(cluster)
+        return when (val choice = SolanaRpcEndpoints.resolve(BuildConfig.NOWNODES_SOLANA_RPC_URL, BuildConfig.NOWNODES_SOLANA_API_KEY)) {
+            is SolanaRpcEndpoints.Choice.Use -> choice
+            is SolanaRpcEndpoints.Choice.Rejected -> throw IllegalStateException(choice.reason)
+        }
+    }
 
-    private suspend fun call(cluster: SolanaCluster, method: String, params: JsonArray): JsonElement = withContext(Dispatchers.IO) {
+    private suspend fun call(cluster: SolanaCluster, method: String, params: JsonArray): JsonElement = call(endpoint(cluster), method, params)
+
+    private suspend fun call(endpoint: SolanaRpcEndpoints.Choice.Use, method: String, params: JsonArray): JsonElement = withContext(Dispatchers.IO) {
         val body = buildJsonObject {
             put("jsonrpc", "2.0")
             put("id", 1)
             put("method", method)
             put("params", params)
         }.toString()
-        val request = Request.Builder().url(cluster.rpcUrl).post(body.toRequestBody("application/json".toMediaType())).build()
+        val request = Request.Builder()
+            .url(endpoint.url)
+            .apply { endpoint.apiKey?.let { header("api-key", it) } }
+            .post(body.toRequestBody("application/json".toMediaType()))
+            .build()
         http.newCall(request).execute().use { response ->
+            check(response.isSuccessful) { "Solana RPC HTTP ${response.code}" }
             val text = response.body.string()
             val obj = json.parseToJsonElement(text).jsonObject
-            obj["error"]?.let { err -> throw IllegalStateException((err as? JsonObject)?.get("message")?.jsonPrimitive?.content ?: "RPC error") }
+            obj["error"]?.takeUnless { it is JsonNull }?.let { err ->
+                val code = (err as? JsonObject)?.get("code")?.jsonPrimitive?.content.orEmpty()
+                throw IllegalStateException("Solana RPC error $code")
+            }
             obj["result"] ?: throw IllegalStateException("Empty RPC result")
         }
     }

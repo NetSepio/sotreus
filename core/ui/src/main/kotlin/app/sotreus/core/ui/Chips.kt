@@ -28,7 +28,7 @@ import app.sotreus.core.designsystem.theme.SotreusTheme
 
 enum class ChipTone { NEUTRAL, TEXT, ACCENT, ACCENT_FILLED, DASHED, ATTENTION_OUTLINE }
 
-/** Small mono chip for states and metadata: NEW, FAMILIAR, TAGGED, STALE, DEVNET, SENSED · 1 S AGO. */
+/** Small mono chip for states and metadata: NEW, FAMILIAR, TAGGED, STALE, MAINNET, SENSED · 1 S AGO. */
 @Composable
 fun StateChip(text: String, tone: ChipTone, modifier: Modifier = Modifier, small: Boolean = true) {
     val c = SotreusTheme.colors

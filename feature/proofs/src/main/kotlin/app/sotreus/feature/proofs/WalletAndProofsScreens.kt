@@ -13,9 +13,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -44,7 +41,6 @@ import app.sotreus.core.ui.BackTopBar
 import app.sotreus.core.ui.ChipTone
 import app.sotreus.core.ui.GhostButton
 import app.sotreus.core.ui.InfoRow
-import app.sotreus.core.ui.InlineLink
 import app.sotreus.core.ui.MonoLabel
 import app.sotreus.core.ui.PrimaryButton
 import app.sotreus.core.ui.PublicPrivateSplit
@@ -81,16 +77,16 @@ sealed interface WalletStatus {
 @HiltViewModel
 class WalletViewModel @Inject constructor(private val gateway: SolanaGateway, private val profiles: ProfileRepository) : ViewModel() {
     val status = MutableStateFlow<WalletStatus>(WalletStatus.Idle)
-    val preview: String = gateway.signInPreview(null, SolanaCluster.DEVNET)
+    val preview: String = gateway.signInPreview(null, SolanaCluster.MAINNET_BETA)
 
     fun signIn(onLinked: () -> Unit) = viewModelScope.launch {
         status.value = WalletStatus.Working
         status.value = try {
-            val result = gateway.signIn(SolanaCluster.DEVNET)
+            val result = gateway.signIn(SolanaCluster.MAINNET_BETA)
             if (!result.signatureVerified) {
                 WalletStatus.Unverified
             } else {
-                profiles.linkWallet(result.publicKey, SolanaCluster.DEVNET, result.walletLabel)
+                profiles.linkWallet(result.publicKey, SolanaCluster.MAINNET_BETA, result.walletLabel)
                 onLinked()
                 WalletStatus.Idle
             }
@@ -112,7 +108,7 @@ internal fun WalletScreen(onLinked: () -> Unit, onBack: () -> Unit, vm: WalletVi
     val status by vm.status.collectAsStateWithLifecycle()
     val c = SotreusTheme.colors
     ScreenColumn(top = SotreusTheme.spacing.screenH) {
-        BackTopBar(onBack = onBack) { StateChip(stringResource(R.string.devnet), ChipTone.DASHED, small = false) }
+        BackTopBar(onBack = onBack) { StateChip(stringResource(R.string.mainnet), ChipTone.DASHED, small = false) }
         Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.l)) {
             MonoLabel(stringResource(R.string.wallet_kicker))
             Text(stringResource(R.string.wallet_title), style = SotreusTheme.typography.title, color = c.text)
@@ -161,6 +157,8 @@ data class ProofsUiState(
     val balanceLamports: Long? = null,
 )
 
+internal data class ProofsNotice(val message: Int, val arg: String? = null)
+
 @HiltViewModel
 class ProofsViewModel @Inject constructor(
     private val profiles: ProfileRepository,
@@ -169,13 +167,15 @@ class ProofsViewModel @Inject constructor(
     private val gateway: SolanaGateway,
 ) : ViewModel() {
     private val balance = MutableStateFlow<Long?>(null)
-    val message = MutableStateFlow<Int?>(null)
+    internal val notice = MutableStateFlow<ProofsNotice?>(null)
+    internal val busy = MutableStateFlow(false)
+    internal val walletCheckMemo: String = gateway.walletCheckMemo()
     val state: StateFlow<ProofsUiState> = combine(profiles.wallet, settings.settings, proofs.observeBatches(), balance) { w, s, b, bal -> ProofsUiState(w, s, b, bal) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProofsUiState())
 
     init {
         viewModelScope.launch {
-            profiles.wallet.collect { w -> balance.value = w?.let { gateway.balanceLamports(it.publicKey, SolanaCluster.DEVNET) } }
+            profiles.wallet.collect { w -> balance.value = w?.let { gateway.balanceLamports(it.publicKey, SolanaCluster.MAINNET_BETA) } }
         }
     }
 
@@ -185,19 +185,40 @@ class ProofsViewModel @Inject constructor(
         profiles.unlinkWallet()
     }
 
-    fun airdrop() = viewModelScope.launch {
+    /** Opens the wallet and sends 0 SOL back to the linked account, with the fixed check memo. */
+    fun walletCheck() = viewModelScope.launch {
         val w = state.value.wallet ?: return@launch
-        message.value = runCatching { gateway.requestDevnetAirdrop(w.publicKey) }.fold({ R.string.airdrop_requested }, { R.string.airdrop_failed })
+        if (busy.value) return@launch
+        busy.value = true
+        try {
+            notice.value = try {
+                val signature = gateway.sendWalletCheck(w.publicKey, SolanaCluster.MAINNET_BETA)
+                ProofsNotice(R.string.wallet_check_sent, signature)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: WalletException) {
+                when {
+                    e.noWallet -> ProofsNotice(R.string.wallet_no_wallet)
+                    e.userCancelled -> ProofsNotice(R.string.wallet_cancelled)
+                    else -> ProofsNotice(R.string.wallet_check_failed, e.message ?: "")
+                }
+            } catch (e: Exception) {
+                ProofsNotice(R.string.wallet_check_failed, e.message ?: e.javaClass.simpleName)
+            }
+        } finally {
+            busy.value = false
+            balance.value = runCatching { gateway.balanceLamports(w.publicKey, SolanaCluster.MAINNET_BETA) }.getOrNull()
+        }
     }
 }
 
-/** Screen S3. Devnet only; mainnet is shown as unavailable. */
+/** Screen S3. Mainnet wallet balance and proof history. */
 @Composable
 internal fun ProofsScreen(navigate: (Any) -> Unit, onBack: () -> Unit, vm: ProofsViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
-    val message by vm.message.collectAsStateWithLifecycle()
+    val notice by vm.notice.collectAsStateWithLifecycle()
+    val busy by vm.busy.collectAsStateWithLifecycle()
     val c = SotreusTheme.colors
-    var mainnet by remember { mutableStateOf(false) }
     ScreenColumn(top = SotreusTheme.spacing.screenH) {
         BackTopBar(onBack = onBack)
         ScreenTitle(stringResource(R.string.proofs_title))
@@ -214,10 +235,9 @@ internal fun ProofsScreen(navigate: (Any) -> Unit, onBack: () -> Unit, vm: Proof
                         MonoLabel(stringResource(R.string.wallet_signed_in), small = true)
                         Text(Base58.abbreviate(w.publicKey), style = SotreusTheme.typography.monoValue.copy(fontSize = SotreusTheme.typography.body.fontSize), color = c.text)
                     }
-                    StateChip(stringResource(R.string.devnet), ChipTone.DASHED, small = false)
+                    StateChip(stringResource(R.string.mainnet), ChipTone.DASHED, small = false)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.m)) {
-                    GhostButton(stringResource(R.string.switch_network), { mainnet = true }, Modifier.weight(1f), minHeight = 44.dp)
                     GhostButton(stringResource(R.string.disconnect), vm::disconnect, Modifier.weight(1f), minHeight = 44.dp)
                 }
                 Text(stringResource(R.string.disconnect_note), style = SotreusTheme.typography.caption, color = c.textDim)
@@ -228,8 +248,14 @@ internal fun ProofsScreen(navigate: (Any) -> Unit, onBack: () -> Unit, vm: Proof
                         color = c.textMuted,
                         modifier = Modifier.weight(1f),
                     )
-                    InlineLink(stringResource(R.string.airdrop), vm::airdrop)
                 }
+                Text(stringResource(R.string.wallet_check_note, vm.walletCheckMemo), style = SotreusTheme.typography.caption, color = c.textDim)
+                GhostButton(
+                    stringResource(if (busy) R.string.wallet_check_working else R.string.wallet_check),
+                    vm::walletCheck,
+                    enabled = !busy,
+                    minHeight = 44.dp,
+                )
             }
         }
         Column {
@@ -265,21 +291,13 @@ internal fun ProofsScreen(navigate: (Any) -> Unit, onBack: () -> Unit, vm: Proof
             stringResource(R.string.never_kicker), stringResource(R.string.never_body).split("\n"),
         )
     }
-    if (mainnet) {
+    notice?.let { n ->
+        val text = if (n.arg == null) stringResource(n.message) else stringResource(n.message, n.arg)
         AlertDialog(
-            onDismissRequest = { mainnet = false },
+            onDismissRequest = { vm.notice.value = null },
             containerColor = c.surfaceRaised,
-            title = { Text(stringResource(R.string.mainnet_title), style = SotreusTheme.typography.titleS.copy(fontSize = SotreusTheme.typography.titleS.fontSize * 0.8f), color = c.text) },
-            text = { Text(stringResource(R.string.mainnet_body), style = SotreusTheme.typography.bodyS, color = c.textSoft) },
-            confirmButton = { TextButton(onClick = { mainnet = false }) { Text(stringResource(R.string.ok), color = c.accent) } },
-        )
-    }
-    message?.let { m ->
-        AlertDialog(
-            onDismissRequest = { vm.message.value = null },
-            containerColor = c.surfaceRaised,
-            text = { Text(stringResource(m), style = SotreusTheme.typography.body, color = c.text) },
-            confirmButton = { TextButton(onClick = { vm.message.value = null }) { Text(stringResource(R.string.ok), color = c.accent) } },
+            text = { Text(text, style = SotreusTheme.typography.body, color = c.text) },
+            confirmButton = { TextButton(onClick = { vm.notice.value = null }) { Text(stringResource(R.string.ok), color = c.accent) } },
         )
     }
 }

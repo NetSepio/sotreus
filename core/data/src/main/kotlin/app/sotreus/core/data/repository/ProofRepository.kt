@@ -42,6 +42,7 @@ class ProofRepository @Inject constructor(
 
     /** Creates a PENDING batch for a session's observations and attention events. */
     suspend fun createForSession(sessionId: Long, cluster: SolanaCluster): Long? {
+        require(cluster == SolanaCluster.MAINNET_BETA) { "New proofs must use Solana mainnet" }
         val session = sessions.get(sessionId) ?: return null
         val obs = observations.forSession(sessionId)
         val events = attention.forSession(sessionId)

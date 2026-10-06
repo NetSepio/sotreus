@@ -80,7 +80,7 @@ class SessionSummaryViewModel @Inject constructor(
         SummaryUiState(false, v, caps.onChainProofStamping, ctx)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SummaryUiState())
 
-    fun stamp(onBatch: (Long?) -> Unit) = viewModelScope.launch { onBatch(proofs.createForSession(id, SolanaCluster.DEVNET)) }
+    fun stamp(onBatch: (Long?) -> Unit) = viewModelScope.launch { onBatch(proofs.createForSession(id, SolanaCluster.MAINNET_BETA)) }
     fun delete(done: () -> Unit) = viewModelScope.launch { controls.deleteSession(id); done() }
     fun export(options: ExportOptions, onReady: (android.net.Uri) -> Unit) = viewModelScope.launch { exports.exportSession(id, options)?.let(onReady) }
 }

@@ -94,7 +94,7 @@ class LiveSessionViewModel @Inject constructor(
         val stampingAvailable = device.capabilities.first().onChainProofStamping && profiles.wallet.first() != null
         when (val result = sessions.end(id, stampingAvailable)) {
             is SessionEnd.AskToStamp -> {
-                val batch = proofs.createForSession(result.sessionId, SolanaCluster.DEVNET)
+                val batch = proofs.createForSession(result.sessionId, SolanaCluster.MAINNET_BETA)
                 navigate(if (batch != null) StampRoute(batch) else SessionRoute(id))
             }
             SessionEnd.Summary -> navigate(SessionRoute(id))

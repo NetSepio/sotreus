@@ -4,10 +4,26 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <queries>
-        <!-- Lets Mobile Wallet Adapter find installed wallets. -->
+        <!-- Android 11+ hides other apps unless they are declared. Without this, the association
+             intent matches nothing and the system wallet dialog never opens. -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="solana-wallet" />
         </intent>
+        <!-- A later session can address one wallet by its https association prefix. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+        </intent>
+        <package android:name="app.phantom" />
+        <package android:name="com.solflare.mobile" />
+        <package android:name="com.solanamobile.seedvault.wallet" />
+        <package android:name="com.solanamobile.wallet" />
+        <package android:name="app.backpack.mobile" />
+        <package android:name="app.backpack.mobile.standalone" />
+        <package android:name="ag.jup.jupiter.android" />
     </queries>
 </manifest>

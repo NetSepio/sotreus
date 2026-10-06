@@ -63,8 +63,33 @@ jobs:
           test -s signing/sotreus-generic.jks
           test -s signing/sotreus-solana-mobile.jks
 
+      - name: Verify decoded release keystore certificates
+        id: signing
+        env:
+          GENERIC_STORE_PASSWORD: ${{ secrets.GENERIC_STORE_PASSWORD }}
+          GENERIC_KEY_ALIAS: ${{ secrets.GENERIC_KEY_ALIAS }}
+          SOLANA_MOBILE_STORE_PASSWORD: ${{ secrets.SOLANA_MOBILE_STORE_PASSWORD }}
+          SOLANA_MOBILE_KEY_ALIAS: ${{ secrets.SOLANA_MOBILE_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          fingerprint() {
+            keytool -exportcert -keystore "$1" -alias "$2" -storepass:env "$3" | sha256sum | awk '{ print $1 }'
+          }
+          generic=$(fingerprint signing/sotreus-generic.jks "$GENERIC_KEY_ALIAS" GENERIC_STORE_PASSWORD)
+          solana=$(fingerprint signing/sotreus-solana-mobile.jks "$SOLANA_MOBILE_KEY_ALIAS" SOLANA_MOBILE_STORE_PASSWORD)
+          echo "generic keystore certificate SHA-256: $generic"
+          echo "solanaMobile keystore certificate SHA-256: $solana"
+          if [ "$generic" = "$solana" ]; then
+            echo "The decoded keystores select the same certificate. Check the Actions keystore and alias secrets."
+            exit 1
+          fi
+          echo "generic=$generic" >> "$GITHUB_OUTPUT"
+          echo "solana=$solana" >> "$GITHUB_OUTPUT"
+
       - name: Build release APKs and the Play App Bundle
         env:
+          NOWNODES_SOLANA_RPC_URL: ${{ secrets.NOWNODES_SOLANA_RPC_URL }}
+          NOWNODES_SOLANA_API_KEY: ${{ secrets.NOWNODES_SOLANA_API_KEY }}
           SOTREUS_GENERIC_STORE_FILE: signing/sotreus-generic.jks
           SOTREUS_GENERIC_STORE_PASSWORD: ${{ secrets.GENERIC_STORE_PASSWORD }}
           SOTREUS_GENERIC_KEY_ALIAS: ${{ secrets.GENERIC_KEY_ALIAS }}
@@ -76,6 +101,9 @@ jobs:
         run: ./gradlew :app:assembleGenericRelease :app:assembleSolanaMobileRelease :app:bundleGenericRelease
 
       - name: Verify the two APKs use different certificates
+        env:
+          EXPECTED_GENERIC_SHA256: ${{ steps.signing.outputs.generic }}
+          EXPECTED_SOLANA_SHA256: ${{ steps.signing.outputs.solana }}
         run: |
           set -euo pipefail
           sdk="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
@@ -85,6 +113,8 @@ jobs:
           }
           generic=$(fingerprint app/build/outputs/apk/generic/release/app-generic-release.apk)
           solana=$(fingerprint app/build/outputs/apk/solanaMobile/release/app-solanaMobile-release.apk)
+          echo "generic APK certificate SHA-256: $generic"
+          echo "solanaMobile APK certificate SHA-256: $solana"
           if [ -z "$generic" ] || [ -z "$solana" ]; then
             echo "Could not read a certificate from one of the APKs."
             exit 1
@@ -93,8 +123,10 @@ jobs:
             echo "Both release APKs are signed with the same certificate."
             exit 1
           fi
-          echo "generic $generic"
-          echo "solanaMobile $solana"
+          if [ "$generic" != "$EXPECTED_GENERIC_SHA256" ] || [ "$solana" != "$EXPECTED_SOLANA_SHA256" ]; then
+            echo "An APK certificate does not match its decoded keystore. Check the Gradle signing configuration and cached build outputs."
+            exit 1
+          fi
 
       - name: Collect release files
         id: files
