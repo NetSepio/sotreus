@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_ui_back">Back</string>
+    <string name="core_ui_close">Close</string>
+    <string name="core_ui_cancel">Cancel</string>
+    <string name="core_ui_save">Save</string>
+    <string name="core_ui_delete">Delete</string>
+
+    <!-- Device families: names for observations, never verdicts -->
+    <string name="family_finder_tag">Finder tag</string>
+    <string name="family_beacon">Beacon</string>
+    <string name="family_signage">Signage</string>
+    <string name="family_wearable">Wearable</string>
+    <string name="family_camera">Camera</string>
+    <string name="family_drone">Drone</string>
+    <string name="family_test_tool">Radio test tool</string>
+    <string name="family_public_safety">Public-safety equipment</string>
+    <string name="family_vehicle">Vehicle</string>
+    <string name="family_glasses">Smart glasses</string>
+    <string name="family_audio">Audio</string>
+    <string name="family_thermostat">Thermostat</string>
+    <string name="family_access_control">Access control</string>
+    <string name="family_health">Health device</string>
+    <string name="family_smart_home">Smart home</string>
+    <string name="family_router">Router</string>
+    <string name="family_mesh_radio">Mesh radio</string>
+    <string name="family_phone_pc">Phone / PC</string>
+    <string name="family_other">Other</string>
+    <!-- Adjective forms for "%1$s-family …" -->
+    <string name="family_adj_finder_tag">Finder-tag</string>
+    <string name="family_adj_beacon">Beacon</string>
+    <string name="family_adj_signage">Signage</string>
+    <string name="family_adj_wearable">Wearable</string>
+    <string name="family_adj_camera">Camera</string>
+    <string name="family_adj_drone">Drone</string>
+    <string name="family_adj_test_tool">Radio-test-tool</string>
+    <string name="family_adj_public_safety">Public-safety</string>
+    <string name="family_adj_vehicle">Vehicle</string>
+    <string name="family_adj_glasses">Smart-glasses</string>
+    <string name="family_adj_audio">Audio</string>
+    <string name="family_adj_thermostat">Thermostat</string>
+    <string name="family_adj_access_control">Access-control</string>
+    <string name="family_adj_health">Health-device</string>
+    <string name="family_adj_smart_home">Smart-home</string>
+    <string name="family_adj_router">Router</string>
+    <string name="family_adj_mesh_radio">Mesh-radio</string>
+    <string name="family_adj_phone_pc">Phone/PC</string>
+    <string name="family_adj_other">Other</string>
+    <!-- "Finder tag family" -->
+    <string name="family_family">%1$s family</string>
+    <!-- "Camera-family signature" -->
+    <string name="family_signature">%1$s-family signature</string>
+    <!-- "Camera-family" (Bands labels) -->
+    <string name="family_short">%1$s-family</string>
+    <!-- "Camera-family advertiser" -->
+    <string name="family_advertiser">%1$s-family advertiser</string>
+
+    <string name="entity_unnamed_advertiser">Unnamed advertiser</string>
+    <string name="entity_wifi_ap">Wi-Fi access point</string>
+    <string name="entity_hidden_network">Hidden network</string>
+    <string name="entity_no_class">No product class</string>
+    <string name="entity_random_address">random address</string>
+    <string name="entity_public_address">public address</string>
+    <string name="entity_wifi_short">Wi-Fi AP</string>
+    <string name="entity_ble_short">BLE</string>
+    <string name="entity_simulated">simulated</string>
+    <plurals name="entity_seen_at_places">
+        <item quantity="one">seen at %d place</item>
+        <item quantity="other">seen at %d places</item>
+    </plurals>
+    <string name="entity_last_heard">last heard %1$s</string>
+
+    <string name="confidence_high">high</string>
+    <string name="confidence_medium">medium</string>
+    <string name="confidence_low">low</string>
+
+    <!-- User labels -->
+    <string name="label_unclassified">Unclassified</string>
+    <string name="label_mine">Mine</string>
+    <string name="label_expected">Expected</string>
+    <string name="label_tagged">Tagged</string>
+    <string name="label_watch">Watch</string>
+    <string name="label_ignore">Ignore</string>
+
+    <!-- State chips -->
+    <string name="chip_new">New</string>
+    <string name="chip_familiar">Familiar</string>
+    <string name="chip_tagged">Tagged</string>
+    <string name="chip_stale">Stale</string>
+    <string name="chip_seen_elsewhere">Seen before</string>
+    <string name="chip_mine">Mine</string>
+    <string name="chip_simulated">Simulated</string>
+
+    <!-- Relative ages, uppercased in mono contexts -->
+    <string name="age_seconds">%1$d s</string>
+    <string name="age_minutes">%1$d min</string>
+    <string name="age_hours">%1$d h</string>
+    <string name="age_days">%1$d d</string>
+    <string name="age_seconds_ago">%1$d s ago</string>
+    <string name="age_minutes_ago">%1$d min ago</string>
+    <string name="age_hours_ago">%1$d h ago</string>
+    <string name="today">Today</string>
+    <string name="yesterday">Yesterday</string>
+    <string name="now">Now</string>
+    <!-- "1 h 08 min" -->
+    <string name="duration_h_min">%1$d h %2$02d min</string>
+    <string name="duration_min">%1$d min</string>
+    <string name="duration_s">%1$d s</string>
+    <string name="dbm">%1$d dBm</string>
+
+    <!-- Glyph legend and bands -->
+    <string name="legend_new">New</string>
+    <string name="legend_familiar">Familiar</string>
+    <string name="legend_tagged">Tagged</string>
+    <string name="legend_wifi">Wi-Fi AP</string>
+    <string name="band_near">Near</string>
+    <string name="band_mid">Mid</string>
+    <string name="band_far">Far</string>
+    <string name="band_you">You</string>
+
+    <!-- Attention headlines and reasons (never a threat verdict) -->
+    <string name="headline_cross_location">Repeated cross-location re-encounter observed</string>
+    <string name="headline_family">%1$s observed</string>
+    <string name="headline_family_generic">Device-family signature observed</string>
+    <string name="headline_tagged">Tagged device re-encountered</string>
+    <string name="headline_persistent_new">New radio observed for a long time</string>
+    <string name="reason_tagged">Previously tagged by you</string>
+    <string name="reason_other_places">Seen at other places before</string>
+    <string name="reason_repeated">Observed repeatedly this session</string>
+    <string name="reason_repeated_detail">%1$s of %2$s min</string>
+    <string name="reason_family">Matches a known device family</string>
+    <string name="reason_new_here">New to this place</string>
+    <!-- Timeline events -->
+    <string name="event_started">Session started</string>
+    <string name="event_new_fingerprint">New BLE fingerprint observed</string>
+    <string name="event_new_ap">New Wi-Fi access point observed</string>
+    <string name="event_lost">BLE fingerprint no longer observed</string>
+    <string name="event_tagged">Tagged device re-encountered</string>
+    <string name="event_attention">Needs attention: %1$s</string>
+    <string name="event_wifi_delayed">Wi-Fi scan delayed by Android</string>
+    <string name="event_ble_paused">BLE scanning paused by Android</string>
+    <string name="event_ended">Session ended</string>
+
+    <!-- Export sheet -->
+    <string name="export_title">Export</string>
+    <string name="export_lead">Exports are privacy-reduced by default: coarse coordinates, hashed identifiers, no notes, 15-minute time buckets, no friend presence.</string>
+    <string name="export_exact_coords">Exact coordinates</string>
+    <string name="export_exact_coords_sub">Off: rounded to about 1 km</string>
+    <string name="export_raw_ids">Raw identifiers</string>
+    <string name="export_raw_ids_sub">Off: addresses replaced with per-export hashes</string>
+    <string name="export_notes">Include notes</string>
+    <string name="export_exact_times">Exact times</string>
+    <string name="export_exact_times_sub">Off: grouped into 15-minute buckets</string>
+    <string name="export_raw_warning">This export contains raw data. Anyone you share it with can see exact identifiers, places or notes.</string>
+    <string name="export_action">Export · privacy-reduced</string>
+    <string name="export_action_raw">Export raw data</string>
+    <string name="export_share">Share export</string>
+</resources>

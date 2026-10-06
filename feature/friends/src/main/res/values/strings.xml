@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="friends_title">Friends</string>
+    <string name="presence_kicker_off">Nearby presence · Off</string>
+    <string name="presence_kicker_on">Nearby presence · On</string>
+    <string name="presence_title">Let friends recognise this phone</string>
+    <string name="presence_body">When on, Sotreus broadcasts rotating anonymous tokens that only approved friends can recognise.</string>
+    <!-- Required copy: "This transmits." -->
+    <string name="presence_transmits">This transmits. It is separate from passive observation and needs Bluetooth advertise permission. No account, wallet or device ID is ever broadcast.</string>
+    <string name="presence_needs_friend">Add a friend first. Presence only broadcasts tokens for approved friends.</string>
+    <string name="approved">Approved · %1$d</string>
+    <string name="friend_nearby">Nearby %1$s · %2$s</string>
+    <string name="friend_nearby_no_place">Nearby %1$s</string>
+    <string name="friend_added_not_seen">Added %1$s · not seen nearby</string>
+    <string name="friend_remove">Remove</string>
+    <string name="friend_remove_title">Remove %1$s?</string>
+    <string name="friend_remove_body">This deletes %1$s and your shared presence secret from this phone. They will no longer be recognised nearby.</string>
+    <string name="add_friend">Add a friend</string>
+    <string name="my_qr">My QR</string>
+    <string name="scan_qr">Scan QR</string>
+    <string name="invite_link">Invite link</string>
+    <string name="friends_note">Friendship is always approved by both people — never inferred from being nearby. Your friend list is never published.</string>
+    <string name="friends_empty">No friends yet. Show your QR to a friend and scan theirs.</string>
+    <string name="qr_title">My QR</string>
+    <string name="qr_lead">Ask your friend to scan this in Sotreus, then scan theirs. Both of you approve by scanning.</string>
+    <string name="qr_contains">This code holds your display name and an app-generated presence key. No account, wallet, email or device ID.</string>
+    <string name="qr_a11y">QR code for adding %1$s as a friend in Sotreus</string>
+    <string name="qr_name_missing">Set a display name in Settings › Profile so friends know who you are.</string>
+    <string name="qr_default_name">Sotreus friend</string>
+    <string name="scan_prompt">Scan a Sotreus friend QR</string>
+    <string name="add_result_added">%1$s added. Ask them to scan your QR too.</string>
+    <string name="add_result_already">You are already friends.</string>
+    <string name="add_result_invalid">That is not a Sotreus friend code.</string>
+    <string name="add_result_self">That is your own code.</string>
+    <string name="invite_share_title">Share invite link</string>
+    <string name="invite_text">Add me as a friend in Sotreus: %1$s</string>
+    <string name="invite_confirm_title">Add %1$s as a friend?</string>
+    <string name="invite_confirm_body">You opened a Sotreus invite. Adding them lets your phone recognise their presence tokens. They still need to add you.</string>
+    <string name="add">Add</string>
+    <string name="cancel">Cancel</string>
+    <string name="ok">OK</string>
+</resources>

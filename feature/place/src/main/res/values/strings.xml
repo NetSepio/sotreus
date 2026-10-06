@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="place_rename">Rename</string>
+    <string name="place_rename_title">Rename place</string>
+    <string name="place_kicker">Place · user-defined</string>
+    <plurals name="place_baseline_from">
+        <item quantity="one">Baseline from %1$d visit · updated %2$s</item>
+        <item quantity="other">Baseline from %1$d visits · updated %2$s</item>
+    </plurals>
+    <string name="place_learning_line">Learning · no completed visits yet</string>
+    <string name="place_keep_learning">Keep learning</string>
+    <string name="place_keep_learning_sub">Each visit refines what is normal here</string>
+    <string name="place_this_visit">This visit</string>
+    <string name="place_comp_a11y">%1$d normally present, %2$d occasional, %3$d new</string>
+    <string name="place_normal">Normally present</string>
+    <string name="place_occasional">Occasional</string>
+    <string name="place_new">New this visit</string>
+    <string name="place_changes">Baseline changes</string>
+    <string name="place_change_new_sub">New to this place · confidence %1$s</string>
+    <string name="place_change_missing">%1$s not observed this visit</string>
+    <string name="place_change_missing_sub">Usually present · %1$d of %2$d visits</string>
+    <string name="place_change_new_plain">%1$s observed</string>
+    <string name="place_normally_present">Normally present · %1$d</string>
+    <string name="place_see_all">See all</string>
+    <string name="place_show_fewer">Show fewer</string>
+    <string name="place_visits_value">%1$d / %2$d visits</string>
+    <string name="place_caveat_kicker">New is not suspicious</string>
+    <string name="place_caveat_body">Most new radios are ordinary — a visitor’s phone, a delivery van, a neighbour’s speaker. Sotreus notes them so you can decide.</string>
+    <string name="place_delete">Delete this place’s history</string>
+    <string name="place_delete_title">Delete history for %1$s?</string>
+    <string name="place_delete_body">This removes this place’s visits, baseline, encounters, observations and attention events from this phone. The place itself, your labels and notes stay. This can’t be undone.</string>
+    <string name="place_delete_place">Delete place</string>
+    <string name="place_delete_place_title">Delete %1$s?</string>
+    <string name="place_delete_place_body">This removes the place and all of its history from this phone. Your entity labels and notes stay.</string>
+    <string name="place_missing">This place is no longer on this phone.</string>
+    <string name="places_title">Places</string>
+    <string name="places_lead">Places are user-defined. Each one learns what is normal there from your visits.</string>
+    <string name="places_new">New place</string>
+    <string name="places_new_hint">Office, Home, Hotel…</string>
+    <string name="places_current">Current</string>
+    <plurals name="places_visits">
+        <item quantity="one">%d visit</item>
+        <item quantity="other">%d visits</item>
+    </plurals>
+    <string name="places_empty">No places yet. Create one here or from the place picker on Now.</string>
+    <string name="places_kicker">Places</string>
+</resources>

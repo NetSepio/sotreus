@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="att_meta">%1$s %2$s · %3$s</string>
+    <string name="att_meta_no_place">%1$s %2$s</string>
+    <string name="att_kicker">Why this needs attention</string>
+    <string name="att_score_kicker">Attention score</string>
+    <string name="att_needs">Needs attention</string>
+    <!-- Required copy: "Not a threat score." -->
+    <string name="att_not_threat">Not a threat score. It ranks what may be worth a look.</string>
+    <string name="att_reasons">Reasons</string>
+    <string name="att_inputs">Inputs</string>
+    <string name="att_in_reencounter">Re-encounter</string>
+    <string name="att_in_tag">Your tag</string>
+    <string name="att_in_persistence">Persistence</string>
+    <string name="att_in_novelty">Novelty</string>
+    <string name="att_in_signature">Known signature</string>
+    <string name="att_in_freshness">Data freshness</string>
+    <string name="att_evidence">Evidence · %1$d of %2$d</string>
+    <string name="att_view_all">View all</string>
+    <string name="att_evidence_rssi">%1$d · Phone BLE</string>
+    <string name="att_evidence_rssi_wifi">%1$d · Phone Wi-Fi</string>
+    <string name="att_places_note">Places are where this phone was at the time of observation.</string>
+    <string name="att_unsaved">Unsaved place</string>
+    <string name="att_caveat_kicker">What this does not mean</string>
+    <string name="att_caveat_finder">It does not show who owns this tag or why it is nearby. A finder tag that travels with you is often yours, a companion’s, or in a shared bag. Signal strength suggests proximity only — never direction.</string>
+    <string name="att_caveat_generic">It does not show who owns this radio or why it is nearby. Many radios travel with people for ordinary reasons. Signal strength suggests proximity only — never direction.</string>
+    <string name="att_mark_mine">Mark as mine</string>
+    <string name="att_mark_expected">Mark expected</string>
+    <string name="att_open_entity">Open entity</string>
+    <string name="att_missing">This attention event is no longer on this phone.</string>
+</resources>

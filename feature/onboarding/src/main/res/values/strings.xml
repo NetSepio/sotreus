@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onb_wordmark">SOTREUS</string>
+    <string name="onb_headline_1">See the signals.</string>
+    <string name="onb_headline_2">Remember the encounters.</string>
+    <string name="onb_lead">Sotreus shows what this phone can observe over Bluetooth LE and Wi-Fi, learns what is normal for a place, and remembers what you have encountered before.</string>
+    <string name="onb_local_first">Local-first</string>
+    <string name="onb_local_first_body">No account. Your radio history stays on this phone.</string>
+    <string name="onb_receive_only">Receive-only</string>
+    <string name="onb_receive_only_body">Sotreus listens to broadcasts. It never pairs, joins or interferes.</string>
+    <string name="onb_evidence">Evidence</string>
+    <string name="onb_evidence_body">A radio being present does not prove surveillance, intent or ownership. You decide what it means.</string>
+    <string name="onb_start">Start local-only</string>
+    <string name="onb_what_can_see">What Sotreus can and can’t see</string>
+    <string name="onb_no_signin">Nothing here needs sign-in. You can add a profile later in Settings.</string>
+
+    <string name="perm_step">Step 1 of 1</string>
+    <string name="perm_title">Sotreus needs\nthe radios.</string>
+    <string name="perm_lead">Android only hands scan results to apps with these permissions. Sotreus asks for what Now uses — nothing else yet.</string>
+    <string name="perm_nearby">Nearby devices</string>
+    <string name="perm_nearby_body">Read Bluetooth LE advertisements. Sotreus never pairs or connects.</string>
+    <string name="perm_wifi">Nearby Wi-Fi devices</string>
+    <string name="perm_wifi_body">Read visible access-point beacons. Sotreus never joins a network.</string>
+    <string name="perm_location">Location</string>
+    <string name="perm_location_suffix">· while in use</string>
+    <string name="perm_location_body">Android withholds Wi-Fi and BLE results without it. Your path is recorded only if you start a geotagged Journey.</string>
+    <string name="perm_notifications">Notifications</string>
+    <string name="perm_optional_suffix">· optional</string>
+    <string name="perm_notifications_body">A status notice while observation runs in the background.</string>
+    <string name="perm_not_asked">Not asked now</string>
+    <string name="perm_not_asked_body">Bluetooth advertise — only if you turn on Nearby presence. Background location — not used in this version.</string>
+    <string name="perm_grant">Grant permissions</string>
+    <string name="perm_not_now">Not now</string>
+    <string name="perm_granted">Granted</string>
+    <string name="perm_denied_forever">Android will not ask again. Open app settings to allow it.</string>
+    <string name="perm_open_settings">Open app settings</string>
+    <string name="perm_radios_off_title">Radios switched off</string>
+    <string name="perm_bluetooth_off">Bluetooth is off.</string>
+    <string name="perm_wifi_off">Wi-Fi scanning is off.</string>
+    <string name="perm_location_off">Location is off. Android needs it on for Wi-Fi and BLE scan results.</string>
+    <string name="perm_turn_on_bluetooth">Turn on Bluetooth</string>
+    <string name="perm_turn_on_wifi">Open Wi-Fi panel</string>
+    <string name="perm_turn_on_location">Open location settings</string>
+    <string name="perm_all_set">All set</string>
+    <string name="perm_continue">Continue</string>
+
+    <string name="about_title">About &amp; limitations</string>
+    <string name="about_lead">Sotreus reports what this phone can observe. It cannot prove why a radio is there.</string>
+    <string name="about_can_kicker">What it can see</string>
+    <string name="about_can_body">Bluetooth LE advertisements and visible Wi-Fi access points that this phone’s radios receive, with their signal strength and timing. Classification comes from what each radio broadcasts, matched against a device-family catalog.</string>
+    <string name="about_cannot_kicker">What it can’t see</string>
+    <string name="about_cannot_body">Radios that are off, asleep, out of range or not advertising. Classic Bluetooth, cellular, Wi-Fi client traffic, encrypted content, and any band Android does not expose. Android also limits Wi-Fi scans to 4 every 2 minutes, so Wi-Fi results are often seconds old.</string>
+    <string name="about_strength_kicker">Signal strength</string>
+    <string name="about_strength_body">Signal strength suggests proximity only. Bodies, bags and walls change readings as much as distance does. Signal strength is not distance and not direction.</string>
+    <string name="about_identity_kicker">Observation, not identity</string>
+    <string name="about_identity_body">Many radios use random addresses that change. A name or family match is a pattern in the broadcast, not proof of what the device is, who owns it or why it is nearby.</string>
+    <string name="about_privacy_kicker">Where your data lives</string>
+    <string name="about_privacy_body">Observations, places, labels and notes stay on this phone. Sotreus has no observation server. Exports are privacy-reduced unless you choose otherwise.</string>
+    <string name="about_credits_kicker">Credits</string>
+    <string name="about_credits_body">Radio parsing, device explanations, the signature catalog and proximity logic are ported from Fieldwatch (MIT, Off Grid Pete LLC). Fonts: Geist, Geist Mono and Instrument Serif (SIL OFL).</string>
+</resources>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="2"
+        android:scaleY="2"
+        android:translateX="30"
+        android:translateY="30">
+        <path
+            android:pathData="M3,12a9,9 0,1 0,18 0a9,9 0,1 0,-18 0z"
+            android:strokeWidth="1.6"
+            android:strokeColor="@color/sotreus_accent" />
+        <path
+            android:pathData="M7.5,12a4.5,4.5 0,1 0,9 0a4.5,4.5 0,1 0,-9 0z"
+            android:strokeWidth="1.6"
+            android:strokeColor="@color/sotreus_accent" />
+        <path
+            android:fillColor="@color/sotreus_accent"
+            android:pathData="M10.8,12a1.2,1.2 0,1 0,2.4 0a1.2,1.2 0,1 0,-2.4 0z" />
+    </group>
+</vector>

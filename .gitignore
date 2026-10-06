@@ -1,0 +1,23 @@
+*.iml
+.gradle/
+.kotlin/
+/local.properties
+/.idea/
+.DS_Store
+build/
+/captures
+.externalNativeBuild
+.cxx
+*.apk
+*.aab
+*.keystore
+*.jks
+google-services.json
+
+# Release signing material
+/signing/
+
+/docs
+/design
+CLAUDE.md
+HANDOFF_V1_UI.md

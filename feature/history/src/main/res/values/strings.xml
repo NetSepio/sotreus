@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feature_history_title">History</string>
+    <string name="tab_entities">Entities</string>
+    <string name="tab_encounters">Encounters</string>
+    <string name="tab_places">Places</string>
+    <string name="tab_attention">Attention</string>
+    <string name="search_label">Search entities</string>
+    <string name="search_hint">Name, family or note</string>
+    <string name="hfilter_all">All %1$s</string>
+    <string name="hfilter_tagged">Tagged %1$d</string>
+    <string name="hfilter_mine">Mine %1$d</string>
+    <string name="hfilter_watch">Watch %1$d</string>
+    <string name="hsort_encounters">Most encounters ▾</string>
+    <string name="hsort_recent">Most recent ▾</string>
+    <string name="hsort_name">Name ▾</string>
+    <string name="hsort_menu_encounters">Most encounters</string>
+    <string name="hsort_menu_recent">Most recent</string>
+    <string name="hsort_menu_name">Name</string>
+    <string name="retention_keep_30">Keep 30 days</string>
+    <string name="retention_keep_all">Keep everything</string>
+    <string name="retention_keep_tagged">Keep tagged</string>
+    <string name="row_everywhere">everywhere</string>
+    <string name="row_no_places">no saved place</string>
+    <string name="h_empty_kicker">Nothing remembered yet</string>
+    <string name="h_empty_body">Entities appear here once Now has observed them. Everything stays on this phone.</string>
+    <string name="enc_row">%1$s · %2$s · %3$s</string>
+    <string name="enc_unsaved">Unsaved place</string>
+    <string name="enc_empty_body">Encounters are stretches of time a radio was observed at a place or in a session.</string>
+    <plurals name="place_visits">
+        <item quantity="one">%d visit</item>
+        <item quantity="other">%d visits</item>
+    </plurals>
+    <string name="place_row_sub">%1$s · created %2$s</string>
+    <string name="places_empty_body">Places are user-defined. Create one from the place picker on Now.</string>
+    <string name="att_row_sub">%1$s · %2$s · score %3$s</string>
+    <string name="att_empty_body">Nothing needs attention. Attention events always come with their reasons.</string>
+</resources>

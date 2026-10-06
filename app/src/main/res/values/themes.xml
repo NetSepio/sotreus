@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark only in V1. Compose draws everything; this just avoids a white flash at launch. -->
+    <style name="Theme.Sotreus" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/sotreus_ink</item>
+        <item name="android:colorBackground">@color/sotreus_ink</item>
+    </style>
+</resources>

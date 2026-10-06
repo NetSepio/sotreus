@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Window and launcher colours only; Compose screens use SotreusTheme tokens. -->
+    <color name="sotreus_ink">#0B0E13</color>
+    <color name="sotreus_accent">#F2B33D</color>
+</resources>

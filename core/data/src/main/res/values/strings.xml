@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="data_channel_observation">Observation sessions</string>
+    <string name="data_channel_observation_description">Shown while a Journey or Sit is observing.</string>
+    <string name="data_channel_presence">Nearby presence</string>
+    <string name="data_channel_presence_description">Shown while this phone is broadcasting presence tokens for friends.</string>
+    <string name="data_notification_journey">Journey · observing</string>
+    <string name="data_notification_sit">Sit · observing</string>
+    <string name="data_notification_session_text">Receiving Bluetooth LE and Wi-Fi broadcasts. Tap to open.</string>
+    <string name="data_notification_session_geotag">Receiving broadcasts. Phone location is on for this session.</string>
+    <string name="data_notification_presence">Nearby presence is on</string>
+    <string name="data_notification_presence_text">This phone is broadcasting rotating tokens that only approved friends can recognise.</string>
+</resources>

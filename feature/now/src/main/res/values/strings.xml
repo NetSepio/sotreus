@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="now_place_kicker">Place ▾</string>
+    <string name="now_unsaved_place">Unsaved place</string>
+    <string name="now_observing">Observing</string>
+    <string name="now_simulated">Simulated</string>
+    <string name="now_paused">Paused</string>
+    <string name="now_place_picker_a11y">Choose place. Current: %1$s</string>
+    <string name="now_view_bands">Bands</string>
+    <string name="now_view_list">List</string>
+
+    <string name="fresh_ble">BLE</string>
+    <string name="fresh_wifi">Wi-Fi</string>
+    <string name="fresh_throttled">%1$s · Throttled</string>
+    <string name="fresh_none">—</string>
+    <plurals name="fresh_baseline">
+        <item quantity="one">Baseline · %d visit</item>
+        <item quantity="other">Baseline · %d visits</item>
+    </plurals>
+    <string name="fresh_learning">Baseline · learning</string>
+
+    <string name="bands_disclaimer">Rings group radios by signal strength. Where a dot sits around a ring is not its direction.</string>
+    <string name="bands_a11y">Proximity bands: %1$d radios grouped by signal strength. %2$d near, %3$d mid, %4$d far. %5$d new here. Positions around a ring are not directions. The List view shows the same radios.</string>
+    <string name="bands_label_new">%1$s · New</string>
+    <string name="bands_label_seen">%1$s · Seen before</string>
+
+    <string name="stat_here">Here</string>
+    <plurals name="stat_families">
+        <item quantity="one">%d family</item>
+        <item quantity="other">%d families</item>
+    </plurals>
+    <string name="stat_familiar">Familiar</string>
+    <string name="stat_this_place">this place</string>
+    <string name="stat_learning">learning</string>
+    <string name="stat_changed">Changed</string>
+    <string name="stat_new_here">new here</string>
+    <string name="stat_seen">Seen</string>
+    <string name="stat_elsewhere">elsewhere</string>
+    <string name="stat_dash">—</string>
+
+    <string name="now_needs_attention">Needs attention · %1$d</string>
+
+    <string name="now_wifi_banner">Wi-Fi results are %1$s old. Android limits apps to 4 Wi-Fi scans every 2 minutes.</string>
+    <string name="now_wifi_banner_rejected">Android delayed the last Wi-Fi scan. Wi-Fi results are %1$s old and shown as stale between scans.</string>
+    <string name="now_simulated_banner">Simulated radios are on. These are not real observations. Turn them off in Settings › Diagnostics.</string>
+
+    <string name="filter_all">All %1$d</string>
+    <string name="filter_new">New %1$d</string>
+    <string name="filter_tagged">Tagged %1$d</string>
+    <string name="filter_familiar">Familiar %1$d</string>
+    <string name="filter_by_class">By class</string>
+    <string name="sort_strongest">Strongest · avg 30 s ▾</string>
+    <string name="sort_newest">Newest ▾</string>
+    <string name="sort_name">Name ▾</string>
+    <string name="sort_signatures">Signatures first ▾</string>
+    <string name="sort_menu_strongest">Strongest (30 s average)</string>
+    <string name="sort_menu_newest">Newest</string>
+    <string name="sort_menu_name">Name</string>
+    <string name="sort_menu_signatures">Signatures first</string>
+    <string name="hold_label">Hold %1$d s after last</string>
+    <string name="class_unclassified">No product class</string>
+
+    <string name="now_empty_kicker">Nothing observable</string>
+    <string name="now_empty_body">Nothing observable on supported bands right now. Radios that are off, asleep or out of range don’t appear.</string>
+    <string name="now_first_visit_kicker">Learning this place</string>
+    <string name="now_first_visit_body">This is the first visit, so there is no baseline yet. Familiar and changed counts start after this visit ends.</string>
+    <string name="now_perm_kicker">Radios not available</string>
+    <string name="now_perm_body">Android only hands scan results to apps with Nearby devices, Nearby Wi-Fi and Location permissions.</string>
+    <string name="now_perm_action">Review permissions</string>
+    <string name="now_radios_off_body">Some radios are switched off: %1$s. Results from those radios are missing.</string>
+    <string name="radio_bluetooth">Bluetooth</string>
+    <string name="radio_wifi">Wi-Fi</string>
+    <string name="radio_location">Location</string>
+
+    <string name="row_subtitle_family">%1$s family · %2$s</string>
+    <string name="row_subtitle_signature">%1$s · %2$s</string>
+    <string name="row_subtitle_wifi">Wi-Fi AP · %1$s · %2$s</string>
+    <string name="row_rssi_age">%1$d · %2$s</string>
+    <string name="band_24">2.4 GHz</string>
+    <string name="band_5">5 GHz</string>
+    <string name="band_6">6 GHz</string>
+    <string name="sec_open">open</string>
+    <string name="sec_wpa3">WPA3</string>
+    <string name="sec_wpa2">WPA2</string>
+    <string name="sec_enterprise">Enterprise</string>
+
+    <string name="picker_title">Place</string>
+    <string name="picker_unsaved">Unsaved place</string>
+    <string name="picker_new">New place…</string>
+    <string name="picker_details">Place details</string>
+    <plurals name="picker_visits">
+        <item quantity="one">%d visit</item>
+        <item quantity="other">%d visits</item>
+    </plurals>
+    <string name="picker_new_title">New place</string>
+    <string name="picker_new_hint">Office, Home, Hotel…</string>
+    <string name="picker_create">Create</string>
+    <string name="picker_cancel">Cancel</string>
+    <string name="picker_note">Places are user-defined. A place learns what is normal there from your visits.</string>
+</resources>

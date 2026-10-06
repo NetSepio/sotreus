@@ -1,0 +1,14 @@
+Sotreus
+Licensed under the GNU GPL v3; see LICENSE.
+
+This product bundles third-party components under their own licenses:
+
+Geist and Geist Mono fonts
+  Copyright 2024 The Geist Project Authors (https://github.com/vercel/geist-font)
+  SIL Open Font License 1.1 - licenses/OFL-Geist.txt
+  Files: core/designsystem/src/main/res/font/geist_*.ttf
+
+Instrument Serif font
+  Copyright 2022 The Instrument Serif Project Authors (https://github.com/Instrument/instrument-serif)
+  SIL Open Font License 1.1 - licenses/OFL-InstrumentSerif.txt
+  Files: core/designsystem/src/main/res/font/instrument_serif_*.ttf
