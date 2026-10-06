@@ -46,6 +46,21 @@ class LocationSource @Inject constructor(@ApplicationContext private val context
         return Fix(System.currentTimeMillis(), loc.latitude, loc.longitude, if (loc.hasAccuracy()) loc.accuracy else null)
     }
 
+    /** The platform's last known fix without starting location, or null without permission. */
+    @SuppressLint("MissingPermission")
+    fun lastKnown(): Fix? {
+        val lm = context.getSystemService(LocationManager::class.java) ?: return null
+        val granted = androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED ||
+            androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_COARSE_LOCATION) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (!granted) return null
+        val loc = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER, LocationManager.FUSED_PROVIDER)
+            .mapNotNull { runCatching { lm.getLastKnownLocation(it) }.getOrNull() }
+            .maxByOrNull { it.time } ?: return null
+        return Fix(loc.time, loc.latitude, loc.longitude, if (loc.hasAccuracy()) loc.accuracy else null)
+    }
+
     @SuppressLint("MissingPermission")
     fun updates(intervalMs: Long = 15_000): Flow<Fix> = callbackFlow {
         val lm = context.getSystemService(LocationManager::class.java)

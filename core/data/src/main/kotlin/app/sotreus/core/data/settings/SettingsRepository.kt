@@ -9,7 +9,9 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import app.sotreus.core.model.AircraftMode
 import app.sotreus.core.model.GeotagMode
+import app.sotreus.core.model.SatelliteGroup
 import app.sotreus.core.model.NowView
 import app.sotreus.core.model.RetentionPolicy
 import app.sotreus.core.model.ScanIntensity
@@ -43,6 +45,12 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val simulated = booleanPreferencesKey("simulated_radios")
         val forceSolana = booleanPreferencesKey("force_solana_ui")
         val showAddresses = booleanPreferencesKey("show_addresses")
+        val contextEnabled = booleanPreferencesKey("context_enabled")
+        val aircraftMode = stringPreferencesKey("aircraft_mode")
+        val aircraftRadius = intPreferencesKey("aircraft_radius_km")
+        val satellitesEnabled = booleanPreferencesKey("satellites_enabled")
+        val satelliteGroups = stringPreferencesKey("satellite_groups")
+        val remoteIdEnabled = booleanPreferencesKey("remote_id_enabled")
         val presenceKey = stringPreferencesKey("presence_key_wrapped")
         val walletAuthToken = stringPreferencesKey("wallet_auth_token_wrapped")
         val notificationsAsked = booleanPreferencesKey("notifications_asked")
@@ -68,6 +76,13 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
             simulatedRadios = p[Keys.simulated] ?: d.simulatedRadios,
             forceSolanaUi = p[Keys.forceSolana] ?: d.forceSolanaUi,
             showAddresses = p[Keys.showAddresses] ?: d.showAddresses,
+            contextEnabled = p[Keys.contextEnabled] ?: d.contextEnabled,
+            aircraftMode = p[Keys.aircraftMode].enumOr(d.aircraftMode),
+            aircraftRadiusKm = p[Keys.aircraftRadius] ?: d.aircraftRadiusKm,
+            satellitesEnabled = p[Keys.satellitesEnabled] ?: d.satellitesEnabled,
+            satelliteGroups = p[Keys.satelliteGroups]?.split(",")?.mapNotNull { n -> SatelliteGroup.entries.firstOrNull { it.name == n } }?.toSet()
+                ?: d.satelliteGroups,
+            remoteIdEnabled = p[Keys.remoteIdEnabled] ?: d.remoteIdEnabled,
         )
     }
 
@@ -85,6 +100,12 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
     suspend fun setNearbyPresence(v: Boolean) { store.edit { it[Keys.presence] = v } }
     suspend fun setTickSound(v: Boolean) { store.edit { it[Keys.tick] = v } }
     suspend fun setSimulatedRadios(v: Boolean) { store.edit { it[Keys.simulated] = v } }
+    suspend fun setContextEnabled(v: Boolean) { store.edit { it[Keys.contextEnabled] = v } }
+    suspend fun setAircraftMode(v: AircraftMode) { store.edit { it[Keys.aircraftMode] = v.name } }
+    suspend fun setAircraftRadiusKm(v: Int) { store.edit { it[Keys.aircraftRadius] = v } }
+    suspend fun setSatellitesEnabled(v: Boolean) { store.edit { it[Keys.satellitesEnabled] = v } }
+    suspend fun setSatelliteGroups(v: Set<SatelliteGroup>) { store.edit { it[Keys.satelliteGroups] = v.joinToString(",") { g -> g.name } } }
+    suspend fun setRemoteIdEnabled(v: Boolean) { store.edit { it[Keys.remoteIdEnabled] = v } }
     suspend fun setShowAddresses(v: Boolean) { store.edit { it[Keys.showAddresses] = v } }
     suspend fun setForceSolanaUi(v: Boolean) { store.edit { it[Keys.forceSolana] = v } }
 

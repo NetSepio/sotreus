@@ -20,6 +20,24 @@ and no network. Observations, places, labels and notes stay on the phone.
 - **Sessions** — Journey and Sit sessions with a live timeline, summaries and sit comparison.
 - **Privacy** — retention, coordinate masking, privacy-reduced exports, per-item deletion.
 - **Friends** — QR pairing and opt-in Nearby presence using rotating anonymous BLE tokens.
+- **Context** — optional sources, each labelled with where it came from and each switchable off:
+  - **Satellites** (PREDICTED) — orbital elements from CelesTrak (Earth observation, weather and
+    space stations), downloaded once a day; what is passing overhead now and the next 24 h of passes
+    are computed on the phone with SGP4. Predictions are checked in unit tests against Skyfield.
+  - **Aircraft** (NETWORK) — positions reported by OpenSky Network within a chosen radius. *Coarse
+    area* asks for the 3° × 3° box around the 1° grid cell you are in and filters on the phone;
+    *Exact area* asks for a box around the radius. Off by default. Polled once a minute while the
+    Context tab is open and every 5 minutes during a session.
+  - **Remote ID** (SENSED, beta) — ASTM F3411 drone broadcasts decoded from the phone's own
+    Bluetooth (service data `FFFA`) and Wi-Fi beacon (vendor IE `FA:0B:BC`) scans: UAS ID, maker,
+    position, altitude, speed, course and operator position. Nothing is sent anywhere.
+  - A **3D scene** heads the tab, drawn on the phone with no map tiles: a dot-matrix Earth with
+    the day/night terminator, every catalog satellite moving in real time (or as a ×60 / ×600
+    time-lapse) and lines of sight to those above your horizon; switching to Aircraft or Remote ID
+    flies the camera down to a tilted plate around you with range rings, coastline, altitude
+    stems, courses, trails, and drone operator positions. Drag to turn, pinch to zoom, tap an
+    object for its details.
+  - Session summaries list context that overlapped the session in time — never as a cause.
 - **Solana Mobile devices** — optional wallet sign-in (Sign In With Solana via Mobile Wallet
   Adapter) and salted-Merkle proof stamping on **devnet**. Only a 32-byte commitment goes on-chain.
 
@@ -72,7 +90,8 @@ profile. Debug builds can force the Solana screens from Settings › Diagnostics
 | `:sensing:android` | BLE / Wi-Fi radios (ported from Fieldwatch), permissions, location, simulator |
 | `:social:presence` | Nearby presence advertising and token resolution |
 | `:integration:solana` | Mobile Wallet Adapter gateway, devnet RPC, Memo transaction |
-| `:feature:*` | onboarding, now, entity, attention, history, place, journey, settings, friends, proofs |
+| `:context:core` | Context sources: OpenSky client, CelesTrak catalog, SGP4 pass prediction, Remote ID tracker |
+| `:feature:*` | onboarding, now, entity, attention, history, place, journey, settings, friends, proofs, context |
 
 Convention plugins live in `build-logic/convention`; versions in `gradle/libs.versions.toml`.
 
@@ -101,6 +120,23 @@ Sotreus builds on the work below. Licences for bundled third-party material are 
 - **dApp Store publishing** — <https://github.com/solana-mobile/dapp-publishing>
 - **Sign In With Solana** — <https://github.com/phantom/sign-in-with-solana>
 
+### Context sources
+
+- **OpenSky Network** — <https://opensky-network.org> ([REST API](https://openskynetwork.github.io/opensky-api/rest.html),
+  [GitHub](https://github.com/openskynetwork/opensky-api)) — aircraft state vectors, anonymous
+  access. Matthias Schäfer et al., "Bringing up OpenSky", IPSN 2014.
+- **CelesTrak** — <https://celestrak.org/NORAD/elements/> — orbital elements (GP data) by group.
+- **predict4java** — <https://github.com/g4dpz/predict4java> (MIT) — SGP4/SDP4 propagation and
+  pass prediction on the phone.
+- **Skyfield** — <https://github.com/skyfielders/python-skyfield> — independent reference values
+  for the prediction tests.
+- **FAA Remote ID** — <https://www.faa.gov/uas/getting_started/remote_id> (14 CFR Part 89),
+  ASTM F3411 broadcast format; **OpenDroneID** — <https://github.com/opendroneid/opendroneid-core-c>
+  — the reference message layout followed by the Fieldwatch decoder Sotreus uses.
+
+- **Natural Earth** — <https://github.com/nvkelso/natural-earth-vector> (public domain) — land and
+  1:50m coastlines for the Context globe, packed by `tools/geodata/build_globe_assets.py`.
+
 ### Maps
 
 - **MapLibre Native** — <https://github.com/maplibre/maplibre-native> — the map view for places.
@@ -127,9 +163,3 @@ Sotreus builds on the work below. Licences for bundled third-party material are 
 
 - **Now in Android** — <https://github.com/android/nowinandroid> — the convention-plugin and
   modular feature layout follow its patterns.
-
-### Planned context sources (V1.1, not used yet)
-
-- OpenSky Network — <https://opensky-network.org/data/>
-- CelesTrak orbital data — <https://celestrak.org/NORAD/elements/>
-- FAA Remote ID — <https://www.faa.gov/uas/getting_started/remote_id>

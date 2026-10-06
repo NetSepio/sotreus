@@ -15,8 +15,11 @@ import javax.inject.Inject
  * HP-Print-3C, …). It exists so the app can be exercised on an emulator or without radios. Every
  * simulated address starts with `5A:` ("SA") and the UI labels simulated data as simulated.
  * Wi-Fi results follow Android's cadence and one AP goes quiet, so staleness can be seen.
+ * One simulated drone broadcasts ASTM F3411 Remote ID over BLE (service data FFFA), one message
+ * type per advertisement as real legacy-advertising broadcasters do, flying a slow circle a few
+ * hundred metres from the phone's last known location (or a fixed point without one).
  */
-class SimulatedRadios @Inject constructor() {
+class SimulatedRadios @Inject constructor(private val location: LocationSource) {
     private data class Radio(
         val kind: RadioKind,
         val mac: String,
@@ -57,6 +60,8 @@ class SimulatedRadios @Inject constructor() {
         emitWifiScan: (List<Observation>, fresh: Boolean, rejected: Boolean) -> Unit,
     ) {
         val started = System.currentTimeMillis()
+        val fix = location.lastKnown()
+        droneBase = if (fix != null) (fix.lat + 0.0035) to (fix.lon - 0.0025) else DRONE_BASE_LAT to DRONE_BASE_LON
         val walk = world.associate { it.mac to 0 }.toMutableMap()
         var tick = 0
         while (coroutineContext.isActive) {
@@ -69,6 +74,7 @@ class SimulatedRadios @Inject constructor() {
                     emitBle(observation(r, r.baseRssi + drift, now, fresh = true))
                 }
             }
+            if (Random.nextFloat() < 0.9f) emitBle(droneObservation(tick, now))
             // Wi-Fi: Android allows ~4 scans per 2 minutes; deliver a fresh batch every 30 s,
             // and every fourth scan is "rejected" so the throttled state can be seen.
             if (tick % 30 == 0) {
@@ -106,9 +112,64 @@ class SimulatedRadios @Inject constructor() {
         ),
     )
 
+    private var droneBase = DRONE_BASE_LAT to DRONE_BASE_LON
+
+    private fun droneObservation(tick: Int, at: Long): Observation {
+        val (baseLat, baseLon) = droneBase
+        val angle = (tick % 120) / 120.0 * 2 * Math.PI
+        val lat = baseLat + 0.0012 * kotlin.math.sin(angle)
+        val lon = baseLon + 0.0015 * kotlin.math.cos(angle)
+        val msg = when (tick % 4) {
+            0 -> remoteIdBasic(DRONE_UAS_ID)
+            1, 3 -> remoteIdLocation(lat, lon, altM = 62.0, courseDeg = (Math.toDegrees(angle) + 90) % 360, speedMps = 6.5)
+            else -> remoteIdSystem(baseLat, baseLon)
+        }.let { if (tick % 8 == 6) remoteIdSelf("Simulated survey flight") else it }
+        return Observation(
+            kind = RadioKind.BLE, mac = DRONE_MAC, name = "", rssi = -74 + Random.nextInt(-3, 4), channel = 0, frequencyMhz = 2402,
+            hiddenSsid = false, serviceUuids = listOf("FFFA"), manufacturerId = null, manufacturerDataHex = "", rawHex = "", extras = "",
+            at = at, fresh = true,
+            facts = RadioFacts(
+                addressType = "Random", connectable = false,
+                serviceData = listOf(ServiceDataRecord("FFFA", "0D%02X".format(tick and 0xFF) + msg.joinToString("") { "%02X".format(it.toInt() and 0xFF) })),
+            ),
+        )
+    }
+
     private fun channelOf(freq: Int): Int = when {
         freq in 2412..2484 -> (freq - 2407) / 5
         freq >= 5000 -> (freq - 5000) / 5
         else -> 0
+    }
+
+    private companion object {
+        const val DRONE_MAC = "5A:D0:0E:1D:00:01"
+        const val DRONE_UAS_ID = "SIM0SOTREUS000000001"
+        const val DRONE_BASE_LAT = 37.4230
+        const val DRONE_BASE_LON = -122.0850
+
+        fun le32(n: Int) = byteArrayOf(n.toByte(), (n shr 8).toByte(), (n shr 16).toByte(), (n shr 24).toByte())
+        fun le16(n: Int) = byteArrayOf(n.toByte(), (n shr 8).toByte())
+
+        /** ASTM F3411 Basic ID: serial number, multirotor. */
+        fun remoteIdBasic(id: String): ByteArray =
+            byteArrayOf(0x02, 0x12) + id.toByteArray(Charsets.US_ASCII).copyOf(20) + ByteArray(3)
+
+        /** ASTM F3411 Location/Vector. */
+        fun remoteIdLocation(lat: Double, lon: Double, altM: Double, courseDeg: Double, speedMps: Double): ByteArray {
+            val ew = courseDeg >= 180
+            val dir = (if (ew) courseDeg - 180 else courseDeg).toInt()
+            val flags = 0x20 or (if (ew) 0x02 else 0)
+            val alt = le16(((altM + 1000) * 2).toInt())
+            return byteArrayOf(0x12, flags.toByte(), dir.toByte(), (speedMps / 0.25).toInt().toByte(), 0) +
+                le32((lat * 1e7).toInt()) + le32((lon * 1e7).toInt()) + alt + alt + alt + ByteArray(6)
+        }
+
+        /** ASTM F3411 System: operator location. */
+        fun remoteIdSystem(lat: Double, lon: Double): ByteArray =
+            byteArrayOf(0x42, 0x01) + le32((lat * 1e7).toInt()) + le32((lon * 1e7).toInt()) + ByteArray(15)
+
+        /** ASTM F3411 Self ID: free-text description. */
+        fun remoteIdSelf(text: String): ByteArray =
+            byteArrayOf(0x32, 0x00) + text.toByteArray(Charsets.US_ASCII).copyOf(23)
     }
 }

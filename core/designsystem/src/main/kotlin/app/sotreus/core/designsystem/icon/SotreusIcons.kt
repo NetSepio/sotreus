@@ -36,6 +36,15 @@ object SotreusIcons {
         }
     }
 
+    /** Context: a body with an orbit. */
+    val Context: ImageVector by lazy {
+        icon("Context") {
+            stroke(circle(12f, 12f, 3.2f))
+            stroke("M5.6 18.4C3.3 16.1 5.6 10 10.8 4.8S18.4 3.3 18.4 5.6 18 10.8 14.4 14.4 7.9 20.7 5.6 18.4z")
+            fill(circle(18.6f, 9.2f, 1.3f))
+        }
+    }
+
     val Settings: ImageVector by lazy {
         icon("Settings") {
             stroke("M4 7h10M18 7h2M4 17h4M12 17h8")

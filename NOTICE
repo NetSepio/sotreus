@@ -21,6 +21,20 @@ Fieldwatch (https://github.com/OffGridPete/Fieldwatch)
   sensing/android/src/main/assets/lookups/radiodb.bin are packed from IEEE Registration Authority
   and Bluetooth SIG Assigned Numbers data and remain subject to those organisations' terms.
 
+predict4java (https://github.com/g4dpz/predict4java)
+  Copyright (c) 2026 David A. B. Johnson
+  MIT License - licenses/MIT-predict4java.txt
+  SGP4/SDP4 orbit propagation and pass prediction for satellite context (context/core).
+
+Natural Earth (https://www.naturalearthdata.com, https://github.com/nvkelso/natural-earth-vector)
+  Public domain. Made with Natural Earth. Land and 1:50m coastline data packed into
+  feature/context/src/main/assets/globe by tools/geodata/build_globe_assets.py.
+
+Context data (fetched at runtime, not bundled)
+  Aircraft state vectors: The OpenSky Network (https://opensky-network.org). Used under the
+  OpenSky Network terms of use; see https://opensky-network.org/about/terms-of-use.
+  Orbital elements: CelesTrak (https://celestrak.org), Dr T.S. Kelso.
+
 Map data
   (c) OpenStreetMap contributors (https://www.openstreetmap.org/copyright), served by OpenFreeMap
   (https://openfreemap.org) using the OpenMapTiles schema.

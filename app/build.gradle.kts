@@ -82,6 +82,8 @@ dependencies {
     implementation(project(":feature:settings"))
     implementation(project(":feature:friends"))
     implementation(project(":feature:proofs"))
+    implementation(project(":feature:context"))
+    implementation(project(":context:core"))
     // Wallet sign-in and proof stamping ship in every build; the UI appears only on Solana Mobile
     // devices (decided at runtime).
     implementation(project(":integration:solana"))

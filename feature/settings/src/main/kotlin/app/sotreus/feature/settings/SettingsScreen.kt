@@ -42,6 +42,7 @@ import app.sotreus.core.model.RetentionPolicy
 import app.sotreus.core.model.SotreusSettings
 import app.sotreus.core.model.StampingMode
 import app.sotreus.core.navigation.AboutRoute
+import app.sotreus.core.navigation.ContextSourcesRoute
 import app.sotreus.core.navigation.DiagnosticsRoute
 import app.sotreus.core.navigation.FriendsRoute
 import app.sotreus.core.navigation.PlacesRoute
@@ -162,6 +163,11 @@ internal fun SettingsContent(state: SettingsUiState, navigate: (Any) -> Unit) {
                 valueAccent = state.wifiLimited,
             )
             NavRow(stringResource(R.string.row_signatures), { navigate(SignaturesRoute) }, value = stringResource(R.string.row_signatures_value, state.families))
+            NavRow(
+                stringResource(R.string.row_context_sources),
+                { navigate(ContextSourcesRoute) },
+                value = stringResource(if (state.settings.contextEnabled) R.string.on else R.string.off),
+            )
             NavRow(
                 stringResource(R.string.row_privacy),
                 { navigate(PrivacyRoute) },

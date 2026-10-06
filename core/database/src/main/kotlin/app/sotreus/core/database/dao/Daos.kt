@@ -8,6 +8,7 @@ import androidx.room.Query
 import androidx.room.Update
 import androidx.room.Upsert
 import app.sotreus.core.database.entity.AttentionEventEntity
+import app.sotreus.core.database.entity.ContextEventEntity
 import app.sotreus.core.database.entity.EncounterEntity
 import app.sotreus.core.database.entity.EntityEntity
 import app.sotreus.core.database.entity.FriendEntity
@@ -540,4 +541,48 @@ interface ProofDao {
 
     @Query("DELETE FROM proof_batches WHERE state = 'PENDING'")
     suspend fun deletePendingBatches()
+}
+
+@Dao
+interface ContextDao {
+    @Insert
+    suspend fun insert(event: ContextEventEntity): Long
+
+    @Update
+    suspend fun update(event: ContextEventEntity)
+
+    @Query("SELECT * FROM context_events WHERE kind = :kind AND subject_id = :subject ORDER BY at_ms DESC LIMIT 1")
+    suspend fun latest(kind: app.sotreus.core.model.ContextKind, subject: String): ContextEventEntity?
+
+    @Query("SELECT * FROM context_events WHERE kind = :kind AND at_ms >= :sinceMs ORDER BY at_ms DESC")
+    fun observeSince(kind: app.sotreus.core.model.ContextKind, sinceMs: Long): Flow<List<ContextEventEntity>>
+
+    @Query("SELECT * FROM context_events WHERE kind = 'REMOTE_ID' AND subject_id = :subject ORDER BY at_ms DESC LIMIT :limit")
+    fun observeRemoteId(subject: String, limit: Int = 200): Flow<List<ContextEventEntity>>
+
+    @Query("SELECT * FROM context_events WHERE at_ms BETWEEN :fromMs AND :toMs ORDER BY at_ms")
+    suspend fun between(fromMs: Long, toMs: Long): List<ContextEventEntity>
+
+    @Query("SELECT * FROM context_events WHERE session_id = :sessionId ORDER BY at_ms")
+    suspend fun forSession(sessionId: Long): List<ContextEventEntity>
+
+    @Query("SELECT COUNT(*) FROM context_events")
+    fun observeCount(): Flow<Int>
+
+    @Query("DELETE FROM context_events WHERE session_id = :sessionId")
+    suspend fun deleteForSession(sessionId: Long)
+
+    @Query("DELETE FROM context_events")
+    suspend fun deleteAll()
+
+    @Query("DELETE FROM context_events WHERE source = '$SOURCE_SIMULATED'")
+    suspend fun deleteSimulated()
+
+    companion object {
+        /** Source of records produced from the simulated radios. */
+        const val SOURCE_SIMULATED = "Simulated radios"
+    }
+
+    @Query("DELETE FROM context_events WHERE at_ms < :beforeMs")
+    suspend fun deleteOlderThan(beforeMs: Long)
 }

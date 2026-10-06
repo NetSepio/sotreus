@@ -27,6 +27,7 @@ import app.sotreus.core.data.settings.SettingsRepository
 import app.sotreus.core.designsystem.icon.SotreusIcons
 import app.sotreus.core.designsystem.theme.SotreusTheme
 import app.sotreus.core.model.SotreusSettings
+import app.sotreus.core.navigation.ContextRoute
 import app.sotreus.core.navigation.FriendsRoute
 import app.sotreus.core.navigation.HistoryRoute
 import app.sotreus.core.navigation.JourneyRoute
@@ -37,6 +38,7 @@ import app.sotreus.core.navigation.WelcomeRoute
 import app.sotreus.core.ui.SotreusBottomNav
 import app.sotreus.core.ui.SotreusNavItem
 import app.sotreus.feature.attention.attentionGraph
+import app.sotreus.feature.context.contextGraph
 import app.sotreus.feature.entity.entityGraph
 import app.sotreus.feature.friends.friendsGraph
 import app.sotreus.feature.history.historyGraph
@@ -49,11 +51,12 @@ import app.sotreus.feature.settings.settingsGraph
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.reflect.KClass
 
-/** The four V1 tabs. There is no Context tab in V1. */
+/** Bottom-nav tabs. */
 enum class TopLevelDestination(val route: Any, val routeClass: KClass<*>, val icon: ImageVector, @StringRes val label: Int) {
     NOW(NowRoute, NowRoute::class, SotreusIcons.Now, R.string.nav_now),
     HISTORY(HistoryRoute, HistoryRoute::class, SotreusIcons.History, R.string.nav_history),
     JOURNEY(JourneyRoute, JourneyRoute::class, SotreusIcons.Journey, R.string.nav_journey),
+    CONTEXT(ContextRoute, ContextRoute::class, SotreusIcons.Context, R.string.nav_context),
     SETTINGS(SettingsRoute, SettingsRoute::class, SotreusIcons.Settings, R.string.nav_settings),
 }
 
@@ -127,6 +130,7 @@ fun SotreusApp(settings: SettingsRepository, pendingInvite: MutableStateFlow<Str
             placeGraph(navigator)
             friendsGraph(navigator)
             proofsGraph(navigator)
+            contextGraph(navigator)
         }
     }
 }

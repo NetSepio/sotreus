@@ -8,6 +8,16 @@ enum class StampingMode { OFF, MANUAL_ONLY, ASK_END_JOURNEY, ASK_END_SIT }
 
 enum class NowView { BANDS, LIST }
 
+/** How much of the phone's location an aircraft query reveals (architecture handoff §14.1). */
+enum class AircraftMode { OFF, COARSE_AREA, EXACT_AREA }
+
+/** CelesTrak groups Sotreus can predict. [celestrakGroup] is the CelesTrak GROUP name. */
+enum class SatelliteGroup(val celestrakGroup: String) {
+    EARTH_OBSERVATION("resource"),
+    WEATHER("weather"),
+    SPACE_STATIONS("stations"),
+}
+
 /** User preferences. Stored on the device only. */
 data class SotreusSettings(
     val onboardingDone: Boolean = false,
@@ -26,4 +36,12 @@ data class SotreusSettings(
     val forceSolanaUi: Boolean = false,
     /** Now › List shows each radio's address, to spot your own devices. */
     val showAddresses: Boolean = false,
+    /** Master switch for every context source. Off means no context network requests at all. */
+    val contextEnabled: Boolean = true,
+    val aircraftMode: AircraftMode = AircraftMode.OFF,
+    val aircraftRadiusKm: Int = 25,
+    val satellitesEnabled: Boolean = true,
+    val satelliteGroups: Set<SatelliteGroup> = SatelliteGroup.entries.toSet(),
+    /** Local Remote ID decoding (beta until validated across devices and regions). */
+    val remoteIdEnabled: Boolean = true,
 )

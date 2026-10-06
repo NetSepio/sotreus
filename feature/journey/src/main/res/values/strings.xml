@@ -76,4 +76,14 @@
     <string name="compare_caveat_body">A radio present in one sit and not the other may simply have been off, asleep, or out of range. Differences are evidence to weigh, not conclusions.</string>
     <string name="compare_need_two">Compare needs two finished sits. Run another Sit in the same place to compare.</string>
     <string name="compare_empty_tab">Nothing in this list.</string>
+    <string name="summary_context">During this session</string>
+    <string name="summary_context_note">Happened at the same time. That does not mean they are related.</string>
+    <string name="summary_ctx_remote_id">Compatible Remote ID broadcast observed · %1$d</string>
+    <string name="summary_ctx_aircraft">Aircraft reported within selected radius · %1$d</string>
+    <string name="summary_ctx_closest">closest %1$d km</string>
+    <string name="summary_ctx_eo">Earth-observation satellite predicted overhead · %1$d</string>
+    <string name="summary_ctx_other_sats">Other satellite passes predicted · %1$d</string>
+    <string name="summary_prov_sensed">Sensed</string>
+    <string name="summary_prov_network">Network</string>
+    <string name="summary_prov_predicted">Predicted</string>
 </resources>

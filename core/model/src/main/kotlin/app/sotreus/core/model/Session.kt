@@ -12,3 +12,5 @@ enum class SessionEventKind {
     val isSensed: Boolean get() = this == NEW_FINGERPRINT || this == FINGERPRINT_LOST ||
         this == TAGGED_REENCOUNTER || this == FAMILY_SIGNATURE || this == ATTENTION
 }
+
+enum class ContextKind { AIRCRAFT, SATELLITE_PASS, REMOTE_ID }

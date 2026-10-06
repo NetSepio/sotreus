@@ -12,6 +12,8 @@ import app.sotreus.core.database.dao.ProfileDao
 import app.sotreus.core.database.dao.ProofDao
 import app.sotreus.core.database.dao.SessionDao
 import app.sotreus.core.database.entity.AttentionEventEntity
+import app.sotreus.core.database.entity.ContextEventEntity
+import app.sotreus.core.database.dao.ContextDao
 import app.sotreus.core.database.entity.EncounterEntity
 import app.sotreus.core.database.entity.EntityEntity
 import app.sotreus.core.database.entity.FriendEntity
@@ -41,7 +43,7 @@ import app.sotreus.core.database.entity.VisitEntityEntity
         PlaceVisitEntity::class, VisitEntityEntity::class, SessionEntity::class, SessionEntityEntity::class,
         SessionEventEntity::class, SessionLocationEntity::class, AttentionEventEntity::class,
         LocalProfileEntity::class, LinkedIdentityEntity::class, FriendEntity::class, ProofBatchEntity::class,
-        ProofLeafEntity::class,
+        ProofLeafEntity::class, ContextEventEntity::class,
     ],
     version = SotreusDatabase.SCHEMA_VERSION,
     exportSchema = true,
@@ -56,9 +58,10 @@ abstract class SotreusDatabase : RoomDatabase() {
     abstract fun profileDao(): ProfileDao
     abstract fun friendDao(): FriendDao
     abstract fun proofDao(): ProofDao
+    abstract fun contextDao(): ContextDao
 
     companion object {
-        const val SCHEMA_VERSION = 2
+        const val SCHEMA_VERSION = 3
         const val NAME = "sotreus.db"
     }
 }

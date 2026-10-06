@@ -30,6 +30,7 @@
     <string name="row_sensors_ok">Observing</string>
     <string name="row_sensors_paused">Paused</string>
     <string name="row_signatures">Signatures</string>
+    <string name="row_context_sources">Context sources</string>
     <string name="row_signatures_value">%1$d families</string>
     <string name="row_privacy">Privacy &amp; retention</string>
     <string name="retention_30">30 days</string>

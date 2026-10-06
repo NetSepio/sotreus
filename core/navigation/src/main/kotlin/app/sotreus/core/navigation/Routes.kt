@@ -14,6 +14,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object NowRoute
 @Serializable data object HistoryRoute
 @Serializable data object JourneyRoute
+@Serializable data object ContextRoute
 @Serializable data object SettingsRoute
 
 // Awareness detail
@@ -29,6 +30,12 @@ import kotlinx.serialization.Serializable
 @Serializable data class SessionLiveRoute(val sessionId: Long)
 @Serializable data class SessionRoute(val sessionId: Long)
 @Serializable data class CompareRoute(val a: Long = -1, val b: Long = -1)
+
+// Context sources
+@Serializable data class AircraftRoute(val icao24: String)
+@Serializable data class SatelliteRoute(val noradId: Int)
+@Serializable data class RemoteIdRoute(val subjectId: String)
+@Serializable data object ContextSourcesRoute
 
 // Settings
 @Serializable data object SensorsRoute

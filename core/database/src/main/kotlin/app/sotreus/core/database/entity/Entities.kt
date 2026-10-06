@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 import app.sotreus.core.model.AttentionHeadline
 import app.sotreus.core.model.BleAddressType
 import app.sotreus.core.model.Confidence
+import app.sotreus.core.model.ContextKind
 import app.sotreus.core.model.DeviceFamily
 import app.sotreus.core.model.LinkedIdentityKind
 import app.sotreus.core.model.ProofState
@@ -242,4 +243,32 @@ data class ProofLeafEntity(
     @ColumnInfo(name = "salt") val saltHex: String,
     @ColumnInfo(name = "leaf_hash") val leafHashHex: String,
     @ColumnInfo(name = "canonical") val canonicalHex: String,
+)
+
+/**
+ * Context items worth remembering: Remote ID broadcasts this phone received (SENSED) and aircraft
+ * reported by a provider during a session (NETWORK). Satellite passes are recomputed on demand.
+ */
+@Entity(tableName = "context_events", indices = [Index("at_ms"), Index("session_id"), Index("subject_id")])
+data class ContextEventEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val kind: ContextKind,
+    val provenance: Provenance,
+    /** Provider or origin, e.g. "OpenSky Network", "Phone BLE". */
+    val source: String,
+    /** ICAO24 address, Remote ID UAS ID or NORAD number. */
+    @ColumnInfo(name = "subject_id") val subjectId: String,
+    val title: String,
+    @ColumnInfo(name = "at_ms") val atMs: Long,
+    @ColumnInfo(name = "end_ms") val endMs: Long? = null,
+    val lat: Double? = null,
+    val lon: Double? = null,
+    @ColumnInfo(name = "alt_m") val altM: Double? = null,
+    @ColumnInfo(name = "speed_mps") val speedMps: Double? = null,
+    @ColumnInfo(name = "course_deg") val courseDeg: Double? = null,
+    @ColumnInfo(name = "operator_lat") val operatorLat: Double? = null,
+    @ColumnInfo(name = "operator_lon") val operatorLon: Double? = null,
+    @ColumnInfo(name = "distance_km") val distanceKm: Double? = null,
+    @ColumnInfo(name = "session_id") val sessionId: Long? = null,
+    @ColumnInfo(name = "entity_id") val entityId: String? = null,
 )

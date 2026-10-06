@@ -3,6 +3,7 @@ package app.sotreus
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import app.sotreus.context.ContextRepository
 import app.sotreus.core.data.pipeline.ObservationController
 import app.sotreus.core.data.retention.RetentionWorker
 import app.sotreus.core.data.service.Notifications
@@ -16,6 +17,7 @@ class SotreusApplication : Application(), Configuration.Provider {
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var observation: ObservationController
     @Inject lateinit var presence: PresenceController
+    @Inject lateinit var contextSources: ContextRepository
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -27,6 +29,7 @@ class SotreusApplication : Application(), Configuration.Provider {
         Notifications.ensureChannels(this)
         observation.start()
         presence.start()
+        contextSources.start()
         RetentionWorker.schedule(this)
     }
 }

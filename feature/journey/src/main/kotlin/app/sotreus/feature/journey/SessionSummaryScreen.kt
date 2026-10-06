@@ -50,16 +50,19 @@ import app.sotreus.core.ui.clockTime
 import app.sotreus.core.ui.dayLabel
 import app.sotreus.core.ui.durationLabel
 import app.sotreus.core.ui.shareFile
+import app.sotreus.context.ContextRepository
+import app.sotreus.context.SessionContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import app.sotreus.core.ui.R as UiR
 
-data class SummaryUiState(val loading: Boolean = true, val view: SessionLiveView? = null, val proofs: Boolean = false)
+data class SummaryUiState(val loading: Boolean = true, val view: SessionLiveView? = null, val proofs: Boolean = false, val context: SessionContext? = null)
 
 @HiltViewModel
 class SessionSummaryViewModel @Inject constructor(
@@ -69,10 +72,13 @@ class SessionSummaryViewModel @Inject constructor(
     private val proofs: ProofRepository,
     private val controls: DataControls,
     private val exports: ExportService,
+    contextSources: ContextRepository,
 ) : ViewModel() {
     val id = handle.toRoute<SessionRoute>().sessionId
-    val state: StateFlow<SummaryUiState> = combine(sessions.observeLive(id), device.capabilities) { v, caps -> SummaryUiState(false, v, caps.onChainProofStamping) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SummaryUiState())
+    private val overlaps = flow { emit(null); emit(runCatching { contextSources.sessionContext(id) }.getOrNull()) }
+    val state: StateFlow<SummaryUiState> = combine(sessions.observeLive(id), device.capabilities, overlaps) { v, caps, ctx ->
+        SummaryUiState(false, v, caps.onChainProofStamping, ctx)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SummaryUiState())
 
     fun stamp(onBatch: (Long?) -> Unit) = viewModelScope.launch { onBatch(proofs.createForSession(id, SolanaCluster.DEVNET)) }
     fun delete(done: () -> Unit) = viewModelScope.launch { controls.deleteSession(id); done() }
@@ -116,6 +122,7 @@ internal fun SessionSummaryScreen(navigate: (Any) -> Unit, onBack: () -> Unit, v
         )
         MonoLabel(stringResource(R.string.timeline))
         SessionTimeline(v.events.filter { it.kind != SessionEventKind.ENDED }.map { timelineItem(it) })
+        state.context?.let { SessionContextSection(it) }
         if (noRecords) CaveatBox(stringResource(R.string.feature_journey_title), stringResource(R.string.summary_no_records))
         Spacer(Modifier.weight(1f))
         Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.l)) {
