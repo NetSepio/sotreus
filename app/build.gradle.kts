@@ -1,9 +1,54 @@
+import java.util.Locale
 import java.util.Properties
+import org.gradle.api.GradleException
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ValueSource
+import org.gradle.api.provider.ValueSourceParameters
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 
 plugins {
     alias(libs.plugins.sotreus.android.application)
     alias(libs.plugins.sotreus.android.compose)
     alias(libs.plugins.sotreus.hilt)
+}
+
+private val releaseSigningFlavors = listOf(
+    "generic" to "SOTREUS_GENERIC",
+    "solanaMobile" to "SOTREUS_SOLANA_MOBILE",
+)
+
+private fun Project.releaseSigningSpec(flavor: String, envPrefix: String): Map<String, String>? {
+    val envNames = listOf("STORE_FILE", "STORE_PASSWORD", "KEY_ALIAS", "KEY_PASSWORD")
+    val fromEnv = envNames.associateWith { providers.environmentVariable("${envPrefix}_$it").orNull }
+    val setCount = fromEnv.values.count { !it.isNullOrBlank() }
+    if (setCount == envNames.size) {
+        return mapOf(
+            "storeFile" to fromEnv.getValue("STORE_FILE")!!,
+            "storePassword" to fromEnv.getValue("STORE_PASSWORD")!!,
+            "keyAlias" to fromEnv.getValue("KEY_ALIAS")!!,
+            "keyPassword" to fromEnv.getValue("KEY_PASSWORD")!!,
+        )
+    }
+    if (setCount != 0) {
+        error(
+            "$envPrefix release signing is incomplete. Set " +
+                envNames.joinToString { "${envPrefix}_$it" } +
+                ", or set none of them and use signing/$flavor.properties.",
+        )
+    }
+    val loaded = providers.of(SigningPropertiesSource::class.java) {
+        parameters.propertiesFile.set(rootProject.layout.projectDirectory.file("signing/$flavor.properties"))
+    }.orNull
+    if (loaded.isNullOrEmpty()) return null
+    val required = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+    val missing = required.filter { loaded[it].isNullOrBlank() }
+    if (missing.isNotEmpty()) {
+        error("signing/$flavor.properties is missing ${missing.joinToString()}")
+    }
+    return required.associateWith { loaded.getValue(it) }
 }
 
 android {
@@ -16,20 +61,16 @@ android {
         versionName = "1.0.0"
     }
 
-    // Each distribution is signed with its own release key. Put the key details in
-    // `signing/<flavor>.properties` (storeFile, storePassword, keyAlias, keyPassword; never
-    // committed). Until a key exists, release builds fall back to the debug key.
+    // Release only. Debug keeps the debug keystore. A missing key fails the release build
+    // rather than falling back to debug. Env vars win when all four for that flavor are set.
     signingConfigs {
-        listOf("generic", "solanaMobile").forEach { flavor ->
-            val props = rootProject.file("signing/$flavor.properties")
-            if (props.isFile) {
-                val p = Properties().apply { props.inputStream().use(::load) }
-                create("${flavor}Release") {
-                    storeFile = rootProject.file(p.getProperty("storeFile"))
-                    storePassword = p.getProperty("storePassword")
-                    keyAlias = p.getProperty("keyAlias")
-                    keyPassword = p.getProperty("keyPassword")
-                }
+        releaseSigningFlavors.forEach { (flavor, envPrefix) ->
+            val spec = releaseSigningSpec(flavor, envPrefix) ?: return@forEach
+            create("${flavor}Release") {
+                storeFile = rootProject.file(spec.getValue("storeFile"))
+                storePassword = spec.getValue("storePassword")
+                keyAlias = spec.getValue("keyAlias")
+                keyPassword = spec.getValue("keyPassword")
             }
         }
     }
@@ -45,12 +86,10 @@ android {
         create("generic") {
             dimension = "distribution"
             buildConfigField("String", "DISTRIBUTION", "\"generic\"")
-            signingConfig = signingConfigs.findByName("genericRelease") ?: signingConfigs.getByName("debug")
         }
         create("solanaMobile") {
             dimension = "distribution"
             buildConfigField("String", "DISTRIBUTION", "\"solanaMobile\"")
-            signingConfig = signingConfigs.findByName("solanaMobileRelease") ?: signingConfigs.getByName("debug")
         }
     }
 
@@ -59,6 +98,40 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+    }
+}
+
+val releaseSigningConfigs = releaseSigningFlavors.associate { (flavor, _) ->
+    flavor to android.signingConfigs.findByName("${flavor}Release")
+}
+
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        val flavor = variant.flavorName
+            ?: throw GradleException("Release variant ${variant.name} has no product flavor.")
+        val config = releaseSigningConfigs[flavor]
+        if (config != null) {
+            variant.signingConfig.from(config)
+        } else {
+            val flavorLabel = flavor.replaceFirstChar {
+                if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+            }
+            val requireSigning = tasks.register("require${flavorLabel}ReleaseSigning") {
+                doLast {
+                    throw GradleException(
+                        "No release key for $flavor. Add signing/$flavor.properties " +
+                            "(storeFile, storePassword, keyAlias, keyPassword), or set " +
+                            "SOTREUS_*_STORE_FILE, _STORE_PASSWORD, _KEY_ALIAS and _KEY_PASSWORD. " +
+                            "Release builds are not signed with the debug key.",
+                    )
+                }
+            }
+            tasks.configureEach {
+                if (name == "pre${flavorLabel}ReleaseBuild") {
+                    dependsOn(requireSigning)
+                }
+            }
         }
     }
 }
@@ -97,4 +170,22 @@ dependencies {
     ksp(libs.androidx.hilt.compiler)
 
     testImplementation(libs.junit)
+}
+
+abstract class SigningPropertiesSource :
+    ValueSource<Map<String, String>, SigningPropertiesSource.Params> {
+    interface Params : ValueSourceParameters {
+        @get:Optional
+        @get:InputFile
+        @get:PathSensitive(PathSensitivity.NONE)
+        val propertiesFile: RegularFileProperty
+    }
+
+    override fun obtain(): Map<String, String> {
+        val file = parameters.propertiesFile.get().asFile
+        if (!file.isFile) return emptyMap()
+        val loaded = Properties()
+        file.inputStream().use(loaded::load)
+        return loaded.stringPropertyNames().associateWith { loaded.getProperty(it) }
+    }
 }

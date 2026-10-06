@@ -62,11 +62,70 @@ Both distributions use the application ID `com.sotreus.app` (the same ID is used
 
 | Flavor | Ships to | Signing |
 |---|---|---|
-| `generic` | Google Play (AAB) | `signing/generic.properties` |
+| `generic` | Google Play (AAB) and a sideload APK | `signing/generic.properties` |
 | `solanaMobile` | Solana dApp Store (APK) | `signing/solanaMobile.properties` |
 
 Each `signing/<flavor>.properties` holds `storeFile`, `storePassword`, `keyAlias` and
-`keyPassword`; the folder is git-ignored. Until a key exists, release builds use the debug key.
+`keyPassword`. The folder is git-ignored. Debug builds keep the debug key. A release build
+fails until that flavor's properties file, or the `SOTREUS_*` env vars used in CI, is present.
+The two release APKs cannot be installed side by side.
+
+### Release signing
+
+Create two different keys from the repo root. JDK 17+ writes a PKCS12 keystore; the `.jks` name
+is only a filename. `keytool` prompts for the passwords and the certificate name. Back both files
+up. Losing the Solana key blocks dApp Store updates. The generic key is the Play upload key; let
+Google generate the Play app-signing key.
+
+```bash
+mkdir -p signing
+
+keytool -genkeypair \
+  -v \
+  -keystore signing/sotreus-generic.jks \
+  -alias sotreus-generic \
+  -keyalg RSA \
+  -keysize 4096 \
+  -validity 25000
+
+keytool -genkeypair \
+  -v \
+  -keystore signing/sotreus-solana-mobile.jks \
+  -alias sotreus-solana-mobile \
+  -keyalg RSA \
+  -keysize 4096 \
+  -validity 25000
+```
+
+`signing/generic.properties` (PKCS12 keeps one password, so `storePassword` and `keyPassword` are the same value):
+
+```properties
+storeFile=signing/sotreus-generic.jks
+storePassword=REPLACE
+keyAlias=sotreus-generic
+keyPassword=REPLACE
+```
+
+`signing/solanaMobile.properties` uses `storeFile=signing/sotreus-solana-mobile.jks` and
+`keyAlias=sotreus-solana-mobile`. Then:
+
+```bash
+./gradlew :app:bundleGenericRelease :app:assembleGenericRelease :app:assembleSolanaMobileRelease
+```
+
+Bump `versionCode` and `versionName` in `app/build.gradle.kts` before each store upload.
+
+Pushing a `v*` tag runs `.github/workflows/release.yml` and publishes
+`Sotreus-<version>-generic.apk`, `Sotreus-<version>-solana-mobile.apk`, and
+`Sotreus-<version>-generic.aab`. A manual run publishes a prerelease tagged `ci-<short sha>`.
+Add Actions secrets `GENERIC_KEYSTORE_BASE64`, `GENERIC_STORE_PASSWORD`, `GENERIC_KEY_ALIAS`,
+`GENERIC_KEY_PASSWORD`, `SOLANA_MOBILE_KEYSTORE_BASE64`, `SOLANA_MOBILE_STORE_PASSWORD`,
+`SOLANA_MOBILE_KEY_ALIAS`, and `SOLANA_MOBILE_KEY_PASSWORD`. Encode a keystore with
+`base64 -i signing/sotreus-generic.jks | tr -d '\n'`.
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0
+```
 
 Which auth and settings screens appear is decided **at runtime by the device**: Solana Mobile
 hardware (Saga, Seeker) gets the wallet and Proofs screens; every other device gets the local

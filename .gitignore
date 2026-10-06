@@ -14,6 +14,7 @@ build/
 *.jks
 google-services.json
 
+.env
 # Release signing material
 /signing/
 
@@ -21,3 +22,4 @@ google-services.json
 /design
 CLAUDE.md
 HANDOFF_V1_UI.md
+
