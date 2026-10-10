@@ -1,6 +1,7 @@
 package app.sotreus.core.data.repository
 
 import app.sotreus.core.data.pipeline.ObservationPipeline
+import app.sotreus.core.data.pipeline.PhoneLocation
 import app.sotreus.core.data.settings.SettingsRepository
 import app.sotreus.core.database.dao.AttentionDao
 import app.sotreus.core.database.dao.EncounterDao
@@ -20,6 +21,7 @@ import app.sotreus.core.model.AttentionInputs
 import app.sotreus.core.model.AttentionReason
 import app.sotreus.core.model.UserEntityState
 import app.sotreus.intelligence.Baseline
+import app.sotreus.intelligence.PlaceGeofence
 import app.sotreus.intelligence.fieldwatch.Sighting
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -170,6 +172,7 @@ class PlaceRepository @Inject constructor(
     private val places: PlaceDao,
     private val entities: EntityDao,
     private val settings: SettingsRepository,
+    private val location: PhoneLocation,
 ) {
     fun observePlaces(): Flow<List<PlaceSummary>> = combine(places.observeAll(), places.observeVisitCounts()) { all, counts ->
         val m = counts.associate { it.key to it.count }
@@ -181,11 +184,25 @@ class PlaceRepository @Inject constructor(
     suspend fun create(name: String, select: Boolean = true): Long {
         val now = System.currentTimeMillis()
         val id = places.insert(PlaceEntity(name = name.trim(), createdAtMs = now, updatedAtMs = now))
-        if (select) settings.setCurrentPlace(id)
+        if (select) select(id)
         return id
     }
 
-    suspend fun select(id: Long?) = settings.setCurrentPlace(id)
+    /**
+     * A hand pick of [id] (null = Unsaved place). It holds while the phone stays near where it was
+     * made ([here], else the latest fresh fix); after that, picking by location takes over again.
+     */
+    suspend fun select(id: Long?, here: Pair<Double, Double>? = null) {
+        val now = System.currentTimeMillis()
+        val at = here ?: location.fresh(now)?.let { it.lat to it.lon }
+        settings.selectPlaceByHand(id, at?.first, at?.second, now)
+    }
+
+    /** The current place is going away: no place for now, and location picks again. */
+    suspend fun clearSelection() {
+        settings.selectPlaceByLocation(null, System.currentTimeMillis(), settings.placeSelection())
+        location.recheck()
+    }
 
     suspend fun rename(id: Long, name: String) {
         places.get(id)?.let { places.update(it.copy(name = name.trim(), updatedAtMs = System.currentTimeMillis())) }
@@ -200,9 +217,15 @@ class PlaceRepository @Inject constructor(
         places.get(id)?.let { places.update(it.copy(lat = null, lon = null, radiusM = null)) }
     }
 
+    /** How far around its location a place reaches, so small moves stay at the same place. */
+    suspend fun setRadius(id: Long, radiusM: Int) {
+        places.get(id)?.let { places.update(it.copy(radiusM = radiusM, updatedAtMs = System.currentTimeMillis())) }
+    }
+
     suspend fun createWithLocation(name: String, lat: Double?, lon: Double?, select: Boolean = true): Long {
-        val id = create(name, select)
+        val id = create(name, select = false)
         if (lat != null && lon != null) setLocation(id, lat, lon)
+        if (select) select(id, if (lat != null && lon != null) lat to lon else null)
         return id
     }
 
@@ -244,6 +267,6 @@ class PlaceRepository @Inject constructor(
     private data class Quad<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)
 
     companion object {
-        const val DEFAULT_RADIUS_M = 150
+        const val DEFAULT_RADIUS_M = PlaceGeofence.DEFAULT_RADIUS_M
     }
 }

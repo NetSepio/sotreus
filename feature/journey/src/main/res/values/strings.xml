@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="feature_journey_title">Sessions</string>
-    <string name="sessions_lead">A session is an explicit window of observation. Nothing records your path unless you start one with location on.</string>
+    <string name="sessions_lead">A session is an explicit window of observation. Nothing records your path unless you start one with location on, or turn on plus-code tags in Privacy &amp; retention.</string>
     <string name="start_journey">Start Journey</string>
     <string name="start_journey_sub">Observe while you move between places.</string>
     <string name="start_sit">Start Sit</string>

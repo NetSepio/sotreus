@@ -12,6 +12,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import app.sotreus.core.data.R
+import app.sotreus.core.data.pipeline.PhoneLocation
 import app.sotreus.core.database.dao.SessionDao
 import app.sotreus.core.database.entity.SessionLocationEntity
 import app.sotreus.core.model.SessionKind
@@ -31,6 +32,7 @@ import javax.inject.Inject
 class ObservationService : LifecycleService() {
     @Inject lateinit var sessions: SessionDao
     @Inject lateinit var location: LocationSource
+    @Inject lateinit var phoneLocation: PhoneLocation
 
     private var locationJob: Job? = null
 
@@ -61,6 +63,8 @@ class ObservationService : LifecycleService() {
                     locationJob = lifecycleScope.launch {
                         location.updates().collect { fix ->
                             sessions.insertLocation(SessionLocationEntity(sessionId = active.id, atMs = fix.atMs, lat = fix.lat, lon = fix.lon, accuracyM = fix.accuracyM))
+                            // Keeps the place following the phone during the session, even off screen.
+                            phoneLocation.offer(fix)
                         }
                     }
                 }

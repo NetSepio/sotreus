@@ -8,14 +8,17 @@ import app.sotreus.core.data.settings.SettingsRepository
 import app.sotreus.core.database.dao.PlaceDao
 import app.sotreus.core.database.dao.SessionDao
 import app.sotreus.core.model.SotreusSettings
+import app.sotreus.sensing.PermissionGroup
 import app.sotreus.sensing.RadioHub
 import app.sotreus.sensing.RadioPermissions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -38,6 +41,7 @@ class ObservationController @Inject constructor(
     private val permissions: RadioPermissions,
     private val sessions: SessionDao,
     private val places: PlaceDao,
+    private val location: PhoneLocation,
     @ApplicationScope private val scope: CoroutineScope,
 ) {
     private val foreground = MutableStateFlow(false)
@@ -77,17 +81,43 @@ class ObservationController @Inject constructor(
                 wasSimulated = s.simulatedRadios
                 val wanted = (fg || session != null) && (s.simulatedRadios || access.canScan)
                 Triple(wanted, s.simulatedRadios, if (boosted) app.sotreus.core.model.ScanIntensity.PERFORMANCE else s.scanIntensity)
-            }.distinctUntilChanged().collect { (wanted, simulated, intensity) ->
-                val now = System.currentTimeMillis()
-                if (wanted) {
-                    if (!_observing.value) pipeline.onStart(now)
-                    hub.start(intensity, simulated)
-                } else if (_observing.value) {
-                    hub.stop()
-                    pipeline.onStop(now)
+            }.distinctUntilChanged().collectLatest { (wanted, simulated, intensity) ->
+                // Location first: the place must reflect where the phone is before anything is tagged.
+                // Cancelled (by collectLatest) if the app leaves the foreground while waiting for a fix.
+                if (wanted && !_observing.value) location.settleBeforeScan()
+                withContext(NonCancellable) {
+                    val now = System.currentTimeMillis()
+                    if (wanted) {
+                        if (!_observing.value) {
+                            pipeline.setPlace(settingsRepository.current().currentPlaceId?.let { places.get(it) }, now)
+                            pipeline.onStart(now)
+                        }
+                        hub.start(intensity, simulated)
+                    } else if (_observing.value) {
+                        hub.stop()
+                        pipeline.onStop(now)
+                    }
+                    _observing.value = wanted
                 }
-                _observing.value = wanted
             }
+        }
+        // Foreground location while observing, so the place follows the phone between saved places.
+        scope.launch {
+            combine(
+                foreground,
+                _observing,
+                settingsRepository.settings.map { it.placeByLocation || it.plusCodeTags }.distinctUntilChanged(),
+                permissions.access,
+            ) { fg, observing, wanted, access ->
+                fg && observing && wanted && PermissionGroup.LOCATION in access.granted && access.locationOn
+            }.distinctUntilChanged().collectLatest { on ->
+                if (on) location.updates().collect { location.offer(it) }
+            }
+        }
+        // A place's location or radius changed, or picking by location was turned on: check again.
+        scope.launch {
+            combine(places.observeAll(), settingsRepository.settings.map { it.placeByLocation }.distinctUntilChanged()) { _, _ -> }
+                .collect { location.recheck() }
         }
         scope.launch {
             var n = 0

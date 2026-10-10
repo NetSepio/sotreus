@@ -102,6 +102,9 @@ class SensorsViewModel @Inject constructor(
             put("bluetoothOn", s.snapshot.access?.bluetoothOn)
             put("wifiOn", s.snapshot.access?.wifiOn)
             put("locationOn", s.snapshot.access?.locationOn)
+            put("placeByLocation", s.settings.placeByLocation)
+            put("plusCodeTags", s.settings.plusCodeTags)
+            put("lastFixAgeMs", s.snapshot.lastFixMs?.let { s.snapshot.atMs - it })
             put("liveRadioCount", s.snapshot.live.size)
         }.toString()
         onReady(exports.writeText("sotreus-diagnostics-${System.currentTimeMillis()}.json", json))
@@ -170,7 +173,18 @@ internal fun SensorsScreen(onBack: () -> Unit, vm: SensorsViewModel = hiltViewMo
             statusTone = ChipTone.NEUTRAL,
             attention = false,
             rows = listOf(
-                stringResource(R.string.kv_used_for) to stringResource(R.string.kv_scan_apis),
+                stringResource(R.string.kv_used_for) to stringResource(
+                    when {
+                        state.settings.placeByLocation && state.settings.plusCodeTags -> R.string.kv_used_for_places_codes
+                        state.settings.placeByLocation -> R.string.kv_used_for_places
+                        state.settings.plusCodeTags -> R.string.kv_used_for_codes
+                        else -> R.string.kv_scan_apis
+                    },
+                ),
+                stringResource(R.string.kv_last_fix) to when {
+                    snap.locating -> stringResource(R.string.kv_locating)
+                    else -> snap.lastFixMs?.let { stringResource(R.string.kv_ago, ageShort((now - it).coerceAtLeast(0))) } ?: never
+                },
                 stringResource(R.string.kv_session_geotag) to stringResource(
                     when (state.settings.geotagMode) {
                         GeotagMode.ASK_EACH_TIME -> R.string.geotag_ask

@@ -72,6 +72,8 @@ class PrivacyViewModel @Inject constructor(
         controls.applyRetention(r)
     }
     fun mask(on: Boolean) = viewModelScope.launch { settings.setMaskCoordinates(on) }
+    fun placeByLocation(on: Boolean) = viewModelScope.launch { settings.setPlaceByLocation(on) }
+    fun plusCodeTags(on: Boolean) = viewModelScope.launch { settings.setPlusCodeTags(on) }
     fun geotag(m: GeotagMode) = viewModelScope.launch { settings.setGeotagMode(m) }
     fun deleteSession(id: Long) = viewModelScope.launch { controls.deleteSession(id) }
     fun deletePlace(id: Long) = viewModelScope.launch { controls.deletePlaceHistory(id) }
@@ -115,6 +117,16 @@ internal fun PrivacyScreen(onBack: () -> Unit, vm: PrivacyViewModel = hiltViewMo
         Column {
             MonoLabel(stringResource(R.string.location_group))
             SwitchRow(stringResource(R.string.mask_coords), state.settings.maskCoordinates, vm::mask, subtitle = stringResource(R.string.mask_coords_sub), bordered = false)
+            RowDivider()
+            SwitchRow(
+                stringResource(R.string.privacy_place_by_location), state.settings.placeByLocation, vm::placeByLocation,
+                subtitle = stringResource(R.string.privacy_place_by_location_sub), bordered = false,
+            )
+            RowDivider()
+            SwitchRow(
+                stringResource(R.string.privacy_plus_codes), state.settings.plusCodeTags, vm::plusCodeTags,
+                subtitle = stringResource(R.string.privacy_plus_codes_sub), bordered = false,
+            )
             RowDivider()
             NavRow(stringResource(R.string.geotag_sessions), { pending = Pending.GeotagChoice }, value = geotagLabel(state.settings.geotagMode), showDivider = false)
         }

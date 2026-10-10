@@ -69,7 +69,7 @@ abstract class SotreusDatabase : RoomDatabase() {
     abstract fun trackingDao(): TrackingDao
 
     companion object {
-        const val SCHEMA_VERSION = 4
+        const val SCHEMA_VERSION = 5
         const val NAME = "sotreus.db"
     }
 }

@@ -38,6 +38,7 @@ internal fun PlacePickerSheet(
     onCreate: (String, Boolean) -> Unit,
     onDetails: (Long) -> Unit,
     onDismiss: () -> Unit,
+    byLocation: Boolean = false,
 ) {
     var creating by remember { mutableStateOf(false) }
     val c = SotreusTheme.colors
@@ -72,6 +73,7 @@ internal fun PlacePickerSheet(
             }
             GhostButton(stringResource(R.string.picker_new), onClick = { creating = true }, strong = true)
             Text(stringResource(R.string.picker_note), style = SotreusTheme.typography.caption, color = c.textDim)
+            if (byLocation) Text(stringResource(R.string.picker_note_location), style = SotreusTheme.typography.caption, color = c.textDim)
         }
     }
     if (creating) NewPlaceDialog(onCreate = { name, withLocation -> creating = false; onCreate(name, withLocation) }, onDismiss = { creating = false })

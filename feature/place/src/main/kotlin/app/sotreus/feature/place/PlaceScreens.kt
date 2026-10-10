@@ -10,7 +10,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import app.sotreus.core.navigation.PlaceMapRoute
 import app.sotreus.core.ui.DashedPanel
+import app.sotreus.core.ui.SegmentedToggle
 import app.sotreus.core.ui.WarningBanner
+import app.sotreus.intelligence.PlaceGeofence
 import app.sotreus.sensing.LocationSource
 import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.compose.foundation.background
@@ -118,12 +120,15 @@ class PlaceViewModel @Inject constructor(
 
     fun clearLocation() = viewModelScope.launch { places.clearLocation(id) }
 
+    fun setRadius(radiusM: Int) = viewModelScope.launch { places.setRadius(id, radiusM) }
+
     fun rename(name: String) = viewModelScope.launch { places.rename(id, name) }
     fun keepLearning(on: Boolean) = viewModelScope.launch { places.setKeepLearning(id, on) }
     fun deleteHistory() = viewModelScope.launch { controls.deletePlaceHistory(id) }
     fun deletePlace(done: () -> Unit) = viewModelScope.launch {
-        if (places.currentPlace()?.id == id) places.select(null)
+        val wasCurrent = places.currentPlace()?.id == id
         controls.deletePlace(id)
+        if (wasCurrent) places.clearSelection()
         done()
     }
 }
@@ -148,6 +153,7 @@ internal fun PlaceScreen(navigate: (Any) -> Unit, onBack: () -> Unit, vm: PlaceV
                 },
                 onPick = { navigate(PlaceMapRoute(vm.id)) },
                 onClear = vm::clearLocation,
+                onRadius = vm::setRadius,
             )
         },
     )
@@ -268,7 +274,7 @@ private fun ChangeCard(entry: BaselineEntry, attention: Boolean, completed: Int,
 }
 
 @Composable
-private fun LocationSection(state: PlaceUiState, onUseCurrent: () -> Unit, onPick: () -> Unit, onClear: () -> Unit) {
+private fun LocationSection(state: PlaceUiState, onUseCurrent: () -> Unit, onPick: () -> Unit, onClear: () -> Unit, onRadius: (Int) -> Unit) {
     val c = SotreusTheme.colors
     val context = LocalContext.current
     val place = state.view?.place ?: return
@@ -296,6 +302,13 @@ private fun LocationSection(state: PlaceUiState, onUseCurrent: () -> Unit, onPic
                     if (state.mask && !reveal) InlineLink(stringResource(R.string.loc_reveal), { reveal = true })
                 }
             }
+            // The place's radius: within it, small moves and GPS jitter keep observations at this place.
+            SegmentedToggle(
+                PlaceGeofence.RADIUS_CHOICES_M.map { it to stringResource(R.string.loc_radius_option, it) },
+                place.radiusM ?: PlaceGeofence.DEFAULT_RADIUS_M,
+                onRadius,
+            )
+            Text(stringResource(R.string.loc_radius_note), style = SotreusTheme.typography.caption, color = c.textMuted)
             if (mapShown) {
                 PlaceMap(lat, lon, 15.5, stringResource(R.string.map_a11y, place.name), Modifier.fillMaxWidth().height(200.dp))
                 Text(stringResource(R.string.map_attribution), style = SotreusTheme.typography.monoLabelS, color = c.textDim)

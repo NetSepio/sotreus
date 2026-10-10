@@ -65,6 +65,11 @@
     <string name="kv_scan_no">No</string>
     <string name="kv_used_for">Used for</string>
     <string name="kv_scan_apis">Scan APIs only</string>
+    <string name="kv_used_for_places">Scan APIs · places</string>
+    <string name="kv_used_for_codes">Scan APIs · plus codes</string>
+    <string name="kv_used_for_places_codes">Scan APIs · places · plus codes</string>
+    <string name="kv_last_fix">Last fix</string>
+    <string name="kv_locating">Getting a fix…</string>
     <string name="kv_session_geotag">Session geotag</string>
     <string name="kv_never">never</string>
     <string name="kv_ago">%1$s ago</string>
@@ -142,6 +147,10 @@
     <string name="location_group">Location</string>
     <string name="mask_coords">Mask coordinates on screen</string>
     <string name="mask_coords_sub">For screenshots and over-the-shoulder</string>
+    <string name="privacy_place_by_location">Pick places by location</string>
+    <string name="privacy_place_by_location_sub">While Sotreus is open, the place comes from the phone’s location and each saved place’s radius. Your path isn’t stored.</string>
+    <string name="privacy_plus_codes">Tag observations with a plus code</string>
+    <string name="privacy_plus_codes_sub">While Sotreus is open, each observation keeps where the phone was as a plus code, about 14 m across. This builds a location history on this phone.</string>
     <string name="geotag_sessions">Geotag sessions</string>
     <string name="geotag_dialog_title">Geotag sessions</string>
     <string name="export_defaults">Export defaults</string>

@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="now_place_kicker">Place ▾</string>
+    <string name="now_place_kicker_location">Place · by location ▾</string>
     <string name="now_unsaved_place">Unsaved place</string>
     <string name="now_observing">Observing</string>
     <string name="now_simulated">Simulated</string>
     <string name="now_paused">Paused</string>
+    <string name="now_locating">Locating</string>
     <string name="now_place_picker_a11y">Choose place. Current: %1$s</string>
     <string name="now_view_bands">Bands</string>
     <string name="now_view_list">List</string>
@@ -101,6 +103,7 @@
     <string name="picker_create">Create</string>
     <string name="picker_cancel">Cancel</string>
     <string name="picker_note">Places are user-defined. A place learns what is normal there from your visits.</string>
+    <string name="picker_note_location">A place with a saved location is picked when the phone is within its radius. A place you pick here stays while the phone is near where you picked it.</string>
     <string name="picker_save_location">Save current location</string>
     <string name="picker_save_location_sub">Stays on this phone. You can also pick it on a map later.</string>
     <string name="picker_name_label">Name</string>
