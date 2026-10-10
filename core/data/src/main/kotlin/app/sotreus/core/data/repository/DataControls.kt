@@ -1,6 +1,7 @@
 package app.sotreus.core.data.repository
 
 import app.sotreus.core.data.pipeline.ObservationPipeline
+import app.sotreus.core.data.settings.SettingsRepository
 import app.sotreus.core.database.dao.AttentionDao
 import app.sotreus.core.database.dao.ContextDao
 import app.sotreus.core.database.dao.EncounterDao
@@ -25,6 +26,7 @@ class DataControls @Inject constructor(
     private val proofs: ProofRepository,
     private val pipeline: ObservationPipeline,
     private val context: ContextDao,
+    private val settings: SettingsRepository,
 ) {
     /** A session's observations, encounters, timeline, locations, context and attention events. */
     suspend fun deleteSession(sessionId: Long) {
@@ -65,6 +67,7 @@ class DataControls @Inject constructor(
         sessions.deleteAllEntities()
         sessions.deleteSensedEvents()
         sessions.deleteAllLocations()
+        settings.clearPlaceAnchor()
         entities.deleteOrphans()
         pipeline.forgetAll()
     }

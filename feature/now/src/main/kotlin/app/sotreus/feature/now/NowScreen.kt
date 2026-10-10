@@ -111,6 +111,7 @@ internal fun NowScreen(navigate: (Any) -> Unit, vm: NowViewModel = hiltViewModel
             onCreate = { name, withLocation -> vm.createPlace(name, withLocation); picker = false },
             onDetails = { id -> picker = false; navigate(PlaceRoute(id)) },
             onDismiss = { picker = false },
+            byLocation = state.settings.placeByLocation,
         )
     }
 }
@@ -171,11 +172,12 @@ private fun Header(state: NowUiState, onPlace: () -> Unit) {
                 .semantics(mergeDescendants = true) { contentDescription = a11y },
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            MonoLabel(stringResource(R.string.now_place_kicker), small = true)
+            MonoLabel(stringResource(if (state.snapshot.placeByLocation) R.string.now_place_kicker_location else R.string.now_place_kicker), small = true)
             // Long place names step down in size instead of being cut off.
             AutoSizeText(placeName, SotreusTheme.typography.titleS, c.text)
         }
         val pill = when {
+            state.snapshot.locating -> stringResource(R.string.now_locating)
             !state.snapshot.observing -> stringResource(R.string.now_paused)
             state.settings.simulatedRadios -> stringResource(R.string.now_simulated)
             else -> stringResource(R.string.now_observing)

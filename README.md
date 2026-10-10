@@ -15,10 +15,16 @@ and no network. Observations, places, labels and notes stay on the phone.
 - **Entities** — device-family classification, "most likely…" explanations, your labels (Mine,
   Expected, Tagged, Watch, Ignore), names, notes, addresses, raw evidence and a proximity check.
 - **Attention** — explainable events with human-readable reasons and inputs. Not a threat score.
-- **Places** — user-defined places with optional coordinates (current location or map pick) and a
-  baseline learned from visits.
+- **Places** — user-defined places with optional coordinates (current location or map pick), a
+  radius (50–300 m) and a baseline learned from visits. While Sotreus is open, the place is picked
+  from the phone's location: inside a saved place's radius you are at that place, and you leave it
+  only once clearly outside, so small moves don't change it. On launch the radios wait for a new
+  fix (up to 10 s) so nothing is tagged to where the app was last used. A place picked by hand
+  holds while the phone stays near where you picked it.
 - **Sessions** — Journey and Sit sessions with a live timeline, summaries and sit comparison.
-- **Privacy** — retention, coordinate masking, privacy-reduced exports, per-item deletion.
+- **Privacy** — retention, coordinate masking, privacy-reduced exports, per-item deletion. Picking
+  places by location stores no path. Opt-in plus-code tags (off by default) keep a ~14 m plus code
+  of the phone's location on each observation while Sotreus is open.
 - **Friends** — QR pairing and opt-in Nearby presence using rotating anonymous BLE tokens.
 - **Context** — optional sources, each labelled with where it came from and each switchable off:
   - **Satellites** (PREDICTED) — orbital elements from CelesTrak (Earth observation, weather and
@@ -123,7 +129,8 @@ keyPassword=REPLACE
 ./gradlew :app:bundleGenericRelease :app:assembleGenericRelease :app:assembleSolanaMobileRelease
 ```
 
-Bump `versionCode` and `versionName` in `app/build.gradle.kts` before each store upload.
+Bump `versionCode` and `versionName` in `app/build.gradle.kts` before each store upload, and add
+the release to [`CHANGELOG.md`](CHANGELOG.md).
 
 Pushing a `v*` tag runs `.github/workflows/release.yml` and publishes
 `Sotreus-<version>-generic.apk`, `Sotreus-<version>-solana-mobile.apk`, and
@@ -134,7 +141,7 @@ Add Actions secrets `GENERIC_KEYSTORE_BASE64`, `GENERIC_STORE_PASSWORD`, `GENERI
 `base64 -i signing/sotreus-generic.jks | tr -d '\n'`.
 
 ```bash
-git tag v1.0.0 && git push origin v1.0.0
+git tag v1.0.1 && git push origin v1.0.1
 ```
 
 Which auth and settings screens appear is decided **at runtime by the device**: Solana Mobile

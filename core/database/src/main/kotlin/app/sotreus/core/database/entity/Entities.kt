@@ -72,6 +72,8 @@ data class ObservationEntity(
     val lat: Double? = null,
     val lon: Double? = null,
     @ColumnInfo(name = "raw_hex") val rawHex: String?,
+    /** Phone location at time of observation as a ~14 m plus code; only when the user turned plus-code tags on. */
+    @ColumnInfo(name = "plus_code") val plusCode: String? = null,
 )
 
 /** A contiguous stretch of presence of one entity at one place/session. */

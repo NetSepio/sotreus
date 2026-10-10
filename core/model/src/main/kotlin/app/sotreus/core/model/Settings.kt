@@ -22,6 +22,12 @@ enum class SatelliteGroup(val celestrakGroup: String) {
 data class SotreusSettings(
     val onboardingDone: Boolean = false,
     val currentPlaceId: Long? = null,
+    /** The current place was picked by phone location (inside its radius), not by hand. */
+    val currentPlaceByLocation: Boolean = false,
+    /** Pick saved places by phone location while Sotreus is open. Uses location; stores no coordinates. */
+    val placeByLocation: Boolean = true,
+    /** Tag each observation with a ~14 m plus code of the phone's location while Sotreus is open. */
+    val plusCodeTags: Boolean = false,
     val nowView: NowView = NowView.BANDS,
     val retention: RetentionPolicy = RetentionPolicy.KEEP_30_DAYS,
     val maskCoordinates: Boolean = true,

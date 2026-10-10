@@ -44,6 +44,12 @@ data class LiveSnapshot(
     val access: RadioAccess? = null,
     val placeId: Long? = null,
     val placeName: String? = null,
+    /** The current place was picked by phone location (the phone is within its radius). */
+    val placeByLocation: Boolean = false,
+    /** Waiting for a location fix before the radios start, so nothing is tagged to an earlier place. */
+    val locating: Boolean = false,
+    /** When the latest phone location fix was taken, if any this run. */
+    val lastFixMs: Long? = null,
     /** Completed visits behind the current place's baseline. 0 = still learning. */
     val baselineVisits: Int = 0,
     val activeSessionId: Long? = null,

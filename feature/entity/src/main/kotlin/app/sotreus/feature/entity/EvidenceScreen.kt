@@ -50,10 +50,11 @@ internal fun EvidenceScreen(onBack: () -> Unit, vm: EvidenceViewModel = hiltView
             MonoLabel("${state.rows.size}")
             state.rows.forEach { o ->
                 val place = o.placeId?.let(state.places::get) ?: stringResource(R.string.evidence_unsaved)
-                val coords = if (o.lat != null && o.lon != null) {
-                    if (state.mask) stringResource(R.string.evidence_coords_masked) else stringResource(R.string.evidence_coords, "%.5f, %.5f".format(o.lat, o.lon))
-                } else {
-                    null
+                val coords = when {
+                    o.lat == null && o.lon == null && o.plusCode == null -> null
+                    state.mask -> stringResource(R.string.evidence_coords_masked)
+                    o.lat != null && o.lon != null -> stringResource(R.string.evidence_coords, "%.5f, %.5f".format(o.lat, o.lon))
+                    else -> o.plusCode?.let { stringResource(R.string.evidence_coords, it) }
                 }
                 InfoRow(
                     title = "${dayLabel(o.observedAtMs)} ${clockTime(o.observedAtMs)} · $place",

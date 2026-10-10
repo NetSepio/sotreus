@@ -289,6 +289,16 @@ interface PlaceDao {
     @Query("SELECT * FROM place_visits WHERE place_id = :placeId AND ended_at_ms IS NULL LIMIT 1")
     suspend fun openVisit(placeId: Long): PlaceVisitEntity?
 
+    @Query("SELECT * FROM place_visits WHERE place_id = :placeId ORDER BY started_at_ms DESC LIMIT 1")
+    suspend fun latestVisit(placeId: Long): PlaceVisitEntity?
+
+    @Query("UPDATE place_visits SET ended_at_ms = NULL WHERE id = :visitId")
+    suspend fun reopenVisit(visitId: Long)
+
+    /** Places with a saved location, for picking the place by phone location. */
+    @Query("SELECT * FROM places WHERE lat IS NOT NULL AND lon IS NOT NULL")
+    suspend fun located(): List<PlaceEntity>
+
     @Query("SELECT COUNT(*) FROM place_visits WHERE place_id = :placeId")
     fun observeVisitCount(placeId: Long): Flow<Int>
 

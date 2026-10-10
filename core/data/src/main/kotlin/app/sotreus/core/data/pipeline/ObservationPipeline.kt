@@ -30,6 +30,7 @@ import app.sotreus.core.model.UserEntityState
 import app.sotreus.intelligence.AttentionEngine
 import app.sotreus.intelligence.Classification
 import app.sotreus.intelligence.Fingerprint
+import app.sotreus.intelligence.PlusCode
 import app.sotreus.intelligence.SignatureClassifier
 import app.sotreus.intelligence.fieldwatch.Observation
 import app.sotreus.intelligence.fieldwatch.Sighting
@@ -67,6 +68,7 @@ class ObservationPipeline @Inject constructor(
     private val attention: AttentionDao,
     private val classifier: SignatureClassifier,
     private val placeTracker: PlaceTracker,
+    private val location: PhoneLocation,
     @ApplicationScope private val scope: CoroutineScope,
 ) {
     private val lock = Any()
@@ -92,6 +94,8 @@ class ObservationPipeline @Inject constructor(
     @Volatile private var activeSession: SessionEntity? = null
     @Volatile private var currentPlace: PlaceEntity? = null
     @Volatile private var baseline: PlaceTracker.Baseline? = null
+    @Volatile private var tagPlusCodes = false
+    @Volatile private var placeByLocation = false
     private var baselineLoadedAt = 0L
     private var windowStartMs = 0L
     private var runStartMs = 0L
@@ -177,6 +181,8 @@ class ObservationPipeline @Inject constructor(
     suspend fun tick(now: Long, status: RadioStatus, access: RadioAccess?, settings: SotreusSettings, observing: Boolean) =
         mutex.withLock {
             tickCount++
+            tagPlusCodes = settings.plusCodeTags
+            placeByLocation = settings.currentPlaceByLocation
             bindSession(now)
             if (tickCount % 2 == 0L) flushLocked(now)
             if (tickCount % 15 == 0L) assessAttention(now, settings)
@@ -212,6 +218,8 @@ class ObservationPipeline @Inject constructor(
         val placeId = currentPlace?.id
         val session = activeSession
         val visitId = placeTracker.ensure(placeId, now)
+        // Opt-in: where the phone was, as a ~14 m plus code, only from a fix taken in the last minute.
+        val plusCode = if (tagPlusCodes) location.fresh(now)?.let { PlusCode.encode(it.lat, it.lon) } else null
         val brandNew = mutableListOf<EntityEntity>()
         val updates = mutableListOf<EntitySystemFields>()
         val evidence = mutableListOf<ObservationEntity>()
@@ -235,6 +243,7 @@ class ObservationPipeline @Inject constructor(
                     sessionId = session?.id,
                     lat = null,
                     lon = null,
+                    plusCode = plusCode,
                     rawHex = s.rawHex.take(RAW_HEX_LIMIT).ifBlank { null },
                 )
             }
@@ -518,6 +527,10 @@ class ObservationPipeline @Inject constructor(
             access = access,
             placeId = currentPlace?.id,
             placeName = currentPlace?.name,
+            // While a fix is pending the earlier place is unconfirmed, so it isn't shown as picked by location.
+            placeByLocation = placeByLocation && currentPlace != null && !location.locating.value,
+            locating = location.locating.value,
+            lastFixMs = location.latest.value?.atMs,
             baselineVisits = baseline?.completedVisits ?: 0,
             activeSessionId = activeSession?.id,
         )

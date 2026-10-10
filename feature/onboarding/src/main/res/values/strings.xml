@@ -23,7 +23,7 @@
     <string name="perm_wifi_body">Read visible access-point beacons. Sotreus never joins a network.</string>
     <string name="perm_location">Location</string>
     <string name="perm_location_suffix">· while in use</string>
-    <string name="perm_location_body">Android withholds Wi-Fi and BLE results without it. Your path is recorded only if you start a geotagged Journey.</string>
+    <string name="perm_location_body">Android withholds Wi-Fi and BLE results without it. Sotreus also uses it to pick your saved places. Your path is recorded only in a geotagged Journey, or if you turn on plus-code tags.</string>
     <string name="perm_notifications">Notifications</string>
     <string name="perm_optional_suffix">· optional</string>
     <string name="perm_notifications_body">A status notice while observation runs in the background.</string>

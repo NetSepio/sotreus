@@ -11,6 +11,7 @@ import app.sotreus.core.database.dao.PlaceDao
 import app.sotreus.core.database.dao.SessionDao
 import app.sotreus.core.database.entity.EntityEntity
 import app.sotreus.core.database.entity.ObservationEntity
+import app.sotreus.intelligence.PlusCode
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.JsonArray
@@ -77,6 +78,15 @@ class ExportService @Inject constructor(
                 ExportOptions.Coordinates.NONE -> Unit
             }
         }
+        fun JsonObjectBuilder.plusCode(code: String?) {
+            if (code == null) return
+            when (options.coordinates) {
+                ExportOptions.Coordinates.EXACT -> put("plusCode", code)
+                // About 5.5 km: no finer than the coarse coordinates' intent.
+                ExportOptions.Coordinates.COARSE -> put("plusCode", PlusCode.coarsen(code, PlusCode.COARSE_LENGTH))
+                ExportOptions.Coordinates.NONE -> Unit
+            }
+        }
         return buildJsonObject {
             put("format", "sotreus-export")
             put("version", 1)
@@ -117,6 +127,7 @@ class ExportService @Inject constructor(
                             put("provenance", o.provenance.name)
                             o.placeId?.let { put("place", placeNames[it] ?: "") }
                             coords(o.lat, o.lon)
+                            plusCode(o.plusCode)
                         }
                     },
                 ),
