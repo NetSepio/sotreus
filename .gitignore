@@ -23,3 +23,5 @@ google-services.json
 CLAUDE.md
 HANDOFF_V1_UI.md
 
+# Python maintenance tools
+__pycache__/

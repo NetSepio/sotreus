@@ -8,6 +8,7 @@ import app.sotreus.core.data.settings.SettingsRepository
 import app.sotreus.core.database.dao.PlaceDao
 import app.sotreus.core.database.dao.SessionDao
 import app.sotreus.core.model.SotreusSettings
+import app.sotreus.core.model.SessionKind
 import app.sotreus.sensing.PermissionGroup
 import app.sotreus.sensing.RadioHub
 import app.sotreus.sensing.RadioPermissions
@@ -106,10 +107,13 @@ class ObservationController @Inject constructor(
             combine(
                 foreground,
                 _observing,
-                settingsRepository.settings.map { it.placeByLocation || it.plusCodeTags }.distinctUntilChanged(),
+                settingsRepository.settings,
                 permissions.access,
-            ) { fg, observing, wanted, access ->
-                fg && observing && wanted && PermissionGroup.LOCATION in access.granted && access.locationOn
+                sessions.observeActive(),
+            ) { fg, observing, s, access, session ->
+                val serviceLocates = session != null && (session.geotag || (session.kind == SessionKind.JOURNEY && s.journeyMovement))
+                fg && observing && !serviceLocates && (s.placeByLocation || s.plusCodeTags) &&
+                    PermissionGroup.LOCATION in access.granted && access.locationOn
             }.distinctUntilChanged().collectLatest { on ->
                 if (on) location.updates().collect { location.offer(it) }
             }

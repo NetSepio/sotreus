@@ -40,6 +40,8 @@ object AttentionEngine {
         val lastHeardAgeSeconds: Double,
         val staleAfterSeconds: Double,
         val displayName: String,
+        val movement: JourneyMovement.Evidence? = null,
+        val linkConfidence: Confidence = Confidence.LOW,
     )
 
     data class Assessment(
@@ -75,9 +77,16 @@ object AttentionEngine {
 
         val miss = (1 - W_TAG * tag) * (1 - W_REENCOUNTER * reEncounter) * (1 - W_PERSISTENCE * persistence) *
             (1 - W_NOVELTY * novelty) * (1 - W_KNOWN * known)
-        val score = ((1 - miss) * (0.5 + 0.5 * freshness)).coerceIn(0.0, 1.0)
+        val ordinaryScore = ((1 - miss) * (0.5 + 0.5 * freshness)).coerceIn(0.0, 1.0)
+        // Shared movement is assessed independently of recognisable product/vendor signatures.
+        val score = if (c.movement != null) maxOf(ordinaryScore, 0.70 * (0.5 + 0.5 * freshness)) else ordinaryScore
 
         val reasons = buildList {
+            c.movement?.let { m ->
+                add(AttentionReason(AttentionReasonKind.OBSERVED_DURING_MOVEMENT,
+                    listOf(m.locations.toString(), (m.durationMs / 60_000).toString(), m.separationM.toString(), m.samples.toString())))
+                add(AttentionReason(AttentionReasonKind.ADDRESS_CONTINUITY, listOf(c.linkConfidence.name), strong = false))
+            }
             if (tag > 0) add(AttentionReason(AttentionReasonKind.TAGGED_BY_YOU, listOf(c.displayName)))
             if (c.otherPlaces.isNotEmpty()) {
                 add(AttentionReason(AttentionReasonKind.SEEN_AT_OTHER_PLACES, c.otherPlaces.take(3)))
@@ -104,6 +113,7 @@ object AttentionEngine {
         if (reasons.isEmpty()) return null
 
         val headline = when {
+            c.movement != null -> AttentionHeadline.JOURNEY_MOVEMENT
             c.otherPlaces.isNotEmpty() -> AttentionHeadline.CROSS_LOCATION_REENCOUNTER
             tag > 0 -> AttentionHeadline.TAGGED_REENCOUNTERED
             known > 0 && (c.notableSignature || c.family?.attentionRelevant == true) -> AttentionHeadline.FAMILY_SIGNATURE_OBSERVED

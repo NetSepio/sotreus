@@ -155,4 +155,10 @@
     <string name="export_action">Export · privacy-reduced</string>
     <string name="export_action_raw">Export raw data</string>
     <string name="export_share">Share export</string>
+    <string name="headline_journey_movement">Radio observed during your journey</string>
+    <string name="reason_movement">Observed while you moved</string>
+    <string name="reason_movement_detail">%1$s separated locations over %2$s min · %3$s m apart · %4$s samples</string>
+    <string name="reason_address_continuity">Address continuity</string>
+    <string name="reason_address_stable">The same broadcast address was observed. Shared transport, radio range and coincidence can also explain this.</string>
+    <string name="reason_address_changeable">This address may change. Evidence applies to this address only; it does not establish a unique physical device or intent.</string>
 </resources>

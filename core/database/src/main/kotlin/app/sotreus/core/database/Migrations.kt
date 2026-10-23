@@ -52,5 +52,14 @@ object Migrations {
         }
     }
 
-    val ALL = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+    /** v6: cached public vendor-prefix lookups. No observed addresses or location. */
+    val MIGRATION_5_6 = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("CREATE TABLE IF NOT EXISTS `vendor_lookups` (`prefix` TEXT NOT NULL, `vendor` TEXT, `block_type` TEXT, `registry_updated` TEXT, `fetched_at_ms` INTEGER NOT NULL, `expires_at_ms` INTEGER NOT NULL, PRIMARY KEY(`prefix`))")
+            db.execSQL("UPDATE entities SET link_confidence = 'LOW', vendor = NULL WHERE radio = 'WIFI' AND UPPER(SUBSTR(REPLACE(address, ':', ''), 2, 1)) IN ('1','2','3','5','6','7','9','A','B','D','E','F')")
+            db.execSQL("UPDATE entities SET vendor = NULL WHERE radio = 'BLE' AND address_type != 'PUBLIC'")
+        }
+    }
+
+    val ALL = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
 }

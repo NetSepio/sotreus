@@ -98,7 +98,7 @@ internal fun PermissionsScreen(onDone: () -> Unit, vm: PermissionsViewModel = hi
             context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)))
         },
         onBluetooth = { enableBluetooth(context) },
-        onWifi = { context.startActivity(Intent(Settings.Panel.ACTION_WIFI)) },
+        onWifi = { context.startActivity(Intent(if (Build.VERSION.SDK_INT >= 29) Settings.Panel.ACTION_WIFI else Settings.ACTION_WIFI_SETTINGS)) },
         onLocation = { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) },
         onNotNow = onDone,
     )

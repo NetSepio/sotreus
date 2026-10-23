@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
 import android.os.Looper
+import android.os.Build
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import androidx.core.location.LocationListenerCompat
@@ -22,8 +23,9 @@ import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 /**
- * Phone location, foreground only (handoff §13): geotagged sessions, picking saved places by
- * location and optional plus-code tags. Uses the platform LocationManager so no Google Play
+ * Phone location while the app is visible or an explicit session's foreground service runs:
+ * Journey movement, geotagged sessions, picking saved places and optional plus-code tags.
+ * Uses the platform LocationManager so no Google Play
  * services dependency is needed. Every [Fix] carries the time the fix was taken, never the time it
  * was read, so an old fix is never shown as current.
  */
@@ -133,7 +135,11 @@ class LocationSource @Inject constructor(@ApplicationContext private val context
     private companion object {
         const val GOOD_ENOUGH_M = 50f
         const val LAST_KNOWN_MAX_AGE_MS = 2 * 60_000L
-        val ONE_SHOT_PROVIDERS = listOf(LocationManager.FUSED_PROVIDER, LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+        val ONE_SHOT_PROVIDERS = buildList {
+            if (Build.VERSION.SDK_INT >= 31) add(LocationManager.FUSED_PROVIDER)
+            add(LocationManager.GPS_PROVIDER)
+            add(LocationManager.NETWORK_PROVIDER)
+        }
         val UPDATE_PROVIDERS = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
     }
 }

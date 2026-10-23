@@ -25,7 +25,7 @@ maplibre = "13.6.1"
 
 compileSdk = "37"
 targetSdk = "37"
-minSdk = "29"
+minSdk = "28"
 jvmTarget = "17"
 
 [libraries]

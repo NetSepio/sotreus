@@ -39,6 +39,10 @@ import app.sotreus.core.data.export.ExportService
 import app.sotreus.core.data.repository.EntityDetail
 import app.sotreus.core.data.repository.EntityRepository
 import app.sotreus.core.data.settings.SettingsRepository
+import app.sotreus.core.data.lookup.VendorLookupOutcome
+import app.sotreus.core.data.lookup.VendorLookupRepository
+import app.sotreus.core.database.dao.VendorLookupDao
+import app.sotreus.core.database.entity.VendorLookupEntity
 import app.sotreus.core.database.entity.EntityEntity
 import app.sotreus.core.designsystem.icon.SotreusIcons
 import app.sotreus.core.designsystem.theme.SotreusTheme
@@ -54,6 +58,7 @@ import app.sotreus.core.ui.AutoSizeText
 import app.sotreus.core.ui.BackTopBar
 import app.sotreus.core.ui.CardStyle
 import app.sotreus.core.ui.CaveatBox
+import app.sotreus.core.ui.ConfirmDialog
 import app.sotreus.core.ui.ChipTone
 import app.sotreus.core.ui.ExportChoice
 import app.sotreus.core.ui.ExportSheet
@@ -81,8 +86,10 @@ import app.sotreus.core.ui.isSameDay
 import app.sotreus.core.ui.shareFile
 import app.sotreus.core.ui.userLabel
 import app.sotreus.intelligence.Fingerprint
+import app.sotreus.intelligence.fieldwatch.RadioDb
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -92,6 +99,10 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import app.sotreus.core.ui.R as UiR
@@ -104,20 +115,36 @@ data class EntityUiState(
     val staleHoldSeconds: Int = 30,
     val maskCoordinates: Boolean = true,
     val proofsEnabled: Boolean = false,
+    val onlineLookupEnabled: Boolean = false,
 )
 
-@OptIn(FlowPreview::class)
+data class VendorLookupUiState(
+    val record: VendorLookupEntity? = null,
+    val busy: Boolean = false,
+    val outcome: VendorLookupOutcome? = null,
+)
+
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class EntityViewModel @Inject constructor(
     handle: SavedStateHandle,
     private val repository: EntityRepository,
     private val exports: ExportService,
-    settings: SettingsRepository,
+    private val settings: SettingsRepository,
     device: DeviceProfileRepository,
+    private val vendorLookup: VendorLookupRepository,
+    vendorCache: VendorLookupDao,
 ) : ViewModel() {
     val entityId: String = handle.toRoute<EntityRoute>().entityId
     private val note = MutableStateFlow<String?>(null)
     private val ticker = flow { while (true) { emit(System.currentTimeMillis()); delay(1_000) } }
+    private val lookupRequest = MutableStateFlow(VendorLookupUiState())
+    private val cachedLookup = repository.observeDetail(entityId).map { d ->
+        d?.entity?.let { Fingerprint.vendorLookupPrefix(it.radio, it.addressType, it.address) }
+    }.distinctUntilChanged().flatMapLatest { prefix -> if (prefix == null) flowOf(null) else vendorCache.observe(prefix) }
+    val lookupState: StateFlow<VendorLookupUiState> = combine(cachedLookup, lookupRequest) { cached, request ->
+        request.copy(record = cached)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), VendorLookupUiState())
 
     val state: StateFlow<EntityUiState> = combine(
         repository.observeDetail(entityId),
@@ -133,6 +160,7 @@ class EntityViewModel @Inject constructor(
             staleHoldSeconds = s.staleHoldSeconds,
             maskCoordinates = s.maskCoordinates,
             proofsEnabled = caps.onChainProofStamping,
+            onlineLookupEnabled = s.onlineVendorLookup,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EntityUiState())
 
@@ -145,6 +173,19 @@ class EntityViewModel @Inject constructor(
     fun setLabel(state: UserEntityState) = viewModelScope.launch { repository.setLabel(entityId, state) }
     fun rename(name: String) = viewModelScope.launch { repository.rename(entityId, name) }
     fun editNote(text: String) { note.value = text }
+
+    fun lookupVendor(enable: Boolean = false) = viewModelScope.launch {
+        if (lookupRequest.value.busy) return@launch
+        val e = state.value.detail?.entity ?: return@launch
+        lookupRequest.value = VendorLookupUiState(busy = true)
+        try {
+            if (enable) settings.setOnlineVendorLookup(true)
+            val result = vendorLookup.lookup(e.radio, e.addressType, e.address)
+            lookupRequest.value = VendorLookupUiState(outcome = result)
+        } finally {
+            lookupRequest.value = lookupRequest.value.copy(busy = false)
+        }
+    }
 
     fun export(choice: ExportChoice, onReady: (android.net.Uri) -> Unit) = viewModelScope.launch {
         exports.exportEntity(entityId, choice.toOptions())?.let(onReady)
@@ -161,6 +202,7 @@ internal fun ExportChoice.toOptions() = ExportOptions(
 @Composable
 internal fun EntityScreen(navigate: (Any) -> Unit, onBack: () -> Unit, vm: EntityViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val lookup by vm.lookupState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var exporting by remember { mutableStateOf(false) }
     val shareTitle = stringResource(UiR.string.export_share)
@@ -174,6 +216,9 @@ internal fun EntityScreen(navigate: (Any) -> Unit, onBack: () -> Unit, vm: Entit
         onProximity = { navigate(ProximityRoute(vm.entityId)) },
         onExport = { exporting = true },
         onBatch = { navigate(ReceiptRoute(it)) },
+        vendorLookup = lookup,
+        onLookup = { vm.lookupVendor() },
+        onEnableLookup = { vm.lookupVendor(enable = true) },
     )
     if (exporting) {
         ExportSheet(
@@ -194,6 +239,9 @@ internal fun EntityContent(
     onProximity: () -> Unit,
     onExport: () -> Unit,
     onBatch: (Long) -> Unit,
+    vendorLookup: VendorLookupUiState = VendorLookupUiState(),
+    onLookup: () -> Unit = {},
+    onEnableLookup: () -> Unit = {},
 ) {
     val c = SotreusTheme.colors
     val d = state.detail
@@ -264,6 +312,7 @@ internal fun EntityContent(
 
         CaveatBox(stringResource(R.string.entity_identity_kicker), identityText(e))
         KeyValueTable(metadata(e, state), title = stringResource(R.string.entity_metadata))
+        VendorLookupPanel(e, state.onlineLookupEnabled, vendorLookup, state.now, onLookup, onEnableLookup)
 
         SotreusCard(style = CardStyle.RAISED, onClick = onEvidence) {
             Text(stringResource(R.string.entity_raw_evidence, d.observationCount), style = SotreusTheme.typography.rowTitle, color = c.text)
@@ -304,6 +353,43 @@ internal fun EntityContent(
     }
 }
 
+@Composable
+private fun VendorLookupPanel(e: EntityEntity, enabled: Boolean, lookup: VendorLookupUiState, now: Long,
+    onLookup: () -> Unit, onEnable: () -> Unit,
+) {
+    val c = SotreusTheme.colors
+    var consent by remember { mutableStateOf(false) }
+    val prefix = Fingerprint.vendorLookupPrefix(e.radio, e.addressType, e.address)
+    SotreusCard(style = CardStyle.RAISED) {
+        Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.m)) {
+            MonoLabel(stringResource(R.string.vendor_lookup_title))
+            Text(stringResource(R.string.vendor_lookup_explanation), style = SotreusTheme.typography.bodyS, color = c.textMuted)
+            lookup.record?.let { record ->
+                Text(record.vendor ?: stringResource(R.string.vendor_lookup_not_found), style = SotreusTheme.typography.bodyL, color = c.text)
+                Text(stringResource(R.string.vendor_lookup_source, dateShort(record.fetchedAtMs)), style = SotreusTheme.typography.caption, color = c.textMuted)
+                record.registryUpdated?.let { Text(stringResource(R.string.vendor_lookup_registry, it), style = SotreusTheme.typography.caption, color = c.textMuted) }
+                if (record.expiresAtMs <= now) Text(stringResource(R.string.vendor_lookup_expired), style = SotreusTheme.typography.caption, color = c.textMuted)
+            }
+            when (val result = lookup.outcome) {
+                VendorLookupOutcome.Unavailable -> Text(stringResource(R.string.vendor_lookup_unavailable), style = SotreusTheme.typography.bodyS, color = c.textMuted)
+                is VendorLookupOutcome.RetryLater -> Text(stringResource(R.string.vendor_lookup_retry, result.seconds), style = SotreusTheme.typography.bodyS, color = c.textMuted)
+                VendorLookupOutcome.Disabled -> Text(stringResource(R.string.vendor_lookup_disabled), style = SotreusTheme.typography.bodyS, color = c.textMuted)
+                else -> Unit
+            }
+            if (prefix == null) {
+                Text(stringResource(R.string.vendor_lookup_unsupported), style = SotreusTheme.typography.caption, color = c.textMuted)
+            } else if (lookup.busy) {
+                Text(stringResource(R.string.vendor_lookup_loading), style = SotreusTheme.typography.bodyS, color = c.textMuted)
+            } else {
+                CompactButton(stringResource(R.string.vendor_lookup_button), { if (enabled) onLookup() else consent = true })
+            }
+        }
+    }
+    if (consent) ConfirmDialog(stringResource(R.string.vendor_lookup_consent_title), stringResource(R.string.vendor_lookup_consent, prefix.orEmpty()),
+        stringResource(R.string.vendor_lookup_enable), stringResource(UiR.string.core_ui_cancel),
+        { consent = false; onEnable() }, { consent = false })
+}
+
 /**
  * The radio's address (BLE MAC or Wi-Fi BSSID), so you can recognise and label your own devices.
  * BSSIDs follow the on-screen privacy mask until revealed. Random BLE addresses are flagged as
@@ -319,7 +405,8 @@ private fun AddressLine(e: EntityEntity, mask: Boolean) {
     val note = when {
         e.radio == RadioKind.WIFI -> null
         e.addressType == BleAddressType.PUBLIC -> stringResource(R.string.entity_address_public)
-        Fingerprint.randomSubtype(e.address) == Fingerprint.RandomSubtype.STATIC -> stringResource(R.string.entity_address_static)
+        e.addressType == BleAddressType.RANDOM && Fingerprint.randomSubtype(e.address) == Fingerprint.RandomSubtype.STATIC -> stringResource(R.string.entity_address_static)
+        e.addressType == BleAddressType.UNKNOWN -> stringResource(R.string.meta_unknown)
         else -> stringResource(R.string.entity_address_random)
     }
     val clipLabel = stringResource(R.string.entity_copy_label)
@@ -347,7 +434,8 @@ private fun AddressLine(e: EntityEntity, mask: Boolean) {
 
 @Composable
 private fun identityText(e: EntityEntity): String = when {
-    e.radio == RadioKind.WIFI -> stringResource(R.string.entity_identity_wifi)
+    e.radio == RadioKind.WIFI && e.linkConfidence == app.sotreus.core.model.Confidence.HIGH -> stringResource(R.string.entity_identity_wifi)
+    e.radio == RadioKind.WIFI -> stringResource(R.string.entity_identity_wifi_local)
     e.addressType == BleAddressType.PUBLIC -> stringResource(R.string.entity_identity_public)
     else -> stringResource(R.string.entity_identity_random, confidenceLabel(e.linkConfidence))
 }
@@ -364,6 +452,7 @@ private fun metadata(e: EntityEntity, state: EntityUiState): List<Pair<String, S
             stringResource(R.string.meta_band) to (e.frequencyMhz?.let { f -> stringResource(R.string.meta_band_value, if (f < 3000) "2.4 GHz" else if (f < 5925) "5 GHz" else "6 GHz", e.channel ?: 0) } ?: dash),
             stringResource(R.string.meta_standard) to (e.wifiStandard ?: dash),
             stringResource(R.string.meta_vendor) to (e.vendor ?: dash),
+            stringResource(R.string.meta_local_db) to RadioDb.builtYmd.toString(),
             stringResource(R.string.meta_rssi) to avg,
         )
     } else {
@@ -381,6 +470,8 @@ private fun metadata(e: EntityEntity, state: EntityUiState): List<Pair<String, S
             stringResource(R.string.meta_address_type) to type,
             stringResource(R.string.meta_advertised_name) to (e.advertisedName ?: dash),
             stringResource(R.string.meta_company_id) to (e.companyId?.let { "0x%04X".format(it) } ?: dash),
+            stringResource(R.string.meta_company) to (e.companyId?.let { RadioDb.company(it) } ?: dash),
+            stringResource(R.string.meta_local_db) to RadioDb.builtYmd.toString(),
             stringResource(R.string.meta_service_data) to (e.serviceData?.split(",")?.firstOrNull()?.let { sd -> sd.substringBefore(":") + " · " + sd.substringAfter(":") + " B" } ?: dash),
             stringResource(R.string.meta_service_uuids) to e.serviceUuids.ifBlank { dash },
             stringResource(R.string.meta_connectable) to when (e.connectable) {

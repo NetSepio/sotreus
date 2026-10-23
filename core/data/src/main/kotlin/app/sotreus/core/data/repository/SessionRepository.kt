@@ -97,7 +97,7 @@ class SessionRepository @Inject constructor(
         )
         sessions.insertEvent(SessionEventEntity(sessionId = id, atMs = now, kind = SessionEventKind.STARTED))
         settings.setGeotagNextSession(false)
-        ObservationService.start(context, kind, geotag)
+        ObservationService.start(context, kind, geotag, settings.current().journeyMovement)
         return id
     }
 

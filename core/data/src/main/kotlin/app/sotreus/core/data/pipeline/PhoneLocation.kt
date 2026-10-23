@@ -12,11 +12,12 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.abs
 
 /**
- * The phone's location while Sotreus observes in the foreground, or a geotagged session runs. It
+ * The phone's location while Sotreus is visible, or a session uses movement or route location. It
  * picks the saved place the phone is in ([PlaceGeofence]) and supplies the optional plus-code tag.
- * Only the latest fix is held, in memory; the one coordinate written to storage is where a hand
+ * A short fix buffer is held in memory to match radio measurements; the one coordinate written by this class is where a hand
  * pick was made, so that pick holds only near there.
  */
 @Singleton
@@ -26,6 +27,7 @@ class PhoneLocation @Inject constructor(
     private val places: PlaceDao,
 ) {
     private val mutex = Mutex()
+    private val history = ArrayDeque<LocationSource.Fix>()
 
     private val _latest = MutableStateFlow<LocationSource.Fix?>(null)
     val latest: StateFlow<LocationSource.Fix?> = _latest.asStateFlow()
@@ -38,12 +40,18 @@ class PhoneLocation @Inject constructor(
     fun canLocate(): Boolean = source.hasPermission() && source.isEnabled()
 
     /** The latest fix if it was taken at most [maxAgeMs] before [now]. An older fix is never passed off as current. */
-    fun fresh(now: Long, maxAgeMs: Long = FRESH_MS): LocationSource.Fix? = _latest.value?.takeIf { now - it.atMs <= maxAgeMs }
+    fun fresh(now: Long, maxAgeMs: Long = FRESH_MS): LocationSource.Fix? = _latest.value?.takeIf { now - it.atMs in 0..maxAgeMs }
+
+    /** A short in-memory buffer matches a radio measurement to when it was actually taken. */
+    fun at(observedAtMs: Long): LocationSource.Fix? = synchronized(history) {
+        history.filter { it.atMs <= observedAtMs + 2_000 && abs(it.atMs - observedAtMs) <= 20_000 }
+            .minByOrNull { abs(it.atMs - observedAtMs) }
+    }
 
     /** Foreground fixes, frequent enough to follow the phone between places. */
     fun updates(): Flow<LocationSource.Fix> = source.updates(UPDATE_INTERVAL_MS, minDistanceM = 0f)
 
-    /** Every fix comes through here: foreground updates, a geotagged session, or a one-off fix. */
+    /** Every fix comes through here: visible app, active session, or a one-off fix. */
     suspend fun offer(fix: LocationSource.Fix) {
         if (accept(fix)) resolve()
     }
@@ -51,6 +59,10 @@ class PhoneLocation @Inject constructor(
     private fun accept(fix: LocationSource.Fix): Boolean {
         if (!PlaceGeofence.isBetter(fix.geo(), _latest.value?.geo())) return false
         _latest.value = fix
+        synchronized(history) {
+            history.addLast(fix)
+            while (history.isNotEmpty() && (fix.atMs - history.first().atMs > 3 * 60_000 || history.size > 100)) history.removeFirst()
+        }
         return true
     }
 

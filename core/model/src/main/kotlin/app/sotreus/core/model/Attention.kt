@@ -6,6 +6,7 @@ enum class AttentionHeadline {
     FAMILY_SIGNATURE_OBSERVED,
     TAGGED_REENCOUNTERED,
     PERSISTENT_NEW_RADIO,
+    JOURNEY_MOVEMENT,
 }
 
 enum class AttentionReasonKind {
@@ -14,6 +15,8 @@ enum class AttentionReasonKind {
     REPEATED_THIS_SESSION,
     KNOWN_FAMILY,
     NEW_TO_PLACE,
+    OBSERVED_DURING_MOVEMENT,
+    ADDRESS_CONTINUITY,
 }
 
 /**

@@ -4,8 +4,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -114,43 +115,50 @@ internal fun LiveSessionContent(state: LiveUiState, onNote: (String) -> Unit, on
     val c = SotreusTheme.colors
     var noting by remember { mutableStateOf(false) }
     val v = state.view
-    ScreenColumn {
-        if (v == null) {
-            if (!state.loading) CaveatBox(stringResource(R.string.feature_journey_title), stringResource(R.string.summary_missing))
-            return@ScreenColumn
+    Column(Modifier.fillMaxSize()) {
+        ScreenColumn(Modifier.weight(1f)) {
+            if (v == null) {
+                if (!state.loading) CaveatBox(stringResource(R.string.feature_journey_title), stringResource(R.string.summary_missing))
+                return@ScreenColumn
+            }
+            val s = v.session
+            if (s.endedAtMs != null) {
+                CaveatBox(stringResource(R.string.feature_journey_title), stringResource(R.string.live_ended))
+                LightButton(stringResource(R.string.live_open_summary), onSummary)
+                return@ScreenColumn
+            }
+            val journey = s.kind == SessionKind.JOURNEY
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                StatusPill(stringResource(if (journey) R.string.live_journey else R.string.live_sit), Modifier.weight(1f), filled = false)
+                CompactButton(stringResource(R.string.live_add_note), { noting = true })
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(elapsed(state.now - s.startedAtMs), style = SotreusTheme.typography.monoTimer, color = c.text)
+                Text(
+                    s.startLabel?.let { stringResource(R.string.live_started_near, clockTime(s.startedAtMs), it) } ?: stringResource(R.string.live_started, clockTime(s.startedAtMs)),
+                    style = SotreusTheme.typography.body.copy(fontSize = SotreusTheme.typography.rowTitle.fontSize * 0.965f),
+                    color = c.textMuted,
+                )
+            }
+            FreshnessChips(s, state.snapshot)
+            StatGrid(
+                listOf(
+                    Stat(v.radios.toString(), stringResource(R.string.stat_radios)),
+                    Stat(v.newToYou.toString(), stringResource(R.string.stat_new_to_you)),
+                    Stat(v.attention.toString(), stringResource(R.string.stat_attention), attention = true),
+                ),
+                columns = 3,
+            )
+            MonoLabel(stringResource(R.string.timeline))
+            SessionTimeline(v.events.filter { it.kind != SessionEventKind.STARTED }.take(40).map { timelineItem(it) })
         }
-        val s = v.session
-        if (s.endedAtMs != null) {
-            CaveatBox(stringResource(R.string.feature_journey_title), stringResource(R.string.live_ended))
-            LightButton(stringResource(R.string.live_open_summary), onSummary)
-            return@ScreenColumn
-        }
-        val journey = s.kind == SessionKind.JOURNEY
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            StatusPill(stringResource(if (journey) R.string.live_journey else R.string.live_sit), Modifier.weight(1f), filled = false)
-            CompactButton(stringResource(R.string.live_add_note), { noting = true })
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(elapsed(state.now - s.startedAtMs), style = SotreusTheme.typography.monoTimer, color = c.text)
-            Text(
-                s.startLabel?.let { stringResource(R.string.live_started_near, clockTime(s.startedAtMs), it) } ?: stringResource(R.string.live_started, clockTime(s.startedAtMs)),
-                style = SotreusTheme.typography.body.copy(fontSize = SotreusTheme.typography.rowTitle.fontSize * 0.965f),
-                color = c.textMuted,
+        if (v != null && v.session.endedAtMs == null) {
+            LightButton(
+                stringResource(if (v.session.kind == SessionKind.JOURNEY) R.string.end_journey else R.string.end_sit),
+                onEnd,
+                Modifier.padding(horizontal = SotreusTheme.spacing.screenH, vertical = SotreusTheme.spacing.l),
             )
         }
-        FreshnessChips(s, state.snapshot)
-        StatGrid(
-            listOf(
-                Stat(v.radios.toString(), stringResource(R.string.stat_radios)),
-                Stat(v.newToYou.toString(), stringResource(R.string.stat_new_to_you)),
-                Stat(v.attention.toString(), stringResource(R.string.stat_attention), attention = true),
-            ),
-            columns = 3,
-        )
-        MonoLabel(stringResource(R.string.timeline))
-        SessionTimeline(v.events.filter { it.kind != SessionEventKind.STARTED }.take(40).map { timelineItem(it) })
-        Spacer(Modifier.weight(1f))
-        LightButton(stringResource(if (journey) R.string.end_journey else R.string.end_sit), onEnd)
     }
     if (noting) {
         TextInputDialog(stringResource(R.string.live_note_title), "", stringResource(R.string.live_note_hint), stringResource(UiR.string.core_ui_save), stringResource(UiR.string.core_ui_cancel), { noting = false; onNote(it) }, { noting = false }, multiline = true)
@@ -166,6 +174,8 @@ private fun FreshnessChips(s: SessionEntity, snap: LiveSnapshot) {
     val dash = stringResource(R.string.chip_dash)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.s), verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.s)) {
         StateChip(stringResource(if (s.geotag) R.string.chip_location_on else R.string.chip_location_off), ChipTone.NEUTRAL, small = false)
+        if (snap.journeyMovementEnabled) StateChip(stringResource(if (snap.movementLocationReady) R.string.chip_movement_ready else R.string.chip_movement_waiting),
+            if (snap.movementLocationReady) ChipTone.NEUTRAL else ChipTone.ATTENTION_OUTLINE, small = false)
         StateChip(stringResource(R.string.chip_ble, bleAge?.let { ageShort(it) } ?: dash), ChipTone.NEUTRAL, small = false)
         StateChip(stringResource(R.string.chip_wifi, wifiAge?.let { ageShort(it) } ?: dash), if (throttled) ChipTone.ATTENTION_OUTLINE else ChipTone.NEUTRAL, small = false)
     }

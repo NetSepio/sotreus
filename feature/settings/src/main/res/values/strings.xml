@@ -139,7 +139,7 @@
 
     <!-- Screen 14 -->
     <string name="privacy_title">Privacy &amp; retention</string>
-    <string name="privacy_lead">Everything here lives only on this phone. Sotreus has no observation server.</string>
+    <string name="privacy_lead">Observations, places and notes stay on this phone. Online vendor lookups are optional and send only a public prefix.</string>
     <string name="keep_observations">Keep observations</string>
     <string name="keep_everything">Keep everything</string>
     <string name="keep_30">Keep 30 days</string>
@@ -211,4 +211,11 @@
     <string name="profile_disconnect_body">Sotreus forgets the wallet address and its sign-in without opening the wallet. Every local observation and proof receipt stays on this phone. To remove Sotreus from the wallet too, use the wallet’s connected apps list.</string>
     <string name="cancel">Cancel</string>
     <string name="confirm">Confirm</string>
+    <string name="privacy_journey_movement">Journey movement evidence</string>
+    <string name="privacy_journey_movement_sub">Use phone location during active Journeys, including with the screen off. Without route saving, coordinates stay in memory and only movement summaries are retained. Address rotation can break continuity.</string>
+    <string name="privacy_online_identification">Online identification</string>
+    <string name="privacy_online_lookup">Allow manual vendor lookups</string>
+    <string name="privacy_online_lookup_sub">Send only a public vendor prefix to api.maclookup.app when you tap Look up on a device. The provider sees your IP address. Full addresses and location stay on this phone.</string>
+    <string name="privacy_clear_vendor_cache">Clear saved vendor lookups</string>
+    <string name="privacy_clear_vendor_cache_body">Remove all saved online vendor results. Observations, labels and local identification stay.</string>
 </resources>

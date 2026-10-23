@@ -42,6 +42,8 @@ data class EntityLabelRow(
 /** Partial row for [EntityDao.updateSystem]: everything except the user's fields. */
 data class EntitySystemFields(
     val id: String,
+    @ColumnInfo(name = "address_type") val addressType: app.sotreus.core.model.BleAddressType,
+    @ColumnInfo(name = "link_confidence") val linkConfidence: app.sotreus.core.model.Confidence,
     @ColumnInfo(name = "advertised_name") val advertisedName: String?,
     val family: app.sotreus.core.model.DeviceFamily?,
     @ColumnInfo(name = "signature_name") val signatureName: String?,

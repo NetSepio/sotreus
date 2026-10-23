@@ -12,6 +12,7 @@ import app.sotreus.core.database.dao.SessionDao
 import app.sotreus.core.model.RetentionPolicy
 import javax.inject.Inject
 import javax.inject.Singleton
+import app.sotreus.core.data.lookup.VendorLookupRepository
 
 /** Every "Clear data" action on screen 14, plus retention. Each removes exactly what it says. */
 @Singleton
@@ -27,6 +28,7 @@ class DataControls @Inject constructor(
     private val pipeline: ObservationPipeline,
     private val context: ContextDao,
     private val settings: SettingsRepository,
+    private val vendorLookups: VendorLookupRepository,
 ) {
     /** A session's observations, encounters, timeline, locations, context and attention events. */
     suspend fun deleteSession(sessionId: Long) {
@@ -58,6 +60,7 @@ class DataControls @Inject constructor(
 
     /** All observations, context records and everything derived from them. Labels, notes and places are kept. */
     suspend fun deleteAllObservations() {
+        vendorLookups.clearCache()
         context.deleteAll()
         observations.deleteAll()
         encounters.deleteAll()

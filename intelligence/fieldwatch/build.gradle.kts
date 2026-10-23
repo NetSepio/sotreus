@@ -9,3 +9,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
 }
+
+sourceSets.named("test") {
+    resources.srcDir(rootProject.file("sensing/android/src/main/assets/lookups"))
+}

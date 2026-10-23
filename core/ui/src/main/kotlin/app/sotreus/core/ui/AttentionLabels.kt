@@ -12,6 +12,7 @@ import app.sotreus.core.model.DeviceFamily
 @Composable
 @ReadOnlyComposable
 fun attentionHeadline(headline: AttentionHeadline, family: DeviceFamily?): String = when (headline) {
+    AttentionHeadline.JOURNEY_MOVEMENT -> stringResource(R.string.headline_journey_movement)
     AttentionHeadline.CROSS_LOCATION_REENCOUNTER -> stringResource(R.string.headline_cross_location)
     AttentionHeadline.FAMILY_SIGNATURE_OBSERVED -> family?.let { stringResource(R.string.headline_family, familySignature(it)) }
         ?: stringResource(R.string.headline_family_generic)
@@ -22,6 +23,10 @@ fun attentionHeadline(headline: AttentionHeadline, family: DeviceFamily?): Strin
 /** Reason row text: bold title and a muted data detail (screen 05). */
 @Composable
 fun attentionReasonItem(r: AttentionReason): ReasonItem = when (r.kind) {
+    AttentionReasonKind.OBSERVED_DURING_MOVEMENT -> ReasonItem(stringResource(R.string.reason_movement),
+        r.args.takeIf { it.size == 4 }?.let { stringResource(R.string.reason_movement_detail, it[0], it[1], it[2], it[3]) }, r.strong)
+    AttentionReasonKind.ADDRESS_CONTINUITY -> ReasonItem(stringResource(R.string.reason_address_continuity),
+        stringResource(if (r.args.firstOrNull() == Confidence.HIGH.name) R.string.reason_address_stable else R.string.reason_address_changeable), r.strong)
     AttentionReasonKind.TAGGED_BY_YOU -> ReasonItem(stringResource(R.string.reason_tagged), r.args.firstOrNull()?.let { "“$it”" }, r.strong)
     AttentionReasonKind.SEEN_AT_OTHER_PLACES -> ReasonItem(stringResource(R.string.reason_other_places), r.args.joinToString(", "), r.strong)
     AttentionReasonKind.REPEATED_THIS_SESSION -> ReasonItem(

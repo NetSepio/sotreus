@@ -15,6 +15,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Validate release version and read changelog
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          source = Path("app/build.gradle.kts").read_text()
+          version = re.search(r'versionName\s*=\s*"([^"]+)"', source).group(1)
+          if os.environ["GITHUB_REF_TYPE"] == "tag" and os.environ["GITHUB_REF_NAME"] != f"v{version}":
+              raise SystemExit(f"Release tag must match app version v{version}")
+          changelog = Path("CHANGELOG.md").read_text()
+          section = re.search(rf"^## {re.escape(version)}(?:[ \t]+[^\n]*)?\n(.*?)(?=^## |\Z)", changelog, re.M | re.S)
+          if section is None or not section.group(1).strip():
+              raise SystemExit(f"Missing changelog for {version}")
+          Path(os.environ["RUNNER_TEMP"], "sotreus-changelog.md").write_text(section.group(1).strip() + "\n")
+          print(f"Preparing Sotreus {version}")
+          PY
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -152,6 +171,8 @@ jobs:
 
           Both APKs use \`com.sotreus.app\` with different certificates. Install one.
           EOF
+          printf '\n## Changes\n\n' >> dist/notes.md
+          cat "$RUNNER_TEMP/sotreus-changelog.md" >> dist/notes.md
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
 

@@ -48,8 +48,8 @@ internal class LiveSightings {
                 rssiMax = observation.rssi,
                 channel = observation.channel,
                 frequencyMhz = observation.frequencyMhz,
-                vendor = OuiLookup.vendor(mac),
-                randomized = MacUtil.isRandomized(mac),
+                vendor = vendor(observation, mac),
+                randomized = if (observation.kind == RadioKind.WIFI) MacUtil.isRandomized(mac) else !observation.facts.addressType.equals("Public", true),
                 hiddenSsid = observation.hiddenSsid,
                 serviceUuids = observation.serviceUuids,
                 manufacturerId = observation.manufacturerId,
@@ -76,7 +76,8 @@ internal class LiveSightings {
             existing.copy(
                 name = observation.name.ifBlank { existing.name },
                 rssi = if (measured) observation.rssi else existing.rssi,
-                vendor = existing.vendor ?: OuiLookup.vendor(mac),
+                vendor = vendor(observation, mac),
+                randomized = if (observation.kind == RadioKind.WIFI) MacUtil.isRandomized(mac) else !observation.facts.addressType.equals("Public", true),
                 rssiMin = if (measured) minOf(existing.rssiMin, observation.rssi) else existing.rssiMin,
                 rssiMax = if (measured) maxOf(existing.rssiMax, observation.rssi) else existing.rssiMax,
                 channel = if (observation.channel != 0) observation.channel else existing.channel,
@@ -112,4 +113,10 @@ internal class LiveSightings {
 
     private fun mergeIes(old: List<String>, extra: List<String>): List<String> =
         if (extra.isEmpty()) old else if (old.isEmpty()) extra else (old + extra).distinct()
+
+    private fun vendor(o: Observation, mac: String): String? {
+        if (o.kind == RadioKind.BLE && !o.facts.addressType.equals("Public", true)) return null
+        // A local address does not reveal a burned-in OUI. Vendor IE evidence is classified separately.
+        return if (MacUtil.isLocallyAdministered(mac)) null else OuiLookup.vendor(mac)
+    }
 }

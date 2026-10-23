@@ -176,6 +176,7 @@ internal fun SessionsContent(
             StartCard(SotreusIcons.Sit, stringResource(R.string.start_sit), stringResource(R.string.start_sit_sub), CardStyle.RAISED, onStartSit, Modifier.weight(1f))
         }
         if (!state.canStart) CaveatBox(stringResource(R.string.feature_journey_title), stringResource(R.string.session_needs_radios))
+        if (state.settings.journeyMovement) Text(stringResource(R.string.journey_movement_disclosure), style = SotreusTheme.typography.bodyS, color = c.textMuted)
         SwitchRow(
             stringResource(R.string.geotag_next),
             state.geotagOn,

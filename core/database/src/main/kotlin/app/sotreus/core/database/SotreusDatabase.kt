@@ -2,6 +2,8 @@ package app.sotreus.core.database
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import app.sotreus.core.database.entity.VendorLookupEntity
+import app.sotreus.core.database.dao.VendorLookupDao
 import app.sotreus.core.database.dao.AttentionDao
 import app.sotreus.core.database.dao.EncounterDao
 import app.sotreus.core.database.dao.EntityDao
@@ -51,6 +53,7 @@ import app.sotreus.core.database.entity.VisitEntityEntity
         LocalProfileEntity::class, LinkedIdentityEntity::class, FriendEntity::class, ProofBatchEntity::class,
         ProofLeafEntity::class, ContextEventEntity::class, LostReportEntity::class, FindSightingEntity::class,
         WitnessHeardEntity::class, WitnessAttestationEntity::class, WitnessSlotEntity::class,
+        VendorLookupEntity::class,
     ],
     version = SotreusDatabase.SCHEMA_VERSION,
     exportSchema = true,
@@ -67,9 +70,10 @@ abstract class SotreusDatabase : RoomDatabase() {
     abstract fun proofDao(): ProofDao
     abstract fun contextDao(): ContextDao
     abstract fun trackingDao(): TrackingDao
+    abstract fun vendorLookupDao(): VendorLookupDao
 
     companion object {
-        const val SCHEMA_VERSION = 5
+        const val SCHEMA_VERSION = 6
         const val NAME = "sotreus.db"
     }
 }

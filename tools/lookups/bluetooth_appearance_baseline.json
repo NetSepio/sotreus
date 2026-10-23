@@ -1,0 +1,1374 @@
+{
+  "source": "Bluetooth SIG Assigned Numbers",
+  "snapshot": "2026-08-24",
+  "entries": [
+    {
+      "value": 0,
+      "name": "Unknown"
+    },
+    {
+      "value": 64,
+      "name": "Phone"
+    },
+    {
+      "value": 128,
+      "name": "Computer"
+    },
+    {
+      "value": 129,
+      "name": "Computer / Desktop Workstation"
+    },
+    {
+      "value": 130,
+      "name": "Computer / Server-class Computer"
+    },
+    {
+      "value": 131,
+      "name": "Computer / Laptop"
+    },
+    {
+      "value": 132,
+      "name": "Computer / Handheld PC/PDA (clamshell)"
+    },
+    {
+      "value": 133,
+      "name": "Computer / Palm-size PC/PDA"
+    },
+    {
+      "value": 134,
+      "name": "Computer / Wearable computer (watch size)"
+    },
+    {
+      "value": 135,
+      "name": "Computer / Tablet"
+    },
+    {
+      "value": 136,
+      "name": "Computer / Docking Station"
+    },
+    {
+      "value": 137,
+      "name": "Computer / All in One"
+    },
+    {
+      "value": 138,
+      "name": "Computer / Blade Server"
+    },
+    {
+      "value": 139,
+      "name": "Computer / Convertible"
+    },
+    {
+      "value": 140,
+      "name": "Computer / Detachable"
+    },
+    {
+      "value": 141,
+      "name": "Computer / IoT Gateway"
+    },
+    {
+      "value": 142,
+      "name": "Computer / Mini PC"
+    },
+    {
+      "value": 143,
+      "name": "Computer / Stick PC"
+    },
+    {
+      "value": 192,
+      "name": "Watch"
+    },
+    {
+      "value": 193,
+      "name": "Watch / Sports Watch"
+    },
+    {
+      "value": 194,
+      "name": "Watch / Smartwatch"
+    },
+    {
+      "value": 256,
+      "name": "Clock"
+    },
+    {
+      "value": 320,
+      "name": "Display"
+    },
+    {
+      "value": 384,
+      "name": "Remote Control"
+    },
+    {
+      "value": 448,
+      "name": "Eye-glasses"
+    },
+    {
+      "value": 512,
+      "name": "Tag"
+    },
+    {
+      "value": 576,
+      "name": "Keyring"
+    },
+    {
+      "value": 640,
+      "name": "Media Player"
+    },
+    {
+      "value": 704,
+      "name": "Barcode Scanner"
+    },
+    {
+      "value": 768,
+      "name": "Thermometer"
+    },
+    {
+      "value": 769,
+      "name": "Thermometer / Ear Thermometer"
+    },
+    {
+      "value": 832,
+      "name": "Heart Rate Sensor"
+    },
+    {
+      "value": 833,
+      "name": "Heart Rate Sensor / Heart Rate Belt"
+    },
+    {
+      "value": 896,
+      "name": "Blood Pressure"
+    },
+    {
+      "value": 897,
+      "name": "Blood Pressure / Arm Blood Pressure"
+    },
+    {
+      "value": 898,
+      "name": "Blood Pressure / Wrist Blood Pressure"
+    },
+    {
+      "value": 960,
+      "name": "Human Interface Device"
+    },
+    {
+      "value": 961,
+      "name": "Human Interface Device / Keyboard"
+    },
+    {
+      "value": 962,
+      "name": "Human Interface Device / Mouse"
+    },
+    {
+      "value": 963,
+      "name": "Human Interface Device / Joystick"
+    },
+    {
+      "value": 964,
+      "name": "Human Interface Device / Gamepad"
+    },
+    {
+      "value": 965,
+      "name": "Human Interface Device / Digitizer Tablet"
+    },
+    {
+      "value": 966,
+      "name": "Human Interface Device / Card Reader"
+    },
+    {
+      "value": 967,
+      "name": "Human Interface Device / Digital Pen"
+    },
+    {
+      "value": 968,
+      "name": "Human Interface Device / Barcode Scanner"
+    },
+    {
+      "value": 969,
+      "name": "Human Interface Device / Touchpad"
+    },
+    {
+      "value": 970,
+      "name": "Human Interface Device / Presentation Remote"
+    },
+    {
+      "value": 1024,
+      "name": "Glucose Meter"
+    },
+    {
+      "value": 1088,
+      "name": "Running Walking Sensor"
+    },
+    {
+      "value": 1089,
+      "name": "Running Walking Sensor / In-Shoe Running Walking Sensor"
+    },
+    {
+      "value": 1090,
+      "name": "Running Walking Sensor / On-Shoe Running Walking Sensor"
+    },
+    {
+      "value": 1091,
+      "name": "Running Walking Sensor / On-Hip Running Walking Sensor"
+    },
+    {
+      "value": 1152,
+      "name": "Cycling"
+    },
+    {
+      "value": 1153,
+      "name": "Cycling / Cycling Computer"
+    },
+    {
+      "value": 1154,
+      "name": "Cycling / Speed Sensor"
+    },
+    {
+      "value": 1155,
+      "name": "Cycling / Cadence Sensor"
+    },
+    {
+      "value": 1156,
+      "name": "Cycling / Power Sensor"
+    },
+    {
+      "value": 1157,
+      "name": "Cycling / Speed and Cadence Sensor"
+    },
+    {
+      "value": 1216,
+      "name": "Control Device"
+    },
+    {
+      "value": 1217,
+      "name": "Control Device / Switch"
+    },
+    {
+      "value": 1218,
+      "name": "Control Device / Multi-switch"
+    },
+    {
+      "value": 1219,
+      "name": "Control Device / Button"
+    },
+    {
+      "value": 1220,
+      "name": "Control Device / Slider"
+    },
+    {
+      "value": 1221,
+      "name": "Control Device / Rotary Switch"
+    },
+    {
+      "value": 1222,
+      "name": "Control Device / Touch Panel"
+    },
+    {
+      "value": 1223,
+      "name": "Control Device / Single Switch"
+    },
+    {
+      "value": 1224,
+      "name": "Control Device / Double Switch"
+    },
+    {
+      "value": 1225,
+      "name": "Control Device / Triple Switch"
+    },
+    {
+      "value": 1226,
+      "name": "Control Device / Battery Switch"
+    },
+    {
+      "value": 1227,
+      "name": "Control Device / Energy Harvesting Switch"
+    },
+    {
+      "value": 1228,
+      "name": "Control Device / Push Button"
+    },
+    {
+      "value": 1229,
+      "name": "Control Device / Dial"
+    },
+    {
+      "value": 1280,
+      "name": "Network Device"
+    },
+    {
+      "value": 1281,
+      "name": "Network Device / Access Point"
+    },
+    {
+      "value": 1282,
+      "name": "Network Device / Mesh Device"
+    },
+    {
+      "value": 1283,
+      "name": "Network Device / Mesh Network Proxy"
+    },
+    {
+      "value": 1344,
+      "name": "Sensor"
+    },
+    {
+      "value": 1345,
+      "name": "Sensor / Motion Sensor"
+    },
+    {
+      "value": 1346,
+      "name": "Sensor / Air quality Sensor"
+    },
+    {
+      "value": 1347,
+      "name": "Sensor / Temperature Sensor"
+    },
+    {
+      "value": 1348,
+      "name": "Sensor / Humidity Sensor"
+    },
+    {
+      "value": 1349,
+      "name": "Sensor / Leak Sensor"
+    },
+    {
+      "value": 1350,
+      "name": "Sensor / Smoke Sensor"
+    },
+    {
+      "value": 1351,
+      "name": "Sensor / Occupancy Sensor"
+    },
+    {
+      "value": 1352,
+      "name": "Sensor / Contact Sensor"
+    },
+    {
+      "value": 1353,
+      "name": "Sensor / Carbon Monoxide Sensor"
+    },
+    {
+      "value": 1354,
+      "name": "Sensor / Carbon Dioxide Sensor"
+    },
+    {
+      "value": 1355,
+      "name": "Sensor / Ambient Light Sensor"
+    },
+    {
+      "value": 1356,
+      "name": "Sensor / Energy Sensor"
+    },
+    {
+      "value": 1357,
+      "name": "Sensor / Color Light Sensor"
+    },
+    {
+      "value": 1358,
+      "name": "Sensor / Rain Sensor"
+    },
+    {
+      "value": 1359,
+      "name": "Sensor / Fire Sensor"
+    },
+    {
+      "value": 1360,
+      "name": "Sensor / Wind Sensor"
+    },
+    {
+      "value": 1361,
+      "name": "Sensor / Proximity Sensor"
+    },
+    {
+      "value": 1362,
+      "name": "Sensor / Multi-Sensor"
+    },
+    {
+      "value": 1363,
+      "name": "Sensor / Flush Mounted Sensor"
+    },
+    {
+      "value": 1364,
+      "name": "Sensor / Ceiling Mounted Sensor"
+    },
+    {
+      "value": 1365,
+      "name": "Sensor / Wall Mounted Sensor"
+    },
+    {
+      "value": 1366,
+      "name": "Sensor / Multisensor"
+    },
+    {
+      "value": 1367,
+      "name": "Sensor / Energy Meter"
+    },
+    {
+      "value": 1368,
+      "name": "Sensor / Flame Detector"
+    },
+    {
+      "value": 1369,
+      "name": "Sensor / Vehicle Tire Pressure Sensor"
+    },
+    {
+      "value": 1408,
+      "name": "Light Fixtures"
+    },
+    {
+      "value": 1409,
+      "name": "Light Fixtures / Wall Light"
+    },
+    {
+      "value": 1410,
+      "name": "Light Fixtures / Ceiling Light"
+    },
+    {
+      "value": 1411,
+      "name": "Light Fixtures / Floor Light"
+    },
+    {
+      "value": 1412,
+      "name": "Light Fixtures / Cabinet Light"
+    },
+    {
+      "value": 1413,
+      "name": "Light Fixtures / Desk Light"
+    },
+    {
+      "value": 1414,
+      "name": "Light Fixtures / Troffer Light"
+    },
+    {
+      "value": 1415,
+      "name": "Light Fixtures / Pendant Light"
+    },
+    {
+      "value": 1416,
+      "name": "Light Fixtures / In-ground Light"
+    },
+    {
+      "value": 1417,
+      "name": "Light Fixtures / Flood Light"
+    },
+    {
+      "value": 1418,
+      "name": "Light Fixtures / Underwater Light"
+    },
+    {
+      "value": 1419,
+      "name": "Light Fixtures / Bollard with Light"
+    },
+    {
+      "value": 1420,
+      "name": "Light Fixtures / Pathway Light"
+    },
+    {
+      "value": 1421,
+      "name": "Light Fixtures / Garden Light"
+    },
+    {
+      "value": 1422,
+      "name": "Light Fixtures / Pole-top Light"
+    },
+    {
+      "value": 1423,
+      "name": "Light Fixtures / Spotlight"
+    },
+    {
+      "value": 1424,
+      "name": "Light Fixtures / Linear Light"
+    },
+    {
+      "value": 1425,
+      "name": "Light Fixtures / Street Light"
+    },
+    {
+      "value": 1426,
+      "name": "Light Fixtures / Shelves Light"
+    },
+    {
+      "value": 1427,
+      "name": "Light Fixtures / Bay Light"
+    },
+    {
+      "value": 1428,
+      "name": "Light Fixtures / Emergency Exit Light"
+    },
+    {
+      "value": 1429,
+      "name": "Light Fixtures / Light Controller"
+    },
+    {
+      "value": 1430,
+      "name": "Light Fixtures / Light Driver"
+    },
+    {
+      "value": 1431,
+      "name": "Light Fixtures / Bulb"
+    },
+    {
+      "value": 1432,
+      "name": "Light Fixtures / Low-bay Light"
+    },
+    {
+      "value": 1433,
+      "name": "Light Fixtures / High-bay Light"
+    },
+    {
+      "value": 1472,
+      "name": "Fan"
+    },
+    {
+      "value": 1473,
+      "name": "Fan / Ceiling Fan"
+    },
+    {
+      "value": 1474,
+      "name": "Fan / Axial Fan"
+    },
+    {
+      "value": 1475,
+      "name": "Fan / Exhaust Fan"
+    },
+    {
+      "value": 1476,
+      "name": "Fan / Pedestal Fan"
+    },
+    {
+      "value": 1477,
+      "name": "Fan / Desk Fan"
+    },
+    {
+      "value": 1478,
+      "name": "Fan / Wall Fan"
+    },
+    {
+      "value": 1536,
+      "name": "HVAC"
+    },
+    {
+      "value": 1537,
+      "name": "HVAC / Thermostat"
+    },
+    {
+      "value": 1538,
+      "name": "HVAC / Humidifier"
+    },
+    {
+      "value": 1539,
+      "name": "HVAC / De-humidifier"
+    },
+    {
+      "value": 1540,
+      "name": "HVAC / Heater"
+    },
+    {
+      "value": 1541,
+      "name": "HVAC / Radiator"
+    },
+    {
+      "value": 1542,
+      "name": "HVAC / Boiler"
+    },
+    {
+      "value": 1543,
+      "name": "HVAC / Heat Pump"
+    },
+    {
+      "value": 1544,
+      "name": "HVAC / Infrared Heater"
+    },
+    {
+      "value": 1545,
+      "name": "HVAC / Radiant Panel Heater"
+    },
+    {
+      "value": 1546,
+      "name": "HVAC / Fan Heater"
+    },
+    {
+      "value": 1547,
+      "name": "HVAC / Air Curtain"
+    },
+    {
+      "value": 1600,
+      "name": "Air Conditioning"
+    },
+    {
+      "value": 1664,
+      "name": "Humidifier"
+    },
+    {
+      "value": 1728,
+      "name": "Heating"
+    },
+    {
+      "value": 1729,
+      "name": "Heating / Radiator"
+    },
+    {
+      "value": 1730,
+      "name": "Heating / Boiler"
+    },
+    {
+      "value": 1731,
+      "name": "Heating / Heat Pump"
+    },
+    {
+      "value": 1732,
+      "name": "Heating / Infrared Heater"
+    },
+    {
+      "value": 1733,
+      "name": "Heating / Radiant Panel Heater"
+    },
+    {
+      "value": 1734,
+      "name": "Heating / Fan Heater"
+    },
+    {
+      "value": 1735,
+      "name": "Heating / Air Curtain"
+    },
+    {
+      "value": 1792,
+      "name": "Access Control"
+    },
+    {
+      "value": 1793,
+      "name": "Access Control / Access Door"
+    },
+    {
+      "value": 1794,
+      "name": "Access Control / Garage Door"
+    },
+    {
+      "value": 1795,
+      "name": "Access Control / Emergency Exit Door"
+    },
+    {
+      "value": 1796,
+      "name": "Access Control / Access Lock"
+    },
+    {
+      "value": 1797,
+      "name": "Access Control / Elevator"
+    },
+    {
+      "value": 1798,
+      "name": "Access Control / Window"
+    },
+    {
+      "value": 1799,
+      "name": "Access Control / Entrance Gate"
+    },
+    {
+      "value": 1800,
+      "name": "Access Control / Door Lock"
+    },
+    {
+      "value": 1801,
+      "name": "Access Control / Locker"
+    },
+    {
+      "value": 1856,
+      "name": "Motorized Device"
+    },
+    {
+      "value": 1857,
+      "name": "Motorized Device / Motorized Gate"
+    },
+    {
+      "value": 1858,
+      "name": "Motorized Device / Awning"
+    },
+    {
+      "value": 1859,
+      "name": "Motorized Device / Blinds or Shades"
+    },
+    {
+      "value": 1860,
+      "name": "Motorized Device / Curtains"
+    },
+    {
+      "value": 1861,
+      "name": "Motorized Device / Screen"
+    },
+    {
+      "value": 1920,
+      "name": "Power Device"
+    },
+    {
+      "value": 1921,
+      "name": "Power Device / Power Outlet"
+    },
+    {
+      "value": 1922,
+      "name": "Power Device / Power Strip"
+    },
+    {
+      "value": 1923,
+      "name": "Power Device / Plug"
+    },
+    {
+      "value": 1924,
+      "name": "Power Device / Power Supply"
+    },
+    {
+      "value": 1925,
+      "name": "Power Device / LED Driver"
+    },
+    {
+      "value": 1926,
+      "name": "Power Device / Fluorescent Lamp Gear"
+    },
+    {
+      "value": 1927,
+      "name": "Power Device / HID Lamp Gear"
+    },
+    {
+      "value": 1928,
+      "name": "Power Device / Charge Case"
+    },
+    {
+      "value": 1929,
+      "name": "Power Device / Power Bank"
+    },
+    {
+      "value": 1984,
+      "name": "Light Source"
+    },
+    {
+      "value": 1985,
+      "name": "Light Source / Incandescent Light Bulb"
+    },
+    {
+      "value": 1986,
+      "name": "Light Source / LED Lamp"
+    },
+    {
+      "value": 1987,
+      "name": "Light Source / HID Lamp"
+    },
+    {
+      "value": 1988,
+      "name": "Light Source / Fluorescent Lamp"
+    },
+    {
+      "value": 1989,
+      "name": "Light Source / LED Array"
+    },
+    {
+      "value": 1990,
+      "name": "Light Source / Multi-Color LED Array"
+    },
+    {
+      "value": 1991,
+      "name": "Light Source / Low voltage halogen"
+    },
+    {
+      "value": 1992,
+      "name": "Light Source / Organic light emitting diode (OLED)"
+    },
+    {
+      "value": 2048,
+      "name": "Window Covering"
+    },
+    {
+      "value": 2049,
+      "name": "Window Covering / Window Shades"
+    },
+    {
+      "value": 2050,
+      "name": "Window Covering / Window Blinds"
+    },
+    {
+      "value": 2051,
+      "name": "Window Covering / Window Awning"
+    },
+    {
+      "value": 2052,
+      "name": "Window Covering / Window Curtain"
+    },
+    {
+      "value": 2053,
+      "name": "Window Covering / Exterior Shutter"
+    },
+    {
+      "value": 2054,
+      "name": "Window Covering / Exterior Screen"
+    },
+    {
+      "value": 2112,
+      "name": "Audio Sink"
+    },
+    {
+      "value": 2113,
+      "name": "Audio Sink / Standalone Speaker"
+    },
+    {
+      "value": 2114,
+      "name": "Audio Sink / Soundbar"
+    },
+    {
+      "value": 2115,
+      "name": "Audio Sink / Bookshelf Speaker"
+    },
+    {
+      "value": 2116,
+      "name": "Audio Sink / Standmounted Speaker"
+    },
+    {
+      "value": 2117,
+      "name": "Audio Sink / Speakerphone"
+    },
+    {
+      "value": 2176,
+      "name": "Audio Source"
+    },
+    {
+      "value": 2177,
+      "name": "Audio Source / Microphone"
+    },
+    {
+      "value": 2178,
+      "name": "Audio Source / Alarm"
+    },
+    {
+      "value": 2179,
+      "name": "Audio Source / Bell"
+    },
+    {
+      "value": 2180,
+      "name": "Audio Source / Horn"
+    },
+    {
+      "value": 2181,
+      "name": "Audio Source / Broadcasting Device"
+    },
+    {
+      "value": 2182,
+      "name": "Audio Source / Service Desk"
+    },
+    {
+      "value": 2183,
+      "name": "Audio Source / Kiosk"
+    },
+    {
+      "value": 2184,
+      "name": "Audio Source / Broadcasting Room"
+    },
+    {
+      "value": 2185,
+      "name": "Audio Source / Auditorium"
+    },
+    {
+      "value": 2240,
+      "name": "Motorized Vehicle"
+    },
+    {
+      "value": 2241,
+      "name": "Motorized Vehicle / Car"
+    },
+    {
+      "value": 2242,
+      "name": "Motorized Vehicle / Large Goods Vehicle"
+    },
+    {
+      "value": 2243,
+      "name": "Motorized Vehicle / 2-Wheeled Vehicle"
+    },
+    {
+      "value": 2244,
+      "name": "Motorized Vehicle / Motorbike"
+    },
+    {
+      "value": 2245,
+      "name": "Motorized Vehicle / Scooter"
+    },
+    {
+      "value": 2246,
+      "name": "Motorized Vehicle / Moped"
+    },
+    {
+      "value": 2247,
+      "name": "Motorized Vehicle / 3-Wheeled Vehicle"
+    },
+    {
+      "value": 2248,
+      "name": "Motorized Vehicle / Light Vehicle"
+    },
+    {
+      "value": 2249,
+      "name": "Motorized Vehicle / Quad Bike"
+    },
+    {
+      "value": 2250,
+      "name": "Motorized Vehicle / Minibus"
+    },
+    {
+      "value": 2251,
+      "name": "Motorized Vehicle / Bus"
+    },
+    {
+      "value": 2252,
+      "name": "Motorized Vehicle / Trolley"
+    },
+    {
+      "value": 2253,
+      "name": "Motorized Vehicle / Agricultural Vehicle"
+    },
+    {
+      "value": 2254,
+      "name": "Motorized Vehicle / Camper / Caravan"
+    },
+    {
+      "value": 2255,
+      "name": "Motorized Vehicle / Recreational Vehicle / Motor Home"
+    },
+    {
+      "value": 2304,
+      "name": "Domestic Appliance"
+    },
+    {
+      "value": 2305,
+      "name": "Domestic Appliance / Refrigerator"
+    },
+    {
+      "value": 2306,
+      "name": "Domestic Appliance / Freezer"
+    },
+    {
+      "value": 2307,
+      "name": "Domestic Appliance / Oven"
+    },
+    {
+      "value": 2308,
+      "name": "Domestic Appliance / Microwave"
+    },
+    {
+      "value": 2309,
+      "name": "Domestic Appliance / Toaster"
+    },
+    {
+      "value": 2310,
+      "name": "Domestic Appliance / Washing Machine"
+    },
+    {
+      "value": 2311,
+      "name": "Domestic Appliance / Dryer"
+    },
+    {
+      "value": 2312,
+      "name": "Domestic Appliance / Coffee maker"
+    },
+    {
+      "value": 2313,
+      "name": "Domestic Appliance / Clothes iron"
+    },
+    {
+      "value": 2314,
+      "name": "Domestic Appliance / Curling iron"
+    },
+    {
+      "value": 2315,
+      "name": "Domestic Appliance / Hair dryer"
+    },
+    {
+      "value": 2316,
+      "name": "Domestic Appliance / Vacuum cleaner"
+    },
+    {
+      "value": 2317,
+      "name": "Domestic Appliance / Robotic vacuum cleaner"
+    },
+    {
+      "value": 2318,
+      "name": "Domestic Appliance / Rice cooker"
+    },
+    {
+      "value": 2319,
+      "name": "Domestic Appliance / Clothes steamer"
+    },
+    {
+      "value": 2368,
+      "name": "Wearable Audio Device"
+    },
+    {
+      "value": 2369,
+      "name": "Wearable Audio Device / Earbud"
+    },
+    {
+      "value": 2370,
+      "name": "Wearable Audio Device / Headset"
+    },
+    {
+      "value": 2371,
+      "name": "Wearable Audio Device / Headphones"
+    },
+    {
+      "value": 2372,
+      "name": "Wearable Audio Device / Neck Band"
+    },
+    {
+      "value": 2373,
+      "name": "Wearable Audio Device / Left Earbud"
+    },
+    {
+      "value": 2374,
+      "name": "Wearable Audio Device / Right Earbud"
+    },
+    {
+      "value": 2432,
+      "name": "Aircraft"
+    },
+    {
+      "value": 2433,
+      "name": "Aircraft / Light Aircraft"
+    },
+    {
+      "value": 2434,
+      "name": "Aircraft / Microlight"
+    },
+    {
+      "value": 2435,
+      "name": "Aircraft / Paraglider"
+    },
+    {
+      "value": 2436,
+      "name": "Aircraft / Large Passenger Aircraft"
+    },
+    {
+      "value": 2496,
+      "name": "AV Equipment"
+    },
+    {
+      "value": 2497,
+      "name": "AV Equipment / Amplifier"
+    },
+    {
+      "value": 2498,
+      "name": "AV Equipment / Receiver"
+    },
+    {
+      "value": 2499,
+      "name": "AV Equipment / Radio"
+    },
+    {
+      "value": 2500,
+      "name": "AV Equipment / Tuner"
+    },
+    {
+      "value": 2501,
+      "name": "AV Equipment / Turntable"
+    },
+    {
+      "value": 2502,
+      "name": "AV Equipment / CD Player"
+    },
+    {
+      "value": 2503,
+      "name": "AV Equipment / DVD Player"
+    },
+    {
+      "value": 2504,
+      "name": "AV Equipment / Bluray Player"
+    },
+    {
+      "value": 2505,
+      "name": "AV Equipment / Optical Disc Player"
+    },
+    {
+      "value": 2506,
+      "name": "AV Equipment / Set-Top Box"
+    },
+    {
+      "value": 2560,
+      "name": "Display Equipment"
+    },
+    {
+      "value": 2561,
+      "name": "Display Equipment / Television"
+    },
+    {
+      "value": 2562,
+      "name": "Display Equipment / Monitor"
+    },
+    {
+      "value": 2563,
+      "name": "Display Equipment / Projector"
+    },
+    {
+      "value": 2624,
+      "name": "Hearing aid"
+    },
+    {
+      "value": 2625,
+      "name": "Hearing aid / In-ear hearing aid"
+    },
+    {
+      "value": 2626,
+      "name": "Hearing aid / Behind-ear hearing aid"
+    },
+    {
+      "value": 2627,
+      "name": "Hearing aid / Cochlear Implant"
+    },
+    {
+      "value": 2688,
+      "name": "Gaming"
+    },
+    {
+      "value": 2689,
+      "name": "Gaming / Home Video Game Console"
+    },
+    {
+      "value": 2690,
+      "name": "Gaming / Portable handheld console"
+    },
+    {
+      "value": 2752,
+      "name": "Signage"
+    },
+    {
+      "value": 2753,
+      "name": "Signage / Digital Signage"
+    },
+    {
+      "value": 2754,
+      "name": "Signage / Electronic Label"
+    },
+    {
+      "value": 3136,
+      "name": "Pulse Oximeter"
+    },
+    {
+      "value": 3137,
+      "name": "Pulse Oximeter / Fingertip Pulse Oximeter"
+    },
+    {
+      "value": 3138,
+      "name": "Pulse Oximeter / Wrist Worn Pulse Oximeter"
+    },
+    {
+      "value": 3200,
+      "name": "Weight Scale"
+    },
+    {
+      "value": 3264,
+      "name": "Personal Mobility Device"
+    },
+    {
+      "value": 3265,
+      "name": "Personal Mobility Device / Powered Wheelchair"
+    },
+    {
+      "value": 3266,
+      "name": "Personal Mobility Device / Mobility Scooter"
+    },
+    {
+      "value": 3328,
+      "name": "Continuous Glucose Monitor"
+    },
+    {
+      "value": 3392,
+      "name": "Insulin Pump"
+    },
+    {
+      "value": 3393,
+      "name": "Insulin Pump / Insulin Pump, durable pump"
+    },
+    {
+      "value": 3396,
+      "name": "Insulin Pump / Insulin Pump, patch pump"
+    },
+    {
+      "value": 3400,
+      "name": "Insulin Pump / Insulin Pen"
+    },
+    {
+      "value": 3456,
+      "name": "Medication Delivery"
+    },
+    {
+      "value": 3520,
+      "name": "Spirometer"
+    },
+    {
+      "value": 3521,
+      "name": "Spirometer / Handheld Spirometer"
+    },
+    {
+      "value": 5184,
+      "name": "Outdoor Sports Activity"
+    },
+    {
+      "value": 5185,
+      "name": "Outdoor Sports Activity / Location Display"
+    },
+    {
+      "value": 5186,
+      "name": "Outdoor Sports Activity / Location and Navigation Display"
+    },
+    {
+      "value": 5187,
+      "name": "Outdoor Sports Activity / Location Pod"
+    },
+    {
+      "value": 5188,
+      "name": "Outdoor Sports Activity / Location and Navigation Pod"
+    },
+    {
+      "value": 5248,
+      "name": "Industrial Measurement Device"
+    },
+    {
+      "value": 5249,
+      "name": "Industrial Measurement Device / Torque Testing Device"
+    },
+    {
+      "value": 5250,
+      "name": "Industrial Measurement Device / Caliper"
+    },
+    {
+      "value": 5251,
+      "name": "Industrial Measurement Device / Dial Indicator"
+    },
+    {
+      "value": 5252,
+      "name": "Industrial Measurement Device / Micrometer"
+    },
+    {
+      "value": 5253,
+      "name": "Industrial Measurement Device / Height Gauge"
+    },
+    {
+      "value": 5254,
+      "name": "Industrial Measurement Device / Force Gauge"
+    },
+    {
+      "value": 5312,
+      "name": "Industrial Tools"
+    },
+    {
+      "value": 5313,
+      "name": "Industrial Tools / Machine Tool Holder"
+    },
+    {
+      "value": 5314,
+      "name": "Industrial Tools / Generic Clamping Device"
+    },
+    {
+      "value": 5315,
+      "name": "Industrial Tools / Clamping Jaws/Jaw Chuck"
+    },
+    {
+      "value": 5316,
+      "name": "Industrial Tools / Clamping (Collet) Chuck"
+    },
+    {
+      "value": 5317,
+      "name": "Industrial Tools / Clamping Mandrel"
+    },
+    {
+      "value": 5318,
+      "name": "Industrial Tools / Vise"
+    },
+    {
+      "value": 5319,
+      "name": "Industrial Tools / Zero-Point Clamping System"
+    },
+    {
+      "value": 5320,
+      "name": "Industrial Tools / Torque Wrench"
+    },
+    {
+      "value": 5321,
+      "name": "Industrial Tools / Torque Screwdriver"
+    },
+    {
+      "value": 5376,
+      "name": "Cookware Device"
+    },
+    {
+      "value": 5377,
+      "name": "Cookware Device / Pot and Jugs"
+    },
+    {
+      "value": 5378,
+      "name": "Cookware Device / Pressure Cooker"
+    },
+    {
+      "value": 5379,
+      "name": "Cookware Device / Slow Cooker"
+    },
+    {
+      "value": 5380,
+      "name": "Cookware Device / Steam Cooker"
+    },
+    {
+      "value": 5381,
+      "name": "Cookware Device / Saucepan"
+    },
+    {
+      "value": 5382,
+      "name": "Cookware Device / Frying Pan"
+    },
+    {
+      "value": 5383,
+      "name": "Cookware Device / Casserole"
+    },
+    {
+      "value": 5384,
+      "name": "Cookware Device / Dutch Oven"
+    },
+    {
+      "value": 5385,
+      "name": "Cookware Device / Grill Pan/Raclette Grill/Griddle Pan"
+    },
+    {
+      "value": 5386,
+      "name": "Cookware Device / Braising Pan"
+    },
+    {
+      "value": 5387,
+      "name": "Cookware Device / Wok Pan"
+    },
+    {
+      "value": 5388,
+      "name": "Cookware Device / Paella Pan"
+    },
+    {
+      "value": 5389,
+      "name": "Cookware Device / Crepe Pan"
+    },
+    {
+      "value": 5390,
+      "name": "Cookware Device / Tagine"
+    },
+    {
+      "value": 5391,
+      "name": "Cookware Device / Fondue"
+    },
+    {
+      "value": 5392,
+      "name": "Cookware Device / Lid"
+    },
+    {
+      "value": 5393,
+      "name": "Cookware Device / Wired Probe"
+    },
+    {
+      "value": 5394,
+      "name": "Cookware Device / Wireless Probe"
+    },
+    {
+      "value": 5395,
+      "name": "Cookware Device / Baking Molds"
+    },
+    {
+      "value": 5396,
+      "name": "Cookware Device / Baking Tray"
+    }
+  ]
+}

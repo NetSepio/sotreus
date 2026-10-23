@@ -32,11 +32,22 @@ object Fingerprint {
     }
 
     fun linkConfidence(kind: RadioKind, type: BleAddressType, address: String): Confidence = when {
-        kind == RadioKind.WIFI -> Confidence.HIGH
+        kind == RadioKind.WIFI -> if (isUniversal(address)) Confidence.HIGH else Confidence.LOW
         type == BleAddressType.PUBLIC -> Confidence.HIGH
         type == BleAddressType.RANDOM && randomSubtype(address) == RandomSubtype.STATIC -> Confidence.MEDIUM
         else -> Confidence.LOW
     }
 
     enum class RandomSubtype { STATIC, RESOLVABLE, NON_RESOLVABLE }
+
+    /** The IEEE local/group bits describe Wi-Fi addresses, not BLE random-address subtypes. */
+    fun isUniversal(address: String): Boolean = address.take(2).toIntOrNull(16)?.let { it and 3 == 0 } == true
+
+    fun vendorLookupPrefix(kind: RadioKind, type: BleAddressType, address: String): String? {
+        val hex = address.replace(":", "").replace("-", "").uppercase()
+        if (hex.length != 12 || hex.any { it !in "0123456789ABCDEF" } || hex.all { it == '0' }) return null
+        if (kind == RadioKind.BLE && type != BleAddressType.PUBLIC) return null
+        if (!isUniversal(hex)) return null
+        return hex.take(6)
+    }
 }

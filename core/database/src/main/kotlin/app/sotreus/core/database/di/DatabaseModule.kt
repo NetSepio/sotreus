@@ -38,4 +38,5 @@ object DatabaseModule {
     @Provides fun proofDao(db: SotreusDatabase) = db.proofDao()
     @Provides fun contextDao(db: SotreusDatabase) = db.contextDao()
     @Provides fun trackingDao(db: SotreusDatabase) = db.trackingDao()
+    @Provides fun vendorLookupDao(db: SotreusDatabase) = db.vendorLookupDao()
 }

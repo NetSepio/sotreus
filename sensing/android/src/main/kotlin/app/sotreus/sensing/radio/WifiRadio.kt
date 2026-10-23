@@ -15,6 +15,7 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import app.sotreus.intelligence.fieldwatch.Observation
 import app.sotreus.intelligence.fieldwatch.RadioKind
@@ -40,12 +41,13 @@ class WifiRadio(
     private val scanStarts = ArrayDeque<Long>()
     private val callbackExecutor = Executors.newSingleThreadExecutor()
     private val quotaLock = Any()
+    private val freshness = ScanFreshness()
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context?, intent: Intent?) {
             if (intent?.action != WifiManager.SCAN_RESULTS_AVAILABLE_ACTION) return
             val updated = intent.getBooleanExtra(WifiManager.EXTRA_RESULTS_UPDATED, false)
-            emitResults(fresh = updated || awaitingScan.get())
+            emitResults(fresh = updated)
         }
     }
 
@@ -156,19 +158,23 @@ class WifiRadio(
         }
         if (nowWall - lastEmitAt.get() < 350L) return
         lastEmitAt.set(nowWall)
-        val isFresh = fresh || awaitingScan.get()
-        awaitingScan.set(false)
+        val elapsedUs = SystemClock.elapsedRealtimeNanos() / 1_000
+        if (fresh) awaitingScan.set(false)
         var count = 0
         val batch = ArrayList<Observation>(results.size)
         results.forEach { result ->
             if (result.BSSID.isNullOrBlank()) return@forEach
             count++
-            val obs = toObservation(result, nowWall, isFresh)
+            val measuredAt = freshness.measuredAt(result.BSSID, result.timestamp, elapsedUs, nowWall)
+            // Neither a pending request nor a successful broadcast proves every returned AP is new.
+            val obs = toObservation(result, measuredAt ?: nowWall, measuredAt != null)
             batch += obs
             onObservation(obs)
         }
-        onScanFinished(count, isFresh)
-        if (isFresh && batch.isNotEmpty()) onFreshScan(batch)
+        val measured = batch.filter { it.fresh }
+        if (measured.isNotEmpty()) awaitingScan.set(false)
+        onScanFinished(count, measured.isNotEmpty())
+        if (measured.isNotEmpty()) onFreshScan(measured)
     }
 
     private fun toObservation(result: ScanResult, nowWall: Long, fresh: Boolean): Observation {

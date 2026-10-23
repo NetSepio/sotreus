@@ -1,0 +1,52 @@
+{
+  "built": "2026-10-23",
+  "format": 1,
+  "counts": {
+    "mal": 40386,
+    "cid": 221,
+    "long": 18464,
+    "btc": 4022,
+    "app": 342,
+    "uuid": 76
+  },
+  "binary_sha256": "5b9c66e5b64c68a6f9495670265922b1c3c4681e47411928cc460d5b93ef3d43",
+  "sources": {
+    "mal.csv": {
+      "url": "https://standards-oui.ieee.org/oui/oui.csv",
+      "sha256": "6b725e8467e61037837f8c3c4f4bf7b9f60e0f7446505584a3f2978d5d1a0c79"
+    },
+    "mam.csv": {
+      "url": "https://standards-oui.ieee.org/oui28/mam.csv",
+      "sha256": "83b2373b48bba57bc959f79b50e016621fd572558ec6eede66f4f751a2d4ee0c"
+    },
+    "mas.csv": {
+      "url": "https://standards-oui.ieee.org/oui36/oui36.csv",
+      "sha256": "6fca16f31dbf0eafd2025872683950ef5bd89c9534ce209573eea50b143b5983"
+    },
+    "iab.csv": {
+      "url": "https://standards-oui.ieee.org/iab/iab.csv",
+      "sha256": "6e71aa3d47f00f19d09cb3b31ce1038de1834703420f0ce4ce111da586f1a533"
+    },
+    "cid.csv": {
+      "url": "https://standards-oui.ieee.org/cid/cid.csv",
+      "sha256": "a07cf5e89d11195c645c60e3e153fe1b4603532eb4c2d793dbc1f50fe98415f8"
+    },
+    "company_ids.json": {
+      "url": "https://raw.githubusercontent.com/nordicsemi/bluetooth-numbers-database/master/v1/company_ids.json",
+      "sha256": "6b2aff969cc5d1f7deb84ef45350034e26008ed65de3660e0dad929756052382"
+    },
+    "gap_appearance.json": {
+      "url": "https://raw.githubusercontent.com/nordicsemi/bluetooth-numbers-database/master/v1/gap_appearance.json",
+      "sha256": "01cb8448d85042fe6ec6885d3c5a36e4026baaa5dfe560a67d214e1f79f44928"
+    },
+    "service_uuids.json": {
+      "url": "https://raw.githubusercontent.com/nordicsemi/bluetooth-numbers-database/master/v1/service_uuids.json",
+      "sha256": "fec38d7a1d24f18a3241a4cc226949be699dccb8abe804df92017a170b041a82"
+    },
+    "bluetooth_appearance_baseline.json": {
+      "url": "https://www.bluetooth.com/specifications/assigned-numbers/",
+      "snapshot": "2026-08-24",
+      "sha256": "dd497ceac4de7b6e0e1b51b99744f9771ea13f24b3bd95643113e0e130a81780"
+    }
+  }
+}

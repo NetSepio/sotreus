@@ -33,6 +33,10 @@ data class SotreusSettings(
     val maskCoordinates: Boolean = true,
     val geotagMode: GeotagMode = GeotagMode.ASK_EACH_TIME,
     val geotagNextSession: Boolean = false,
+    /** Use location during an active Journey; retain movement summaries even without saving a route. */
+    val journeyMovement: Boolean = true,
+    /** Manual vendor-prefix requests only. No radio addresses or location are uploaded. */
+    val onlineVendorLookup: Boolean = false,
     val scanIntensity: ScanIntensity = ScanIntensity.BALANCED,
     val staleHoldSeconds: Int = SotreusDefaults.BLE_STALE_HOLD_SECONDS_DEFAULT,
     val stampingMode: StampingMode = StampingMode.ASK_END_JOURNEY,

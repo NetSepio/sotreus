@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="feature_journey_title">Sessions</string>
-    <string name="sessions_lead">A session is an explicit window of observation. Nothing records your path unless you start one with location on, or turn on plus-code tags in Privacy &amp; retention.</string>
+    <string name="sessions_lead">A session is an explicit window of observation. Save a route by enabling geotagging. Journey movement evidence can use location without saving the route.</string>
     <string name="start_journey">Start Journey</string>
     <string name="start_journey_sub">Observe while you move between places.</string>
     <string name="start_sit">Start Sit</string>
     <string name="start_sit_sub">Observe one room, venue or position.</string>
     <string name="geotag_next">Geotag next session</string>
-    <string name="geotag_next_sub">Phone location, foreground only</string>
+    <string name="geotag_next_sub">Save phone coordinates with this session</string>
     <string name="journey_geotag_never_note">Geotagging is off in Privacy &amp; retention</string>
     <string name="previous">Previous · %1$d</string>
     <string name="compare_sits">Compare sits</string>
@@ -32,8 +32,8 @@
     <string name="live_note_hint">What is happening here? It stays on this phone.</string>
     <string name="live_started">Started %1$s</string>
     <string name="live_started_near">Started %1$s near %2$s</string>
-    <string name="chip_location_on">Location on · foreground</string>
-    <string name="chip_location_off">Location off</string>
+    <string name="chip_location_on">Route saving on</string>
+    <string name="chip_location_off">Route saving off</string>
     <string name="chip_ble">BLE %1$s</string>
     <string name="chip_wifi">Wi-Fi %1$s</string>
     <string name="chip_dash">—</string>
@@ -86,4 +86,7 @@
     <string name="summary_prov_sensed">Sensed</string>
     <string name="summary_prov_network">Network</string>
     <string name="summary_prov_predicted">Predicted</string>
+    <string name="journey_movement_disclosure">Journey movement evidence uses phone location while a Journey is active, including with the screen off. Saving a route is separate. Change this in Privacy.</string>
+    <string name="chip_movement_ready">Movement · location ready</string>
+    <string name="chip_movement_waiting">Movement · waiting for accurate location</string>
 </resources>

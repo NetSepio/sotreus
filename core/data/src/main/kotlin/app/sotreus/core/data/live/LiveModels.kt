@@ -50,6 +50,8 @@ data class LiveSnapshot(
     val locating: Boolean = false,
     /** When the latest phone location fix was taken, if any this run. */
     val lastFixMs: Long? = null,
+    val journeyMovementEnabled: Boolean = false,
+    val movementLocationReady: Boolean = false,
     /** Completed visits behind the current place's baseline. 0 = still learning. */
     val baselineVisits: Int = 0,
     val activeSessionId: Long? = null,

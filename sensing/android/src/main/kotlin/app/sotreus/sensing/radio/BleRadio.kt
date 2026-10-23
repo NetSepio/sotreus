@@ -15,6 +15,7 @@ import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.os.Build
+import android.os.SystemClock
 import android.util.Log
 import app.sotreus.intelligence.fieldwatch.Observation
 import app.sotreus.intelligence.fieldwatch.RadioKind
@@ -29,6 +30,7 @@ class BleRadio(
 ) {
     private val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
     private var scanner: BluetoothLeScanner? = null
+    private val freshness = ScanFreshness()
     private val running = AtomicBoolean(false)
     private var lastIntensity = ScanIntensity.PERFORMANCE
     private val startedAt = AtomicLong(0L)
@@ -212,13 +214,15 @@ class BleRadio(
 
     private fun emit(result: ScanResult) {
         try {
-            onObservation(toObservation(result))
+            val at = freshness.measuredAt(result.device?.address.orEmpty(), result.timestampNanos / 1_000,
+                SystemClock.elapsedRealtimeNanos() / 1_000, System.currentTimeMillis()) ?: return
+            onObservation(toObservation(result, at))
         } catch (t: Throwable) {
             Log.e("SotreusBle", "scan result failed", t)
         }
     }
 
-    private fun toObservation(result: ScanResult): Observation {
+    private fun toObservation(result: ScanResult, measuredAtMs: Long): Observation {
         val record = result.scanRecord
         val parsed = BleAdParser.parse(record?.bytes)
         // Advertised name only. BluetoothDevice.getName() is a binder call to
@@ -247,7 +251,7 @@ class BleRadio(
             manufacturerDataHex = mfg?.dataHex.orEmpty(),
             rawHex = raw.take(1024),
             extras = "",
-            at = System.currentTimeMillis(),
+            at = measuredAtMs,
             facts = facts,
         )
     }

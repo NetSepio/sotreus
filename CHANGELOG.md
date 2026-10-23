@@ -2,6 +2,37 @@
 
 All notable changes to Sotreus Android. Versions follow `versionName` in `app/build.gradle.kts`.
 
+## 1.1.0 — 2026-10-23
+
+### Added
+
+- Add Journey movement evidence with geographic, accuracy, duration, sample and continuity checks.
+- Separate active Journey location use from route storage, with Privacy controls and live availability status.
+- Add opt-in manual MACLookup vendor-prefix lookups, source dates, persistent positive/negative caches,
+  request cancellation, bounded responses and rate-limit handling. Private/unknown addresses stay local.
+- Support Android 9 (API 28), with legacy Wi-Fi settings and foreground-service fallbacks.
+
+### Fixed
+
+- Reject repeated and stale Wi-Fi/BLE hardware measurements; retain their actual observation time.
+- Match stored coordinates to measurement time and stop attributing observations to an expired automatic place.
+- Correct Wi-Fi and BLE address confidence handling and refresh classification when payload evidence changes.
+- Keep the End Journey / End Sit action visible while scrolling a busy live timeline.
+
+### Changed
+
+- Refresh the local radio database and add a reproducible source-hashed updater, including legacy IAB blocks.
+- Database schema 6 adds the public vendor-prefix cache with a non-destructive migration from schema 5.
+- Release tags must match the app version; GitHub release notes include this changelog section.
+
+### Validation and limits
+
+- Passed 460 Gradle tests, five Python tests, lint, both debug and signed release APK builds, and
+  the Play bundle build. Tested on a Huawei Mate 9
+  running Android 9, including opt-in lookup, cache reuse and screen-off BLE observations without route storage.
+- Movement thresholds still need field calibration across separated locations. Address rotation breaks
+  continuity, Wi-Fi scan throttling limits coverage, and vendor records do not establish an exact product or owner.
+
 ## 1.0.1 — 2026-10-09
 
 ### Fixed

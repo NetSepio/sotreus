@@ -10,4 +10,5 @@
     <string name="data_notification_session_geotag">Receiving broadcasts. Phone location is on for this session.</string>
     <string name="data_notification_presence">Nearby presence is on</string>
     <string name="data_notification_presence_text">This phone is broadcasting rotating tokens that only approved friends can recognise.</string>
+    <string name="data_notification_session_movement">Observing shared movement with phone location. Route saving is off.</string>
 </resources>

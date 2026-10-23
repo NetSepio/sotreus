@@ -9,6 +9,7 @@ import android.bluetooth.le.AdvertiseSettings
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
@@ -47,7 +48,8 @@ class PresenceService : LifecycleService() {
             .setOngoing(true)
             .setContentIntent(tap)
             .build()
-        ServiceCompat.startForeground(this, Notifications.ID_PRESENCE, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+        ServiceCompat.startForeground(this, Notifications.ID_PRESENCE, notification,
+            if (Build.VERSION.SDK_INT >= 29) ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE else 0)
         lifecycleScope.launch {
             var i = 0
             while (isActive) {

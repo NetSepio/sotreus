@@ -95,4 +95,22 @@
     <string name="prox_tick_sub">Faster ticks when louder</string>
     <string name="prox_stop">Stop checking</string>
     <string name="prox_not_ble">Proximity check works on Bluetooth LE advertisers only.</string>
+    <string name="entity_identity_wifi_local">This BSSID is locally assigned. It may change or be shared; address continuity has low confidence.</string>
+    <string name="vendor_lookup_title">Online vendor lookup</string>
+    <string name="vendor_lookup_explanation">A vendor prefix can identify the address-block registrant. It does not identify an owner or exact product model.</string>
+    <string name="vendor_lookup_button">Look up vendor online</string>
+    <string name="vendor_lookup_source">MACLookup · checked %1$s · vendor prefix only</string>
+    <string name="vendor_lookup_registry">Registry record updated %1$s</string>
+    <string name="vendor_lookup_expired">Saved result has expired. Look up again to refresh.</string>
+    <string name="vendor_lookup_not_found">No public vendor found for this prefix.</string>
+    <string name="vendor_lookup_loading">Looking up vendor…</string>
+    <string name="vendor_lookup_unavailable">Lookup unavailable. Local identification is still available. Try again later.</string>
+    <string name="vendor_lookup_retry">Please wait %1$d seconds before another lookup.</string>
+    <string name="vendor_lookup_disabled">Online lookups are off.</string>
+    <string name="vendor_lookup_unsupported">Vendor lookup is unavailable for private, locally assigned or unknown address types. Advertised company and service data can still help identify this device.</string>
+    <string name="vendor_lookup_consent_title">Enable online vendor lookups?</string>
+    <string name="vendor_lookup_consent">Send vendor prefix %1$s to api.maclookup.app. The provider also receives your IP address. Full device addresses, location, names and notes stay on your phone. Requests happen only when you tap Look up. Saved results are reused for up to 30 days. You can turn this off in Privacy.</string>
+    <string name="vendor_lookup_enable">Enable and look up</string>
+    <string name="meta_local_db">Local database snapshot</string>
+    <string name="meta_company">Advertised company</string>
 </resources>

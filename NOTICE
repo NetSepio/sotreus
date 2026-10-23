@@ -21,6 +21,11 @@ Fieldwatch (https://github.com/OffGridPete/Fieldwatch)
   sensing/android/src/main/assets/lookups/radiodb.bin are packed from IEEE Registration Authority
   and Bluetooth SIG Assigned Numbers data and remain subject to those organisations' terms.
 
+Bluetooth Numbers Database (https://github.com/nordicsemi/bluetooth-numbers-database)
+  Copyright (c) 2019 - 2020 Nordic Semiconductor ASA
+  BSD 3-Clause License - licenses/BSD-3-Clause-BluetoothNumbers.txt
+  Bluetooth company, service and appearance labels in lookups/radiodb.bin.
+
 predict4java (https://github.com/g4dpz/predict4java)
   Copyright (c) 2026 David A. B. Johnson
   MIT License - licenses/MIT-predict4java.txt

@@ -23,6 +23,7 @@ import app.sotreus.core.data.repository.PlaceSummary
 import app.sotreus.core.data.repository.SessionListItem
 import app.sotreus.core.data.repository.SessionRepository
 import app.sotreus.core.data.settings.SettingsRepository
+import app.sotreus.core.data.lookup.VendorLookupRepository
 import app.sotreus.core.designsystem.theme.SotreusTheme
 import app.sotreus.core.model.GeotagMode
 import app.sotreus.core.model.RetentionPolicy
@@ -62,6 +63,7 @@ class PrivacyViewModel @Inject constructor(
     places: PlaceRepository,
     device: DeviceProfileRepository,
     private val controls: DataControls,
+    private val vendorCache: VendorLookupRepository,
 ) : ViewModel() {
     val state: StateFlow<PrivacyUiState> = combine(settings.settings, sessions.observeList(), places.observePlaces(), device.capabilities) { s, ss, p, caps ->
         PrivacyUiState(s, ss.filter { it.session.endedAtMs != null }, p, caps.onChainProofStamping)
@@ -75,6 +77,9 @@ class PrivacyViewModel @Inject constructor(
     fun placeByLocation(on: Boolean) = viewModelScope.launch { settings.setPlaceByLocation(on) }
     fun plusCodeTags(on: Boolean) = viewModelScope.launch { settings.setPlusCodeTags(on) }
     fun geotag(m: GeotagMode) = viewModelScope.launch { settings.setGeotagMode(m) }
+    fun movement(on: Boolean) = viewModelScope.launch { settings.setJourneyMovement(on) }
+    fun onlineLookup(on: Boolean) = viewModelScope.launch { settings.setOnlineVendorLookup(on) }
+    fun clearVendorCache() = viewModelScope.launch { vendorCache.clearCache() }
     fun deleteSession(id: Long) = viewModelScope.launch { controls.deleteSession(id) }
     fun deletePlace(id: Long) = viewModelScope.launch { controls.deletePlaceHistory(id) }
     fun deletePresence() = viewModelScope.launch { controls.deletePresenceKeys() }
@@ -91,6 +96,7 @@ private sealed interface Pending {
     data object Presence : Pending
     data object All : Pending
     data object Proofs : Pending
+    data object VendorCache : Pending
 }
 
 /** Screen 14. Every delete has a confirm dialog that says exactly what is removed. */
@@ -129,6 +135,14 @@ internal fun PrivacyScreen(onBack: () -> Unit, vm: PrivacyViewModel = hiltViewMo
             )
             RowDivider()
             NavRow(stringResource(R.string.geotag_sessions), { pending = Pending.GeotagChoice }, value = geotagLabel(state.settings.geotagMode), showDivider = false)
+            SwitchRow(stringResource(R.string.privacy_journey_movement), state.settings.journeyMovement, vm::movement,
+                subtitle = stringResource(R.string.privacy_journey_movement_sub), bordered = false)
+        }
+        Column {
+            MonoLabel(stringResource(R.string.privacy_online_identification))
+            SwitchRow(stringResource(R.string.privacy_online_lookup), state.settings.onlineVendorLookup, vm::onlineLookup,
+                subtitle = stringResource(R.string.privacy_online_lookup_sub), bordered = false)
+            NavRow(stringResource(R.string.privacy_clear_vendor_cache), { pending = Pending.VendorCache }, showDivider = false)
         }
         Column {
             MonoLabel(stringResource(R.string.export_defaults))
@@ -166,6 +180,7 @@ internal fun PrivacyScreen(onBack: () -> Unit, vm: PrivacyViewModel = hiltViewMo
         Pending.Presence -> ConfirmDialog(stringResource(R.string.confirm_presence_title), stringResource(R.string.confirm_presence_body), delete, cancel, { vm.deletePresence(); pending = null }, { pending = null })
         Pending.All -> ConfirmDialog(stringResource(R.string.confirm_all_title), stringResource(R.string.confirm_all_body), delete, cancel, { vm.deleteAll(); pending = null }, { pending = null })
         Pending.Proofs -> ConfirmDialog(stringResource(R.string.confirm_pending_title), stringResource(R.string.confirm_pending_body), delete, cancel, { vm.clearPending(); pending = null }, { pending = null })
+        Pending.VendorCache -> ConfirmDialog(stringResource(R.string.privacy_clear_vendor_cache), stringResource(R.string.privacy_clear_vendor_cache_body), delete, cancel, { vm.clearVendorCache(); pending = null }, { pending = null })
         null -> Unit
     }
 }

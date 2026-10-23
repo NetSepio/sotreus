@@ -45,6 +45,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val mask = booleanPreferencesKey("mask_coordinates")
         val geotagMode = stringPreferencesKey("geotag_mode")
         val geotagNext = booleanPreferencesKey("geotag_next")
+        val journeyMovement = booleanPreferencesKey("journey_movement")
+        val onlineVendorLookup = booleanPreferencesKey("online_vendor_lookup")
         val intensity = stringPreferencesKey("scan_intensity")
         val staleHold = intPreferencesKey("stale_hold_s")
         val stamping = stringPreferencesKey("stamping_mode")
@@ -81,6 +83,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
             maskCoordinates = p[Keys.mask] ?: d.maskCoordinates,
             geotagMode = p[Keys.geotagMode].enumOr(d.geotagMode),
             geotagNextSession = p[Keys.geotagNext] ?: d.geotagNextSession,
+            journeyMovement = p[Keys.journeyMovement] ?: d.journeyMovement,
+            onlineVendorLookup = p[Keys.onlineVendorLookup] ?: d.onlineVendorLookup,
             scanIntensity = p[Keys.intensity].enumOr(d.scanIntensity),
             staleHoldSeconds = p[Keys.staleHold] ?: d.staleHoldSeconds,
             stampingMode = p[Keys.stamping].enumOr(d.stampingMode),
@@ -170,6 +174,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
     suspend fun setMaskCoordinates(v: Boolean) { store.edit { it[Keys.mask] = v } }
     suspend fun setGeotagMode(v: GeotagMode) { store.edit { it[Keys.geotagMode] = v.name } }
     suspend fun setGeotagNextSession(v: Boolean) { store.edit { it[Keys.geotagNext] = v } }
+    suspend fun setJourneyMovement(v: Boolean) { store.edit { it[Keys.journeyMovement] = v } }
+    suspend fun setOnlineVendorLookup(v: Boolean) { store.edit { it[Keys.onlineVendorLookup] = v } }
     suspend fun setScanIntensity(v: ScanIntensity) { store.edit { it[Keys.intensity] = v.name } }
     suspend fun setStampingMode(v: StampingMode) { store.edit { it[Keys.stamping] = v.name } }
     suspend fun setNearbyPresence(v: Boolean) { store.edit { it[Keys.presence] = v } }

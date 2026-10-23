@@ -27,6 +27,10 @@ import app.sotreus.core.model.RadioKind
 import app.sotreus.core.model.SessionEventKind
 import app.sotreus.core.model.SotreusSettings
 import app.sotreus.core.model.UserEntityState
+import app.sotreus.core.model.SessionKind
+import app.sotreus.intelligence.JourneyMovement
+import app.sotreus.intelligence.MeasurementPlace
+import app.sotreus.intelligence.PlaceGeofence
 import app.sotreus.intelligence.AttentionEngine
 import app.sotreus.intelligence.Classification
 import app.sotreus.intelligence.Fingerprint
@@ -88,6 +92,9 @@ class ObservationPipeline @Inject constructor(
     private val sessionRows = HashMap<String, SessionEntityEntity>()
     private val sessionEventKeys = HashSet<String>()
     private val attentionIds = HashMap<String, Long>()
+    private val movement = JourneyMovement()
+    private var movementEnabled = false
+    private var placeChangedAtMs = 0L
 
     @Volatile private var labels: Map<String, EntityLabelRow> = emptyMap()
     @Volatile private var placeNames: Map<String, Set<String>> = emptyMap()
@@ -129,6 +136,8 @@ class ObservationPipeline @Inject constructor(
 
     /** Called for every advertisement / AP result. */
     fun ingest(observation: Observation, simulated: Boolean) {
+        // Cached APs must never become live sightings or trigger historical/tagged attention.
+        if (observation.kind == FwKind.WIFI && !observation.fresh) return
         val kind = if (observation.kind == FwKind.WIFI) RadioKind.WIFI else RadioKind.BLE
         val key = (if (simulated) SIMULATED_PREFIX else "") + Fingerprint.key(kind, observation.mac)
         synchronized(lock) {
@@ -153,6 +162,7 @@ class ObservationPipeline @Inject constructor(
     fun sighting(entityId: String): Sighting? = synchronized(lock) { sightings.live[entityId] }
 
     suspend fun onStart(now: Long) = mutex.withLock {
+        movement.clear()
         runStartMs = now
         windowStartMs = activeSession?.startedAtMs ?: now
         windowPresence.clear()
@@ -164,6 +174,7 @@ class ObservationPipeline @Inject constructor(
         flushLocked(now)
         placeTracker.touch(now)
         openEncounters.clear()
+        movement.clear()
     }
 
     /** Selected place changed (or the pipeline is starting): load its name and baseline. */
@@ -171,6 +182,7 @@ class ObservationPipeline @Inject constructor(
         if (place?.id == currentPlace?.id && baseline != null) return@withLock
         flushLocked(now)
         currentPlace = place
+        placeChangedAtMs = now
         visitFirstSeen.clear()
         attentionIds.clear()
         placeTracker.ensure(place?.id, now)
@@ -184,6 +196,9 @@ class ObservationPipeline @Inject constructor(
             tagPlusCodes = settings.plusCodeTags
             placeByLocation = settings.currentPlaceByLocation
             bindSession(now)
+            val detectMovement = settings.journeyMovement && activeSession?.kind == SessionKind.JOURNEY
+            if (movementEnabled != detectMovement) movement.clear()
+            movementEnabled = detectMovement
             if (tickCount % 2 == 0L) flushLocked(now)
             if (tickCount % 15 == 0L) assessAttention(now, settings)
             if (now - baselineLoadedAt > BASELINE_REFRESH_MS) {
@@ -215,16 +230,25 @@ class ObservationPipeline @Inject constructor(
         val unknown = batch.map { it.key }.filter { it !in rows }
         if (unknown.isNotEmpty()) unknown.chunked(500).forEach { chunk -> entities.getAll(chunk).forEach { rows[it.id] = it } }
 
-        val placeId = currentPlace?.id
+        val placeId = currentPlace?.id?.takeIf { !placeByLocation || location.fresh(now) != null }
         val session = activeSession
         val visitId = placeTracker.ensure(placeId, now)
         // Opt-in: where the phone was, as a ~14 m plus code, only from a fix taken in the last minute.
-        val plusCode = if (tagPlusCodes) location.fresh(now)?.let { PlusCode.encode(it.lat, it.lon) } else null
         val brandNew = mutableListOf<EntityEntity>()
         val updates = mutableListOf<EntitySystemFields>()
         val evidence = mutableListOf<ObservationEntity>()
+        val observedPlaces = HashMap<String, Long?>()
+        val area = currentPlace?.let { p -> p.lat?.let { lat -> p.lon?.let { lon ->
+            PlaceGeofence.Area(p.id, lat, lon, p.radiusM ?: PlaceGeofence.DEFAULT_RADIUS_M)
+        } } }
 
         for (s in batch) {
+            val fix = location.at(s.lastSeen)
+            val observedPlaceId = MeasurementPlace.resolve(placeId, placeByLocation, placeChangedAtMs, s.lastSeen, area,
+                fix?.let { PlaceGeofence.Fix(it.atMs, it.lat, it.lon, it.accuracyM) })
+            observedPlaces[s.key] = observedPlaceId
+            if (movementEnabled && s.key !in simulatedIds) movement.observe(s.key, s.lastSeen,
+                fix?.let { JourneyMovement.Fix(it.atMs, it.lat, it.lon, it.accuracyM) })
             val existing = rows[s.key]
             val kind = if (s.kind == FwKind.WIFI) RadioKind.WIFI else RadioKind.BLE
             val sampleEvery = if (kind == RadioKind.WIFI) WIFI_SAMPLE_MS else BLE_SAMPLE_MS
@@ -239,11 +263,11 @@ class ObservationPipeline @Inject constructor(
                     observedAtMs = s.lastSeen,
                     rssi = s.rssi,
                     radio = kind,
-                    placeId = placeId,
+                    placeId = observedPlaceId,
                     sessionId = session?.id,
-                    lat = null,
-                    lon = null,
-                    plusCode = plusCode,
+                    lat = fix?.lat.takeIf { session?.geotag == true },
+                    lon = fix?.lon.takeIf { session?.geotag == true },
+                    plusCode = if (tagPlusCodes) fix?.let { PlusCode.encode(it.lat, it.lon) } else null,
                     rawHex = s.rawHex.take(RAW_HEX_LIMIT).ifBlank { null },
                 )
             }
@@ -251,17 +275,14 @@ class ObservationPipeline @Inject constructor(
         if (brandNew.isNotEmpty()) entities.insertIgnore(brandNew)
         if (updates.isNotEmpty()) entities.updateSystem(updates)
         if (evidence.isNotEmpty()) {
-            session?.takeIf { it.geotag }?.let { sessions.lastLocation(it.id) }?.let { fix ->
-                evidence.replaceAll { it.copy(lat = fix.lat, lon = fix.lon) }
-            }
             observations.insert(evidence)
         }
 
-        batch.forEach { recordEncounter(it, placeId, session?.id) }
+        batch.forEach { recordEncounter(it, observedPlaces[it.key], session?.id) }
         accumulatePresence(batch, now)
         if (visitId != null) {
             places.upsertVisitEntities(
-                batch.map { s ->
+                batch.filter { observedPlaces[it.key] == placeId && placeId != null }.map { s ->
                     VisitEntityEntity(visitId, s.key, visitFirstSeen.getOrPut(s.key) { s.lastSeen }, s.lastSeen)
                 },
             )
@@ -270,7 +291,7 @@ class ObservationPipeline @Inject constructor(
     }
 
     private fun stamp(s: Sighting): String =
-        "${s.name}|${s.serviceUuids.joinToString(",")}|${s.manufacturerId}|${s.manufacturerDataHex.take(8)}|${s.vendorIeOuis.joinToString(",")}"
+        "${s.name}|${s.serviceUuids.sorted()}|${s.manufacturerId}|${s.manufacturerDataHex}|${s.vendorIeOuis.sorted()}|${s.facts}"
 
     private fun toEntity(s: Sighting, kind: RadioKind, c: Classification?, existing: EntityEntity?, count: Int): EntityEntity {
         val address = s.mac
@@ -308,7 +329,7 @@ class ObservationPipeline @Inject constructor(
     }
 
     private fun EntityEntity.systemFields() = EntitySystemFields(
-        id, advertisedName, family, signatureName, guess, guessConfidence, notable, vendor, companyId, serviceUuids,
+        id, addressType, linkConfidence, advertisedName, family, signatureName, guess, guessConfidence, notable, vendor, companyId, serviceUuids,
         serviceData, connectable, txPower, security, frequencyMhz, channel, wifiStandard, lastSeenMs, lastRssi, observationCount,
     )
 
@@ -349,6 +370,7 @@ class ObservationPipeline @Inject constructor(
         lastPresenceTick.clear()
         attentionIds.clear()
         windowStartMs = session?.startedAtMs ?: now
+        movement.clear()
         if (session != null) sessions.entities(session.id).forEach { sessionRows[it.entityId] = it }
     }
 
@@ -431,6 +453,8 @@ class ObservationPipeline @Inject constructor(
                     lastHeardAgeSeconds = ageSeconds,
                     staleAfterSeconds = settings.staleHoldSeconds.toDouble(),
                     displayName = label?.userName ?: s.name.ifBlank { c?.signatureName ?: "" },
+                    movement = if (movementEnabled) movement.evidence(s.key, now) else null,
+                    linkConfidence = rows[s.key]?.linkConfidence ?: Confidence.LOW,
                 ),
             ) ?: return@forEach
             if (!assessment.needsAttention) return@forEach
@@ -518,6 +542,7 @@ class ObservationPipeline @Inject constructor(
                 simulated = s.key in simulatedIds,
             )
         }
+        val confirmedPlace = currentPlace?.takeIf { !placeByLocation || location.fresh(now) != null }
         _snapshot.value = LiveSnapshot(
             atMs = now,
             observing = observing,
@@ -525,12 +550,14 @@ class ObservationPipeline @Inject constructor(
             radios = radios,
             status = status,
             access = access,
-            placeId = currentPlace?.id,
-            placeName = currentPlace?.name,
+            placeId = confirmedPlace?.id,
+            placeName = confirmedPlace?.name,
             // While a fix is pending the earlier place is unconfirmed, so it isn't shown as picked by location.
-            placeByLocation = placeByLocation && currentPlace != null && !location.locating.value,
+            placeByLocation = placeByLocation && confirmedPlace != null && !location.locating.value,
             locating = location.locating.value,
             lastFixMs = location.latest.value?.atMs,
+            journeyMovementEnabled = movementEnabled,
+            movementLocationReady = location.fresh(now, 20_000)?.accuracyM?.let { it.isFinite() && it in 0f..50f } == true,
             baselineVisits = baseline?.completedVisits ?: 0,
             activeSessionId = activeSession?.id,
         )
@@ -550,6 +577,7 @@ class ObservationPipeline @Inject constructor(
             dirty.clear()
         }
         rows.clear()
+        movement.clear()
         classified.clear()
         openEncounters.clear()
         visitFirstSeen.clear()

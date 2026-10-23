@@ -1,6 +1,6 @@
 # Sotreus
 
-Private, local-first electronic situational awareness for Android (Kotlin, Jetpack Compose).
+Private, local-first electronic situational awareness for Android 9+ (Kotlin, Jetpack Compose).
 
 Sotreus shows what the phone can observe over Bluetooth LE and Wi-Fi, learns what is normal for a
 place, remembers what you have encountered before, and explains why something may be worth a
@@ -14,17 +14,27 @@ and no network. Observations, places, labels and notes stay on the phone.
   with freshness, stale state and Wi-Fi throttling surfaced.
 - **Entities** — device-family classification, "most likely…" explanations, your labels (Mine,
   Expected, Tagged, Watch, Ignore), names, notes, addresses, raw evidence and a proximity check.
-- **Attention** — explainable events with human-readable reasons and inputs. Not a threat score.
+- **Attention** — explainable events with human-readable reasons and inputs. Journey movement evidence
+  uses fresh, location-matched observations of the same broadcast address at separated locations,
+  independently of whether the product is recognised. Not a threat score.
 - **Places** — user-defined places with optional coordinates (current location or map pick), a
   radius (50–300 m) and a baseline learned from visits. While Sotreus is open, the place is picked
   from the phone's location: inside a saved place's radius you are at that place, and you leave it
   only once clearly outside, so small moves don't change it. On launch the radios wait for a new
   fix (up to 10 s) so nothing is tagged to where the app was last used. A place picked by hand
   holds while the phone stays near where you picked it.
-- **Sessions** — Journey and Sit sessions with a live timeline, summaries and sit comparison.
+- **Sessions** — Journey and Sit sessions with a live timeline, summaries and sit comparison. Journey
+  movement can use phone location with the screen off while the session is active. Route saving is
+  separate: without it, coordinates used for movement stay in memory; only evidence summaries persist.
+  Both choices are explained in Privacy. The live session shows when accurate location is unavailable.
 - **Privacy** — retention, coordinate masking, privacy-reduced exports, per-item deletion. Picking
   places by location stores no path. Opt-in plus-code tags (off by default) keep a ~14 m plus code
   of the phone's location on each observation while Sotreus is open.
+- **Vendor lookup** — local IEEE and Bluetooth definitions, plus opt-in manual lookup through
+  MACLookup. Only a public 24-bit vendor prefix is sent, together with the network connection
+  (the provider sees the phone's IP address). No full radio address, location, name or note is sent.
+  Private and unknown address types are excluded. Results show their source and date; positive
+  results are cached for 30 days, missing vendors for one day. The local classification stays separate.
 - **Friends** — QR pairing and opt-in Nearby presence using rotating anonymous BLE tokens.
 - **Context** — optional sources, each labelled with where it came from and each switchable off:
   - **Satellites** (PREDICTED) — orbital elements from CelesTrak (Earth observation, weather and
@@ -141,7 +151,7 @@ Add Actions secrets `GENERIC_KEYSTORE_BASE64`, `GENERIC_STORE_PASSWORD`, `GENERI
 `base64 -i signing/sotreus-generic.jks | tr -d '\n'`.
 
 ```bash
-git tag v1.0.1 && git push origin v1.0.1
+git tag -a v1.1.0 -m "Sotreus 1.1.0" && git push origin v1.1.0
 ```
 
 Which auth and settings screens appear is decided **at runtime by the device**: Solana Mobile
@@ -170,6 +180,33 @@ profile. Debug builds can force the Solana screens from Settings › Diagnostics
 | `:feature:*` | onboarding, now, entity, attention, history, place, journey, settings, friends, proofs, context |
 
 Convention plugins live in `build-logic/convention`; versions in `gradle/libs.versions.toml`.
+
+## Radio evidence and lookup maintenance
+
+Movement currently requires at least three locations separated by 300 m plus GPS uncertainty,
+600 m overall separation, eight minutes and twelve independently sampled observations. Gaps over
+two minutes reset continuity. Coordinates must have reported accuracy of 50 m or better and be
+within 20 seconds of the radio measurement. These conservative starting thresholds need field
+validation; they establish shared observations, not a device owner or intent. Address rotation
+starts a new entity. Evidence collected before a process restart is not stitched to a new run.
+
+The release lookup snapshot is recorded in `sensing/android/src/main/assets/lookups/radiodb.sources.json`
+with source URLs, counts and SHA-256 hashes. Refresh it explicitly before a release:
+
+```bash
+python3 tools/lookups/build_radio_db.py --download --source-dir /tmp/sotreus-radio-sources --date YYYY-MM-DD
+python3 -m unittest discover -s tools/lookups -p 'test_*.py'
+./gradlew :intelligence:fieldwatch:test
+```
+
+Use the actual snapshot date for `YYYY-MM-DD`. Keep the source directory to reproduce the output
+without `--download`; an unchanged input snapshot and date produce identical binaries. The tool
+uses the official IEEE MA-L, MA-M, MA-S, IAB and CID CSVs, plus Nordic Semiconductor's Bluetooth
+JSON definitions. It preserves the bundled official SIG appearance definitions where Nordic's
+subset has no entry. Source failures and unexpected coverage reductions stop the update.
+No database refresh happens silently on a user's phone.
+
+See [radio validation](RADIO_VALIDATION.md) for the field test matrix and current limits.
 
 ## References and inspiration
 
