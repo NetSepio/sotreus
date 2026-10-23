@@ -40,7 +40,7 @@ class PhoneLocation @Inject constructor(
     fun canLocate(): Boolean = source.hasPermission() && source.isEnabled()
 
     /** The latest fix if it was taken at most [maxAgeMs] before [now]. An older fix is never passed off as current. */
-    fun fresh(now: Long, maxAgeMs: Long = FRESH_MS): LocationSource.Fix? = _latest.value?.takeIf { now - it.atMs in 0..maxAgeMs }
+    fun fresh(now: Long, maxAgeMs: Long = FRESH_MS): LocationSource.Fix? = _latest.value?.takeIf { !it.mock && now - it.atMs in 0..maxAgeMs }
 
     /** A short in-memory buffer matches a radio measurement to when it was actually taken. */
     fun at(observedAtMs: Long): LocationSource.Fix? = synchronized(history) {
@@ -49,7 +49,7 @@ class PhoneLocation @Inject constructor(
     }
 
     /** Foreground fixes, frequent enough to follow the phone between places. */
-    fun updates(): Flow<LocationSource.Fix> = source.updates(UPDATE_INTERVAL_MS, minDistanceM = 0f)
+    fun updates(fast: Boolean = false): Flow<LocationSource.Fix> = source.updates(if (fast) 1_000L else UPDATE_INTERVAL_MS, minDistanceM = 0f)
 
     /** Every fix comes through here: visible app, active session, or a one-off fix. */
     suspend fun offer(fix: LocationSource.Fix) {
@@ -57,6 +57,7 @@ class PhoneLocation @Inject constructor(
     }
 
     private fun accept(fix: LocationSource.Fix): Boolean {
+        if (fix.mock) return false
         if (!PlaceGeofence.isBetter(fix.geo(), _latest.value?.geo())) return false
         _latest.value = fix
         synchronized(history) {

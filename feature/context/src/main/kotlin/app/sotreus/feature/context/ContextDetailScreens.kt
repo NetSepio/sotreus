@@ -214,7 +214,14 @@ internal fun RemoteIdScreen(onBack: () -> Unit, vm: RemoteIdViewModel = hiltView
                 stringResource(R.string.ctx_kv_speed) to (speed(live?.speedMps ?: last?.speedMps) ?: unknown),
                 stringResource(R.string.ctx_kv_course) to ((live?.courseDeg ?: last?.courseDeg)?.let { "${degrees(it)} ${compass(it)}" } ?: unknown),
                 stringResource(R.string.ctx_kv_position) to (if (lat != null && lon != null) "%.5f, %.5f".format(lat, lon) else unknown),
-                stringResource(R.string.ctx_kv_operator) to (if (opLat != null && opLon != null) "%.5f, %.5f".format(opLat, opLon) else unknown),
+                app.sotreus.intelligence.fieldwatch.OperatorLoc.label(live?.operatorKind ?: last?.operatorKind) to (if (opLat != null && opLon != null) "%.5f, %.5f".format(opLat, opLon) else unknown),
+                (live?.operatorAltM ?: last?.operatorAltM)?.let { stringResource(R.string.ctx_operator_altitude) to altitude(it).orEmpty() },
+                (live?.heightM ?: last?.heightM)?.let { h ->
+                    val reference = if ((live?.heightReference ?: last?.heightReference) == 1) stringResource(R.string.ctx_above_ground) else stringResource(R.string.ctx_above_takeoff)
+                    stringResource(R.string.ctx_height) to "${altitude(h)} $reference"
+                },
+                (live?.euCategory ?: last?.euCategory)?.let { stringResource(R.string.ctx_eu_category) to it },
+                (live?.euClass ?: last?.euClass)?.let { stringResource(R.string.ctx_eu_class) to it },
                 stringResource(R.string.ctx_kv_last_heard) to stringResource(R.string.ctx_ago, ageShort(now - (live?.lastSeenMs ?: last?.endMs ?: last?.atMs ?: now))),
                 live?.let { stringResource(R.string.ctx_kv_first_heard) to dateTime(it.firstSeenMs) },
             ),

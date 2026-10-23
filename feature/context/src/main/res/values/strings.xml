@@ -184,4 +184,10 @@
         <item quantity="one">%d outside this view</item>
         <item quantity="other">%d outside this view</item>
     </plurals>
+    <string name="ctx_operator_altitude">Operator altitude</string>
+    <string name="ctx_height">Height</string>
+    <string name="ctx_above_ground">above ground</string>
+    <string name="ctx_above_takeoff">above takeoff</string>
+    <string name="ctx_eu_category">EU category</string>
+    <string name="ctx_eu_class">EU class</string>
 </resources>

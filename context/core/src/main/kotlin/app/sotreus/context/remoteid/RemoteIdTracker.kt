@@ -42,6 +42,12 @@ data class LiveRemoteId(
     val altM: Double?,
     val operatorLat: Double?,
     val operatorLon: Double?,
+    val operatorKind: Int? = null,
+    val operatorAltM: Double? = null,
+    val heightM: Double? = null,
+    val heightReference: Int? = null,
+    val euCategory: String? = null,
+    val euClass: String? = null,
     val speedMps: Double?,
     val courseDeg: Double?,
     val radio: RadioKind,
@@ -64,6 +70,8 @@ class RemoteIdTracker @Inject constructor(
     private val sessions: SessionDao,
 ) {
     private val mutex = Mutex()
+    private val catalog = app.sotreus.intelligence.fieldwatch.DefaultCatalog.fleets()
+
     private val byAddress = HashMap<String, PayloadLocation>()
     private val drones = LinkedHashMap<String, LiveRemoteId>()
     private val lastWrite = HashMap<String, Pair<Long, Long>>() // subject → (written at, row id)
@@ -108,11 +116,21 @@ class RemoteIdTracker @Inject constructor(
             val subject = merged.uasId ?: obs.mac
             if (merged.uasId != null) drones.remove(obs.mac) // the address-keyed entry becomes the UAS ID one
             val prev = drones[subject]
+            val sighting = app.sotreus.intelligence.fieldwatch.observationSighting(obs).copy(fleetIds = setOf("fleet-remote-id"))
+            val fields = app.sotreus.intelligence.fieldwatch.SignatureFieldDecoder.decodeSighting(sighting, catalog)
+            fun number(id: String) = fields.firstOrNull { it.id == id }?.number
+            fun label(id: String) = fields.firstOrNull { it.id == id }?.display
+
             val pin = merged.pin()
             val next = LiveRemoteId(
                 subjectId = subject, uasId = merged.uasId, maker = merged.aircraft, selfId = merged.selfId,
                 lat = pin?.first, lon = pin?.second, altM = merged.alt,
                 operatorLat = merged.opLat, operatorLon = merged.opLon,
+                operatorKind = merged.opKind, operatorAltM = merged.opAlt,
+                heightM = number("height")?.takeIf { it > -1000 } ?: prev?.heightM,
+                heightReference = number("height_ref")?.toInt() ?: prev?.heightReference,
+                euCategory = if (decoded.opKind != null) label("eu_category") else prev?.euCategory,
+                euClass = if (decoded.opKind != null) label("eu_class") else prev?.euClass,
                 speedMps = merged.speedMps, courseDeg = merged.headingDeg,
                 radio = obs.kind, address = obs.mac, rssi = obs.rssi,
                 firstSeenMs = prev?.firstSeenMs ?: obs.at, lastSeenMs = obs.at,
@@ -159,6 +177,8 @@ class RemoteIdTracker @Inject constructor(
         atMs = lastSeenMs,
         lat = lat, lon = lon, altM = altM, speedMps = speedMps, courseDeg = courseDeg,
         operatorLat = operatorLat, operatorLon = operatorLon,
+        operatorKind = operatorKind, operatorAltM = operatorAltM, heightM = heightM,
+        heightReference = heightReference, euCategory = euCategory, euClass = euClass,
         sessionId = sessionId,
     )
 

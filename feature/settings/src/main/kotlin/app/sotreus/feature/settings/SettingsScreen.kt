@@ -168,6 +168,8 @@ internal fun SettingsContent(state: SettingsUiState, navigate: (Any) -> Unit) {
                 { navigate(ContextSourcesRoute) },
                 value = stringResource(if (state.settings.contextEnabled) R.string.on else R.string.off),
             )
+            NavRow(stringResource(R.string.field_tools_title), { navigate(app.sotreus.core.navigation.FieldToolsRoute) })
+            NavRow(stringResource(R.string.languages_title), { navigate(app.sotreus.core.navigation.LanguagesRoute) })
             NavRow(
                 stringResource(R.string.row_privacy),
                 { navigate(PrivacyRoute) },

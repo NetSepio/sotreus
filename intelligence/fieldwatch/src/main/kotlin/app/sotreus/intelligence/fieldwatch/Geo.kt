@@ -1,12 +1,14 @@
 /*
- * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit e71b9b2).
+ * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit ddc0d8c).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
- * Modified for Sotreus: package renamed.
+ * Modified for Sotreus: package renamed; adapted to Sotreus modules.
  */
 package app.sotreus.intelligence.fieldwatch
 
+import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -20,6 +22,32 @@ object Geo {
         val dl = Math.toRadians(lon2 - lon1)
         val a = sin(dp / 2) * sin(dp / 2) + cos(p1) * cos(p2) * sin(dl / 2) * sin(dl / 2)
         return 2 * r * atan2(sqrt(a), sqrt(1 - a))
+    }
+
+    /** Degrees clockwise from true north, from the first point to the second. */
+    fun bearingDegrees(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val p1 = Math.toRadians(lat1)
+        val p2 = Math.toRadians(lat2)
+        val dl = Math.toRadians(lon2 - lon1)
+        val y = sin(dl) * cos(p2)
+        val x = cos(p1) * sin(p2) - sin(p1) * cos(p2) * cos(dl)
+        val wrapped = Math.toDegrees(atan2(y, x)) % 360.0
+        return if (wrapped < 0.0) wrapped + 360.0 else wrapped
+    }
+
+    fun midpoint(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Pair<Double, Double> {
+        val p1 = Math.toRadians(lat1)
+        val l1 = Math.toRadians(lon1)
+        val p2 = Math.toRadians(lat2)
+        val dl = Math.toRadians(lon2 - lon1)
+        val bx = cos(p2) * cos(dl)
+        val by = cos(p2) * sin(dl)
+        val lat = atan2(
+            sin(p1) + sin(p2),
+            sqrt((cos(p1) + bx) * (cos(p1) + bx) + by * by),
+        )
+        val lon = l1 + atan2(by, cos(p1) + bx)
+        return Math.toDegrees(lat) to Math.toDegrees(lon)
     }
 
     fun pathLengthM(samples: List<GpsSample>): Double {
@@ -63,6 +91,26 @@ object Geo {
 
     fun cellKey(lat: Double, lon: Double): String =
         "%.4f,%.4f".format(java.util.Locale.US, lat, lon)
+
+    /** Exact GPS cell, then the nearest named cell within [maxM]. */
+    fun nameNear(lat: Double, lon: Double, namesByCell: Map<String, String>, maxM: Double = 90.0): String? {
+        if (namesByCell.isEmpty()) return null
+        namesByCell[cellKey(lat, lon)]?.let { return it }
+        var best: String? = null
+        var bestD = maxM
+        for ((key, name) in namesByCell) {
+            val parts = key.split(',')
+            if (parts.size != 2) continue
+            val klat = parts[0].toDoubleOrNull() ?: continue
+            val klon = parts[1].toDoubleOrNull() ?: continue
+            val d = meters(lat, lon, klat, klon)
+            if (d < bestD) {
+                bestD = d
+                best = name
+            }
+        }
+        return best
+    }
 
     fun screenCoord(lat: Double?, lon: Double?, demo: Boolean): String? {
         if (lat == null || lon == null) return null
@@ -226,6 +274,102 @@ object Geo {
         return if (out.size >= 2) out else samples.take(1) + samples.takeLast(1)
     }
 
+    /**
+     * A bend is kept when the drive leaves the last line by about a road's width.
+     * Side-to-side GPS wobble under this stays off the line, so a straight road
+     * does not turn into a zigzag. Same rule in a sit and out of one.
+     */
+    const val DRIVE_CROSS_M = 12.0
+    const val DRIVE_MAX_ACCURACY_M = 25f
+    const val TRACK_CAP = 2_000
+
+    class DriveApex {
+        var sample: GpsSample? = null
+        fun clear() {
+            sample = null
+        }
+    }
+
+    /** GPS only, and only when the fix is tight enough to belong on the driven line. */
+    fun acceptDriveFix(gps: Boolean, accuracyM: Float?): Boolean {
+        if (!gps) return false
+        if (accuracyM != null && accuracyM > DRIVE_MAX_ACCURACY_M) return false
+        return true
+    }
+
+    /** Signed meters of [p] off the line from [a] to [b]. Zero when the line is too short to trust. */
+    fun crossTrackMeters(
+        aLat: Double,
+        aLon: Double,
+        bLat: Double,
+        bLon: Double,
+        pLat: Double,
+        pLon: Double,
+    ): Double {
+        val cosLat = cos(Math.toRadians(aLat)).coerceAtLeast(0.2)
+        val eastB = (bLon - aLon) * 111_320.0 * cosLat
+        val northB = (bLat - aLat) * 111_320.0
+        val eastP = (pLon - aLon) * 111_320.0 * cosLat
+        val northP = (pLat - aLat) * 111_320.0
+        val len = hypot(eastB, northB)
+        if (len < 1.0) return 0.0
+        return (eastB * northP - northB * eastP) / len
+    }
+
+    /**
+     * Corners plus a moving tip. The tip is where the phone is now. A new corner
+     * is the point that left the last line by more than [crossM], which is the
+     * apex of a bend rather than every GPS wobble.
+     * Returns true when the oldest corner was dropped to stay inside [cap].
+     */
+    fun extendDrivePath(
+        path: MutableList<GpsSample>,
+        apex: DriveApex,
+        lat: Double,
+        lon: Double,
+        at: Long,
+        cap: Int = TRACK_CAP,
+        crossM: Double = DRIVE_CROSS_M,
+    ): Boolean {
+        val fix = GpsSample(at, lat, lon)
+        if (path.isEmpty()) {
+            path += fix
+            apex.clear()
+            return false
+        }
+        if (path.size == 1) {
+            path += fix
+            apex.clear()
+            return false
+        }
+        val anchor = path[path.lastIndex - 1]
+        val tip = path.last()
+        val devTip = abs(crossTrackMeters(anchor.lat, anchor.lon, fix.lat, fix.lon, tip.lat, tip.lon))
+        val held = apex.sample
+        val devHeld = if (held == null) {
+            -1.0
+        } else {
+            abs(crossTrackMeters(anchor.lat, anchor.lon, fix.lat, fix.lon, held.lat, held.lon))
+        }
+        val best = if (held != null && devHeld > devTip) held else tip
+        val bestDev = max(devTip, devHeld)
+        if (bestDev > crossM && meters(anchor.lat, anchor.lon, best.lat, best.lon) >= crossM) {
+            path[path.lastIndex] = best
+            path += fix
+            apex.clear()
+            var trimmed = false
+            while (path.size > cap) {
+                path.removeAt(0)
+                trimmed = true
+            }
+            if (trimmed) apex.clear()
+            return trimmed
+        }
+        apex.sample = best
+        path[path.lastIndex] = fix
+        return false
+    }
+
     fun append(trail: List<GpsSample>, at: Long, lat: Double, lon: Double, rssi: Int, cap: Int = 48): List<GpsSample> {
         val last = trail.lastOrNull()
         if (last != null) {
@@ -367,7 +511,7 @@ object TrackerMatch {
         "find hub", "dult",
     )
     private val beaconTokens = listOf("ibeacon", "minew", "estimote", "kontakt")
-    private val wearableTokens = listOf("garmin", "fitbit", "oura")
+    private val wearableTokens = listOf("garmin", "fitbit", "oura", "polar")
 
     /** Apple Continuity / pairing types — not Offline Finding 0x12. */
     private val APPLE_CONTINUITY_PREFIXES = setOf(

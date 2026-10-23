@@ -48,6 +48,17 @@ class RadioPermissions @Inject constructor(@ApplicationContext private val conte
     private val _access = MutableStateFlow(read())
     val access: StateFlow<RadioAccess> = _access.asStateFlow()
 
+    init {
+        val filter = android.content.IntentFilter().apply {
+            addAction(LocationManager.PROVIDERS_CHANGED_ACTION)
+            addAction(android.bluetooth.BluetoothAdapter.ACTION_STATE_CHANGED)
+            addAction(WifiManager.WIFI_STATE_CHANGED_ACTION)
+        }
+        ContextCompat.registerReceiver(context, object : android.content.BroadcastReceiver() {
+            override fun onReceive(c: Context?, intent: android.content.Intent?) { runCatching { refresh() } }
+        }, filter, ContextCompat.RECEIVER_EXPORTED)
+    }
+
     fun permissionsFor(group: PermissionGroup): List<String> = when (group) {
         PermissionGroup.NEARBY_DEVICES -> if (Build.VERSION.SDK_INT >= 31) {
             listOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
@@ -92,8 +103,8 @@ class RadioPermissions @Inject constructor(@ApplicationContext private val conte
         val loc = context.getSystemService(LocationManager::class.java)
         return RadioAccess(
             granted = PermissionGroup.entries.filter(::isGranted).toSet(),
-            bluetoothOn = bt?.isEnabled == true,
-            wifiOn = wifi?.isWifiEnabled == true || (wifi?.isScanAlwaysAvailable == true),
+            bluetoothOn = runCatching { bt?.isEnabled == true }.getOrDefault(false),
+            wifiOn = runCatching { wifi?.isWifiEnabled == true || (wifi?.isScanAlwaysAvailable == true) }.getOrDefault(false),
             locationOn = loc != null && LocationManagerCompat.isLocationEnabled(loc),
             bleSupported = context.packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE),
         )

@@ -102,6 +102,8 @@ internal fun NowScreen(navigate: (Any) -> Unit, vm: NowViewModel = hiltViewModel
         onAttention = { navigate(AttentionRoute(it)) },
         onPermissions = { navigate(PermissionsRoute) },
         onShowAddresses = vm::setShowAddresses,
+        onRoute = { navigate(app.sotreus.core.navigation.RouteMapRoute()) },
+        onHideBurst = vm::hideBurst,
     )
     if (picker) {
         PlacePickerSheet(
@@ -127,10 +129,15 @@ internal fun NowContent(
     onAttention: (Long) -> Unit,
     onPermissions: () -> Unit,
     onShowAddresses: (Boolean) -> Unit = {},
+    onRoute: () -> Unit = {},
+    onHideBurst: () -> Unit = {},
 ) {
     val snap = state.snapshot
     ScreenColumn(top = SotreusTheme.spacing.screenH) {
         Header(state, onPlace)
+        if (state.settings.livePath) GhostButton(stringResource(R.string.now_live_path), onRoute)
+        snap.conditionNotes.forEach { note -> CaveatBox(stringResource(R.string.now_radio_conditions), note) }
+        if (snap.conditionNotes.any { it.contains("flood", true) }) GhostButton(stringResource(R.string.now_hide_burst), onHideBurst)
         Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.xl)) {
             FreshnessLine(freshness(state))
             SegmentedToggle(
@@ -350,7 +357,7 @@ private fun RadioRow(r: LiveRadio, now: Long, onEntity: (String) -> Unit, addres
     }
     EntityRow(
         title = title,
-        subtitle = subtitle,
+        subtitle = listOfNotNull(subtitle, r.decodedStatus).joinToString(" · "),
         glyph = glyphFor(r.kind, r.userState, r.presence, r.stale, false),
         onClick = { onEntity(r.entityId) },
         trailingValue = if (r.stale) r.lastRssi.toString().replace("-", "−") else stringResource(R.string.row_rssi_age, r.avgRssi30.toInt(), ageShort(now - r.lastHeardMs)).replace("-", "−"),

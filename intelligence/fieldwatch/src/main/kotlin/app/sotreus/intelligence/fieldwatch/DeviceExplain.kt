@@ -1,7 +1,7 @@
 /*
- * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit e71b9b2).
+ * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit ddc0d8c).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
- * Modified for Sotreus: package renamed.
+ * Modified for Sotreus: package renamed; adapted to Sotreus modules.
  */
 package app.sotreus.intelligence.fieldwatch
 
@@ -199,7 +199,9 @@ object DeviceExplain {
             0xFE2C -> "Google Fast Pair (often buds/speakers)"
             0xFD5A -> "Samsung SmartTag"
             0xFD44 -> "Apple Find My related"
-            0xFEED, 0xFEDD -> "Tile tracker"
+            0xFEED, 0xFEDD, 0xFEEC -> "Tile tracker"
+            0xFEEE -> "Polar heart-rate strap or watch"
+            0xFE33 -> "Chipolo item finder"
             0xFD50 -> "Tuya IoT"
             0xFEBE, 0xFE21 -> "Bose"
             0xFE78 -> "HP printer"
@@ -302,7 +304,8 @@ object DeviceExplain {
                 0xFE2C -> out += Hint("audio-personal", "earbuds or a speaker", "Google Fast Pair is present (common on buds and speakers).", 4)
                 0xFD5A -> out += Hint("tag", "a Samsung SmartTag", "SmartTag service UUID.", 7)
                 0xFD44 -> out += Hint("tag", "an Apple Find My accessory", "Find My related UUID.", 6)
-                0xFEED, 0xFEDD -> out += Hint("tag", "a Tile tracker", "Tile service UUID.", 7)
+                0xFEED, 0xFEDD, 0xFEEC -> out += Hint("tag", "a Tile tracker", "Tile service UUID.", 7)
+                0xFEEE -> out += Hint("wearable", "a Polar heart-rate strap or watch", "Polar service UUID.", 7)
             }
         }
         return out

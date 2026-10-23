@@ -77,6 +77,7 @@ data class NowUiState(
 @HiltViewModel
 class NowViewModel @Inject constructor(
     pipeline: ObservationPipeline,
+    private val insights: app.sotreus.core.data.field.FieldInsights,
     private val settings: SettingsRepository,
     private val placeRepository: PlaceRepository,
     attention: AttentionRepository,
@@ -97,6 +98,8 @@ class NowViewModel @Inject constructor(
     ) { snap, s, (f, so), att, places ->
         NowUiState(snapshot = snap, settings = s, view = s.nowView, filter = f, sort = so, openAttention = att, places = places)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NowUiState())
+
+    fun hideBurst() { insights.hideBurst() }
 
     fun setView(v: NowView) = viewModelScope.launch { settings.setNowView(v) }
     fun setShowAddresses(on: Boolean) = viewModelScope.launch { settings.setShowAddresses(on) }

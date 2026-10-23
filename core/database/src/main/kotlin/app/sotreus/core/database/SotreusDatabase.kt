@@ -53,7 +53,7 @@ import app.sotreus.core.database.entity.VisitEntityEntity
         LocalProfileEntity::class, LinkedIdentityEntity::class, FriendEntity::class, ProofBatchEntity::class,
         ProofLeafEntity::class, ContextEventEntity::class, LostReportEntity::class, FindSightingEntity::class,
         WitnessHeardEntity::class, WitnessAttestationEntity::class, WitnessSlotEntity::class,
-        VendorLookupEntity::class,
+        VendorLookupEntity::class, app.sotreus.core.database.entity.TrackerStopEntity::class, app.sotreus.core.database.entity.TrackerMemoryEntity::class,
     ],
     version = SotreusDatabase.SCHEMA_VERSION,
     exportSchema = true,
@@ -71,9 +71,10 @@ abstract class SotreusDatabase : RoomDatabase() {
     abstract fun contextDao(): ContextDao
     abstract fun trackingDao(): TrackingDao
     abstract fun vendorLookupDao(): VendorLookupDao
+    abstract fun trackerStopDao(): app.sotreus.core.database.dao.TrackerStopDao
 
     companion object {
-        const val SCHEMA_VERSION = 6
+        const val SCHEMA_VERSION = 7
         const val NAME = "sotreus.db"
     }
 }

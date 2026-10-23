@@ -39,6 +39,9 @@ class ObservationService : LifecycleService() {
 
     private var sessionJob: Job? = null
 
+    override fun onCreate() { super.onCreate(); running.value = true }
+    override fun onDestroy() { running.value = false; super.onDestroy() }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         Notifications.ensureChannels(this)
@@ -49,8 +52,8 @@ class ObservationService : LifecycleService() {
 
         sessionJob?.cancel()
         sessionJob = lifecycleScope.launch {
-            combine(sessions.observeActive(), settings.settings) { active, s -> active to s.journeyMovement }
-                .distinctUntilChanged().collectLatest { (active, detectMovement) ->
+            combine(sessions.observeActive(), settings.settings) { active, s -> Triple(active, s.journeyMovement, s.livePath) }
+                .distinctUntilChanged().collectLatest { (active, detectMovement, livePath) ->
                     if (active == null) {
                         stopSelf()
                         return@collectLatest
@@ -59,8 +62,8 @@ class ObservationService : LifecycleService() {
                     val detect = active.kind == SessionKind.JOURNEY && detectMovement && hasLocation()
                     showNotification(active.kind, recordRoute, detect)
                     if (recordRoute || detect) {
-                        phoneLocation.updates().collect { fix ->
-                            if (recordRoute) sessions.insertLocation(SessionLocationEntity(sessionId = active.id, atMs = fix.atMs, lat = fix.lat, lon = fix.lon, accuracyM = fix.accuracyM))
+                        phoneLocation.updates(fast = livePath).collect { fix ->
+                            if (recordRoute && !fix.mock) sessions.insertLocation(SessionLocationEntity(sessionId = active.id, atMs = fix.atMs, lat = fix.lat, lon = fix.lon, accuracyM = fix.accuracyM))
                             phoneLocation.offer(fix)
                         }
                     }
@@ -95,6 +98,7 @@ class ObservationService : LifecycleService() {
         ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
     companion object {
+        val running = kotlinx.coroutines.flow.MutableStateFlow(false)
         private const val EXTRA_KIND = "kind"
         private const val EXTRA_GEOTAG = "geotag"
         private const val EXTRA_MOVEMENT = "movement"

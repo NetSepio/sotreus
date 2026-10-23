@@ -140,6 +140,7 @@ data class SessionEntityEntity(
     @ColumnInfo(name = "rssi_sum") val rssiSum: Long,
     @ColumnInfo(name = "rssi_count") val rssiCount: Int,
     @ColumnInfo(name = "new_to_you") val newToYou: Boolean,
+    @ColumnInfo(name = "is_flood", defaultValue = "0") val isFlood: Boolean = false,
 )
 
 @Entity(tableName = "session_events", indices = [Index("session_id")])
@@ -270,6 +271,12 @@ data class ContextEventEntity(
     @ColumnInfo(name = "course_deg") val courseDeg: Double? = null,
     @ColumnInfo(name = "operator_lat") val operatorLat: Double? = null,
     @ColumnInfo(name = "operator_lon") val operatorLon: Double? = null,
+    @ColumnInfo(name = "operator_kind") val operatorKind: Int? = null,
+    @ColumnInfo(name = "operator_alt_m") val operatorAltM: Double? = null,
+    @ColumnInfo(name = "height_m") val heightM: Double? = null,
+    @ColumnInfo(name = "height_reference") val heightReference: Int? = null,
+    @ColumnInfo(name = "eu_category") val euCategory: String? = null,
+    @ColumnInfo(name = "eu_class") val euClass: String? = null,
     @ColumnInfo(name = "distance_km") val distanceKm: Double? = null,
     @ColumnInfo(name = "session_id") val sessionId: Long? = null,
     @ColumnInfo(name = "entity_id") val entityId: String? = null,

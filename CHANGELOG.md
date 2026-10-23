@@ -2,6 +2,52 @@
 
 All notable changes to Sotreus Android. Versions follow `versionName` in `app/build.gradle.kts`.
 
+## 1.1.1 — 2026-10-23
+
+### Added
+
+- Add opt-in, seven-day tracker stop history, bounded to eight stops per stable identifier and
+  400 identifiers. Require accurate matched fixes and repeated samples; skip unknown/rotating BLE
+  addresses, mock fixes, simulated devices and Mine/Expected/Ignore labels.
+- Add calibrated GNSS health monitoring, receiver pause recovery, sensitivity controls and optional
+  position, motion and network-time checks. Calibration stores receiver statistics without coordinates.
+- Add live smoothed phone paths, saved-route viewing, offline path maps and separately opted-in
+  OpenFreeMap street maps. Live paths remain in memory unless route saving is enabled.
+- Add privacy-aware GeoJSON and ATAK Mission Package exports with phone paths, radio hear points
+  and separately labelled, unverified Remote ID aircraft/operator positions.
+- Add 26 partial community language packs, safe local pack import and an exportable English template.
+- Add bounded signature-pack preview/import/export and bundled-catalog restore.
+- Add local crash recovery diagnostics with address/URL/coordinate redaction and an explicit
+  Continue action before restarting observation.
+
+### Fixed
+
+- Recover scanner state after Location/radio changes, isolate malformed scan records and callbacks,
+  and restore an unfinished session's foreground service when the app becomes visible again.
+- Wire pairing/name/Wi-Fi flood evidence into live conditions, optional burst hiding and session
+  noise filtering, while preserving raw observations.
+- Apply current signature classifications and expose decoded states on live and detail views.
+- Preserve Remote ID operator location semantics, altitude, height reference and EU classification.
+- Keep continuous sightings distinct from quiet returns even when GPS is temporarily unavailable.
+
+### Changed
+
+- Selectively port Fieldwatch 1.1.30 / catalog 96 (commit `ddc0d8c`), including recognition corrections
+  and Polar/GoPro disambiguation. Keep Sotreus' newer vendor database, opt-in keyless prefix lookup,
+  hardware measurement freshness and detection/route-saving separation.
+- Bump Android version to 1.1.1 (code 4). Schema 7 adds tracker history, flood flags and Remote ID
+  metadata through a non-destructive migration from schema 6.
+
+### Validation and limits
+
+- Passed 549 Gradle test executions, seven Python tests, lint, both debug and signed release APK
+  builds, and the generic bundle. Connected Android 9 checks covered data migration, screen-off
+  route-free observation, service recovery, languages, maps and spatial exports; details are in
+  `RADIO_VALIDATION.md`.
+- Shared movement and repeated broadcasts are evidence, not proof of a device identity, owner or
+  intent. GNSS warnings require calibration and can reflect poor reception. Language coverage is
+  partial. Detection accuracy, battery cost and outdoor GNSS behaviour still require field trials.
+
 ## 1.1.0 — 2026-10-23
 
 ### Added

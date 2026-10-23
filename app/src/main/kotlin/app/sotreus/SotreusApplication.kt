@@ -14,7 +14,10 @@ import javax.inject.Inject
 
 @HiltAndroidApp
 class SotreusApplication : Application(), Configuration.Provider {
+    @Inject lateinit var build: app.sotreus.core.model.AppBuildInfo
+    @Inject lateinit var languages: app.sotreus.core.data.field.LanguageRepository
     @Inject lateinit var workerFactory: HiltWorkerFactory
+    @Inject lateinit var catalog: app.sotreus.core.data.field.SignatureCatalogRepository
     @Inject lateinit var observation: ObservationController
     @Inject lateinit var presence: PresenceController
     @Inject lateinit var contextSources: ContextRepository
@@ -24,6 +27,14 @@ class SotreusApplication : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        app.sotreus.core.data.field.CrashNotes.install(this, build)
+        if (app.sotreus.core.data.field.CrashNotes.pending(this) == null) startObservation()
+    }
+
+    private var observationStarted = false
+    @Synchronized fun startObservation() {
+        if (observationStarted) return
+        observationStarted = true
         // Offline IEEE / Bluetooth SIG lookup tables used by the Fieldwatch explanations.
         RadioDb.init { assets.open("lookups/radiodb.bin") }
         Notifications.ensureChannels(this)

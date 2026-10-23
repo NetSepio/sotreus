@@ -82,13 +82,22 @@ class SessionSummaryViewModel @Inject constructor(
 
     fun stamp(onBatch: (Long?) -> Unit) = viewModelScope.launch { onBatch(proofs.createForSession(id, SolanaCluster.MAINNET_BETA)) }
     fun delete(done: () -> Unit) = viewModelScope.launch { controls.deleteSession(id); done() }
-    fun export(options: ExportOptions, onReady: (android.net.Uri) -> Unit) = viewModelScope.launch { exports.exportSession(id, options)?.let(onReady) }
+    val exportError = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    fun export(options: ExportOptions, format: app.sotreus.core.model.ExportFormat, onReady: (android.net.Uri) -> Unit) = viewModelScope.launch {
+        exportError.value = null
+        runCatching {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                if (format == app.sotreus.core.model.ExportFormat.JSON) exports.exportSession(id, options) else exports.exportSpatial(id, options, format)
+            }
+        }.onSuccess { it?.let(onReady) }.onFailure { exportError.value = it.message ?: "Export failed" }
+    }
 }
 
 /** Session summary (not designed): stats and timeline from screen 11, plus actions. */
 @Composable
 internal fun SessionSummaryScreen(navigate: (Any) -> Unit, onBack: () -> Unit, vm: SessionSummaryViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val exportError by vm.exportError.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var confirm by remember { mutableStateOf(false) }
     var exporting by remember { mutableStateOf(false) }
@@ -120,9 +129,11 @@ internal fun SessionSummaryScreen(navigate: (Any) -> Unit, onBack: () -> Unit, v
             ),
             columns = 3,
         )
+        if (s.geotag) GhostButton(stringResource(R.string.route_title), { navigate(app.sotreus.core.navigation.RouteMapRoute(s.id)) })
         MonoLabel(stringResource(R.string.timeline))
         SessionTimeline(v.events.filter { it.kind != SessionEventKind.ENDED }.map { timelineItem(it) })
         state.context?.let { SessionContextSection(it) }
+        exportError?.let { app.sotreus.core.ui.WarningBanner(it) }
         if (noRecords) CaveatBox(stringResource(R.string.feature_journey_title), stringResource(R.string.summary_no_records))
         Spacer(Modifier.weight(1f))
         Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.l)) {
@@ -143,14 +154,19 @@ internal fun SessionSummaryScreen(navigate: (Any) -> Unit, onBack: () -> Unit, v
     }
     if (exporting) {
         ExportSheet(
+            formats = app.sotreus.core.model.ExportFormat.entries,
             onExport = { choice ->
                 exporting = false
                 vm.export(
                     ExportOptions(
                         coordinates = if (choice.exactCoordinates) ExportOptions.Coordinates.EXACT else ExportOptions.Coordinates.COARSE,
                         hashIdentifiers = !choice.rawIdentifiers, includeNotes = choice.includeNotes, timeBucketMinutes = if (choice.exactTimes) 0 else 15,
-                    ),
-                ) { shareFile(context, it, shareTitle) }
+                    ), choice.format,
+                ) { shareFile(context, it, shareTitle, when (choice.format) {
+                    app.sotreus.core.model.ExportFormat.GEOJSON -> "application/geo+json"
+                    app.sotreus.core.model.ExportFormat.ATAK -> "application/zip"
+                    else -> "application/json"
+                }) }
             },
             onDismiss = { exporting = false },
         )

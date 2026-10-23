@@ -56,6 +56,7 @@ class EntityRepository @Inject constructor(
     private val attention: AttentionDao,
     private val proofs: ProofDao,
     private val pipeline: ObservationPipeline,
+    private val classifier: app.sotreus.intelligence.SignatureClassifier,
 ) {
     fun observeDetail(id: String): Flow<EntityDetail?> = combine(
         entities.observe(id),
@@ -70,6 +71,8 @@ class EntityRepository @Inject constructor(
     fun observeEvidence(id: String, limit: Int = 500): Flow<List<ObservationEntity>> = observations.observeForEntity(id, limit)
 
     fun liveSighting(id: String): Sighting? = pipeline.sighting(id)
+    fun decodedFields(id: String): List<app.sotreus.intelligence.fieldwatch.DecodedFieldValue> =
+        pipeline.sighting(id)?.let { app.sotreus.intelligence.fieldwatch.SignatureFieldDecoder.decodeSighting(it, classifier.fleets) }.orEmpty()
 
     fun observeHistory(): Flow<List<HistoryEntity>> = combine(
         entities.observeAll(),

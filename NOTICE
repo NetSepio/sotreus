@@ -16,8 +16,11 @@ Instrument Serif font
 Fieldwatch (https://github.com/OffGridPete/Fieldwatch)
   Copyright (c) 2026 Off Grid Pete LLC
   MIT License - licenses/MIT-Fieldwatch.txt
-  Ported into intelligence/fieldwatch, sensing/android (radio) and core/data (live sightings);
-  each ported file keeps its notice. The offline lookup tables in
+  Ported into intelligence/fieldwatch, sensing/android (radio/GNSS) and core/data (live sightings
+  and crash diagnostics); each ported file keeps its notice. Version 1.1.1 selectively updates
+  domain logic to upstream commit ddc0d8cde52b7708884668c9c666c92db1c2f427 (catalog 96).
+  Partial community language packs in core/data/src/main/assets/languages are adapted from
+  that revision with English fallback and are not reviewed/certified translations. The offline lookup tables in
   sensing/android/src/main/assets/lookups/radiodb.bin are packed from IEEE Registration Authority
   and Bluetooth SIG Assigned Numbers data and remain subject to those organisations' terms.
 

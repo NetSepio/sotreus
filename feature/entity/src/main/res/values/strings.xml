@@ -113,4 +113,11 @@
     <string name="vendor_lookup_enable">Enable and look up</string>
     <string name="meta_local_db">Local database snapshot</string>
     <string name="meta_company">Advertised company</string>
+    <string name="entity_decoded">Decoded radio evidence</string>
+    <string name="entity_masked">Masked</string>
+    <string name="entity_stop_history">Tracker stops · last seven days</string>
+    <string name="entity_stop_caveat">Where this phone heard the broadcast. Addresses are not physical identities.</string>
+    <string name="entity_coords_masked">Coordinates masked</string>
+    <string name="entity_stop_samples">%1$s · %2$d samples</string>
+    <string name="entity_stop_return"> · heard again after %1$d min</string>
 </resources>

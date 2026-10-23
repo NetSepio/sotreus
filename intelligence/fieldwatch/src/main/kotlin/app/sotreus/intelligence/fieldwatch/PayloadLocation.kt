@@ -1,7 +1,7 @@
 /*
- * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit e71b9b2).
+ * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit ddc0d8c).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
- * Modified for Sotreus: package renamed.
+ * Modified for Sotreus: package renamed; adapted to Sotreus modules.
  */
 package app.sotreus.intelligence.fieldwatch
 
@@ -10,7 +10,8 @@ package app.sotreus.intelligence.fieldwatch
  *
  * Canonical ids are [LAT] / [LON]. Stock Remote ID uses those. A custom map
  * with the same ids pins the same way — there is no Remote ID branch.
- * [OP_LAT] / [OP_LON] are the Remote ID *pilot* location and are never the pin.
+ * [OP_LAT] / [OP_LON] are the Remote ID operator location and are never the pin.
+ * [opKind] is takeoff, live GPS, or a fixed point. Null means this packet did not say.
  */
 data class PayloadLocation(
     val lat: Double? = null,
@@ -18,6 +19,10 @@ data class PayloadLocation(
     val alt: Double? = null,
     val opLat: Double? = null,
     val opLon: Double? = null,
+    /** 0 takeoff, 1 live GPS, 2 fixed. Null when this packet is not a System message. */
+    val opKind: Int? = null,
+    /** Operator altitude in meters. Null when this packet did not send a known value. */
+    val opAlt: Double? = null,
     val uasId: String? = null,
     val selfId: String? = null,
     val headingDeg: Double? = null,
@@ -55,6 +60,8 @@ data class PayloadLocation(
             alt = nextAlt,
             opLat = nextOp.first,
             opLon = nextOp.second,
+            opKind = opKind ?: p.opKind,
+            opAlt = opAlt?.takeIf { OperatorLoc.knownAlt(it) } ?: p.opAlt,
             uasId = uasId?.takeIf { it.isNotBlank() } ?: p.uasId,
             selfId = selfId?.takeIf { it.isNotBlank() } ?: p.selfId,
             headingDeg = headingDeg?.takeIf { it.isFinite() } ?: p.headingDeg,
@@ -76,6 +83,8 @@ data class PayloadLocation(
         private val ALT_IDS = setOf("alt_geo", "altitude", "alt", "hae")
         private val OP_LAT_IDS = setOf("op_lat", "operator_lat")
         private val OP_LON_IDS = setOf("op_lon", "operator_lon")
+        private val OP_KIND_IDS = setOf("op_loc_type")
+        private val OP_ALT_IDS = setOf("op_alt", "operator_alt")
         private val UAS_IDS = setOf("uas_id", "uasid", "serial")
         private val SELF_IDS = setOf("self_id", "selfid")
         private val HEADING_IDS = setOf("heading", "course")
@@ -90,6 +99,8 @@ data class PayloadLocation(
                 alt = num(fields, ALT_IDS),
                 opLat = num(fields, OP_LAT_IDS),
                 opLon = num(fields, OP_LON_IDS),
+                opKind = kind(fields),
+                opAlt = opAltitude(fields),
                 uasId = text(fields, UAS_IDS),
                 selfId = text(fields, SELF_IDS),
                 headingDeg = num(fields, HEADING_IDS),
@@ -104,6 +115,8 @@ data class PayloadLocation(
             alt = device.payloadAlt,
             opLat = device.payloadOpLat,
             opLon = device.payloadOpLon,
+            opKind = device.payloadOpKind,
+            opAlt = device.payloadOpAlt,
             uasId = device.payloadUasId,
             selfId = device.payloadSelfId,
             headingDeg = device.payloadHeading,
@@ -122,10 +135,14 @@ data class PayloadLocation(
             if (decoded.isEmpty() &&
                 fromBytes.lat == null &&
                 fromBytes.opLat == null &&
+                fromBytes.opKind == null &&
+                fromBytes.opAlt == null &&
                 fromBytes.uasId == null &&
                 !fromBytes.basicId &&
                 device.payloadLat == null &&
                 device.payloadOpLat == null &&
+                device.payloadOpKind == null &&
+                device.payloadOpAlt == null &&
                 device.payloadUasId == null
             ) {
                 return device
@@ -136,6 +153,8 @@ data class PayloadLocation(
                 next.alt == device.payloadAlt &&
                 next.opLat == device.payloadOpLat &&
                 next.opLon == device.payloadOpLon &&
+                next.opKind == device.payloadOpKind &&
+                next.opAlt == device.payloadOpAlt &&
                 next.uasId == device.payloadUasId &&
                 next.selfId == device.payloadSelfId &&
                 next.headingDeg == device.payloadHeading &&
@@ -151,6 +170,8 @@ data class PayloadLocation(
                 payloadAlt = next.alt,
                 payloadOpLat = next.opLat,
                 payloadOpLon = next.opLon,
+                payloadOpKind = next.opKind,
+                payloadOpAlt = next.opAlt,
                 payloadUasId = next.uasId,
                 payloadSelfId = next.selfId,
                 payloadHeading = next.headingDeg,
@@ -174,9 +195,51 @@ data class PayloadLocation(
             return hit.number?.takeIf { it.isFinite() }
         }
 
+        private fun kind(fields: List<DecodedFieldValue>): Int? {
+            val n = num(fields, OP_KIND_IDS) ?: return null
+            val k = n.toInt()
+            return if (k in 0..2 && k.toDouble() == n) k else null
+        }
+
+        private fun opAltitude(fields: List<DecodedFieldValue>): Double? {
+            val n = num(fields, OP_ALT_IDS) ?: return null
+            return n.takeIf { OperatorLoc.knownAlt(it) }
+        }
+
         private fun text(fields: List<DecodedFieldValue>, ids: Set<String>): String? {
             val hit = fields.firstOrNull { it.id.lowercase() in ids } ?: return null
             return hit.display.trim().trimEnd('\u0000').takeIf { it.isNotEmpty() }
         }
     }
+}
+
+/**
+ * ASTM F3411 operator location type. 0 is takeoff, 1 is the live pilot, 2 is a fixed point.
+ * Null is an older sit, or a plate that has not sent a System message yet.
+ */
+object OperatorLoc {
+    const val TAKEOFF = 0
+    const val LIVE = 1
+    const val FIXED = 2
+
+    fun label(kind: Int?): String = when (kind) {
+        TAKEOFF -> "Takeoff"
+        LIVE -> "Pilot"
+        FIXED -> "Fixed"
+        else -> "Operator"
+    }
+
+    /** Remarks line. Live GPS keeps the existing pilot phrase. */
+    fun where(kind: Int?): String = when (kind) {
+        TAKEOFF -> "takeoff position"
+        LIVE -> "operator (pilot) position"
+        FIXED -> "fixed operator position"
+        else -> "operator position"
+    }
+
+    /** Encoded 0 is the unknown sentinel (−1000 m). A real altitude is above that. */
+    fun knownAlt(alt: Double?): Boolean = alt != null && alt.isFinite() && alt > -1000.0
+
+    /** CoT HAE. Unknown stays the CoT unknown height. */
+    fun hae(alt: Double?): Double = if (knownAlt(alt)) alt!! else 9999999.0
 }

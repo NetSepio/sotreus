@@ -11,6 +11,8 @@ import app.sotreus.core.navigation.SignaturesRoute
 import app.sotreus.core.navigation.SotreusNavigator
 
 fun NavGraphBuilder.settingsGraph(nav: SotreusNavigator) {
+    composable<app.sotreus.core.navigation.FieldToolsRoute> { FieldToolsScreen(onBack = nav::back, onMap = { nav.navigate(app.sotreus.core.navigation.RouteMapRoute()) }) }
+    composable<app.sotreus.core.navigation.LanguagesRoute> { LanguagesScreen(onBack = nav::back) }
     composable<SettingsRoute> { SettingsScreen(navigate = nav::navigate) }
     composable<SensorsRoute> { SensorsScreen(onBack = nav::back) }
     composable<DiagnosticsRoute> { DiagnosticsScreen(onBack = nav::back) }

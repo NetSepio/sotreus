@@ -54,4 +54,16 @@ data class SotreusSettings(
     val satelliteGroups: Set<SatelliteGroup> = SatelliteGroup.entries.toSet(),
     /** Local Remote ID decoding (beta until validated across devices and regions). */
     val remoteIdEnabled: Boolean = true,
+    /** Independent opt-ins: stopping location storage does not disable Journey detection. */
+    val trackerStopHistory: Boolean = false,
+    val gnssMonitoring: Boolean = false,
+    val gnssSpoofChecks: Boolean = false,
+    val gnssSensitivity: String = "MEDIUM",
+    val livePath: Boolean = false,
+    val onlineRouteMaps: Boolean = false,
+    val languageTag: String = "en",
+
 )
+
+/** Spatial exports use the same explicit privacy choices as JSON. */
+enum class ExportFormat { JSON, GEOJSON, ATAK }

@@ -33,6 +33,13 @@ private val Context.settingsStore: DataStore<Preferences> by preferencesDataStor
 class SettingsRepository @Inject constructor(@ApplicationContext private val context: Context) {
     private object Keys {
         val onboardingDone = booleanPreferencesKey("onboarding_done")
+        val trackerStopHistory = booleanPreferencesKey("tracker_stop_history")
+        val gnssSpoofChecks = booleanPreferencesKey("gnss_spoof_checks")
+        val gnssSensitivity = stringPreferencesKey("gnss_sensitivity")
+        val gnssMonitoring = booleanPreferencesKey("gnss_monitoring")
+        val livePath = booleanPreferencesKey("live_path")
+        val onlineRouteMaps = booleanPreferencesKey("online_route_maps")
+        val languageTag = stringPreferencesKey("language_tag")
         val currentPlace = longPreferencesKey("current_place_id")
         val currentPlaceAuto = booleanPreferencesKey("current_place_auto")
         val placeSelectedAt = longPreferencesKey("current_place_selected_at_ms")
@@ -74,6 +81,13 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val d = SotreusSettings()
         SotreusSettings(
             onboardingDone = p[Keys.onboardingDone] ?: d.onboardingDone,
+            trackerStopHistory = p[Keys.trackerStopHistory] ?: d.trackerStopHistory,
+            gnssMonitoring = p[Keys.gnssMonitoring] ?: d.gnssMonitoring,
+            gnssSpoofChecks = p[Keys.gnssSpoofChecks] ?: d.gnssSpoofChecks,
+            gnssSensitivity = p[Keys.gnssSensitivity] ?: d.gnssSensitivity,
+            livePath = p[Keys.livePath] ?: d.livePath,
+            onlineRouteMaps = p[Keys.onlineRouteMaps] ?: d.onlineRouteMaps,
+            languageTag = p[Keys.languageTag] ?: d.languageTag,
             currentPlaceId = p[Keys.currentPlace]?.takeIf { it > 0 },
             currentPlaceByLocation = p[Keys.currentPlaceAuto] ?: d.currentPlaceByLocation,
             placeByLocation = p[Keys.placeByLocation] ?: d.placeByLocation,
@@ -104,6 +118,14 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
     }
 
     suspend fun current(): SotreusSettings = settings.first()
+    suspend fun setTrackerStopHistory(on: Boolean) { store.edit { it[Keys.trackerStopHistory] = on } }
+    suspend fun setGnssSpoofChecks(on: Boolean) { store.edit { it[Keys.gnssSpoofChecks] = on } }
+    suspend fun setGnssSensitivity(level: String) { require(level in setOf("LOW", "MEDIUM", "HIGH")); store.edit { it[Keys.gnssSensitivity] = level } }
+    suspend fun setGnssMonitoring(on: Boolean) { store.edit { it[Keys.gnssMonitoring] = on } }
+    suspend fun setLivePath(on: Boolean) { store.edit { it[Keys.livePath] = on } }
+    suspend fun setOnlineRouteMaps(on: Boolean) { store.edit { it[Keys.onlineRouteMaps] = on } }
+    suspend fun setLanguageTag(tag: String) { store.edit { it[Keys.languageTag] = tag } }
+
 
     suspend fun setOnboardingDone() { store.edit { it[Keys.onboardingDone] = true } }
     // --- Current place -------------------------------------------------------------------------

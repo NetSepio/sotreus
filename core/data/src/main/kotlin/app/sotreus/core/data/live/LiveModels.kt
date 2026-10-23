@@ -31,12 +31,14 @@ data class LiveRadio(
     val randomAddress: Boolean,
     val needsAttention: Boolean,
     val simulated: Boolean,
+    val decodedStatus: String? = null,
 )
 
 data class AttentionSummary(val eventId: Long, val count: Int, val headlineName: String)
 
 data class LiveSnapshot(
     val atMs: Long = 0,
+    val conditionNotes: List<String> = emptyList(),
     val observing: Boolean = false,
     val simulated: Boolean = false,
     val radios: List<LiveRadio> = emptyList(),

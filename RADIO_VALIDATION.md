@@ -73,6 +73,64 @@ generic Play bundle build. APK signatures, distinct distribution certificates an
 were verified. Release workflow validation accepted `v1.1.0`, rejected a mismatched tag and
 extracted only the matching changelog section for GitHub release notes.
 
+## Version 1.1.1 integration
+
+Compared with [Fieldwatch 1.1.30 at ddc0d8c](https://github.com/OffGridPete/Fieldwatch/commit/ddc0d8cde52b7708884668c9c666c92db1c2f427),
+updating the prior e71b9b2 import selectively rather than replacing Sotreus' radio/lookup pipeline.
+
+| Priority | Recommendation implemented | Sotreus integration |
+|---|---|---|
+| High | Catalog and recognition corrections | Catalog 96, narrowed Flock tests, current Chipolo matching, Polar/GoPro disambiguation, richer payload decoders |
+| High | Scanner recovery and callback isolation | Radio/provider broadcasts, Location off/on quiet window, malformed record/callback guards, foreground session restoration |
+| Medium | Local crash recovery | Java/native exit notes where available, redaction, copy/Continue gate, no automatic upload |
+| Medium | Seven-day tracker stops | Separate opt-in, public finder address or explicit UAS ID, two samples, accurate nonmock fixes, eight stops/400 identifiers, deletion and retention |
+| Medium | Remote ID metadata | Operator location kind/altitude, height/reference, EU category/class, separately labelled spatial exports |
+| Optional | GNSS health | One-minute calibration, no-coordinate profile, receiver pause handling, sensitivity and optional side checks, session notes |
+| Optional | Route maps and smoothing | In-memory GPS path, saved-route view, offline blank map, explicit online tile consent, recenter/zoom/pan |
+| Optional | GeoJSON/ATAK | Privacy choices applied to all geometries and identifiers, escaped CoT/KML, bounded saved routes |
+| Optional | Language packs | 26 partial community packs, English fallback/template, bounded local imports with key/printf validation |
+| Integration | Existing imported components | Pairing/name/Wi-Fi flood evidence, decoded states and signature pack management are now surfaced |
+
+Preserved: the 23 October IEEE/Nordic vendor database, longest-prefix local lookup, manual keyless
+online prefix lookup, actual hardware observation times and the distinction between detection and
+route saving. Database schema 7 has an explicit 6→7 migration; no destructive migration is used
+for this upgrade. Vendor asset SHA-256 remains
+`5b9c66e5b64c68a6f9495670265922b1c3c4681e47411928cc460d5b93ef3d43`.
+
+New automated regressions cover continuous travel with GPS gaps versus true quiet returns,
+public/unknown/random identifiers, opt-in/excluded states, invalid/mock fixes, stop deletion,
+spatial coordinate/time reduction and per-export salts, one-point KML, XML escaping and package
+manifest references, signature export/import round trips and older-stock rejection, translation
+placeholders, crash redaction and schema-7 preservation/defaults.
+
+Connected Android 9 validation for 1.1.1:
+
+| Check | Observed result |
+|---|---|
+| Actual schema 6→7 upgrade | All 11,621 pre-upgrade observation rows and the vendor cache retained; both tracker tables created |
+| Field tools defaults | Stop history, GNSS monitoring, live path and online maps off; monitoring requires calibration |
+| GNSS calibration | Start/countdown worked; no profile saved in the indoor smoke test; no GNSS warning inferred |
+| French pack and English restore | Existing resource-backed screens translated; English restored; template exported locally |
+| Staged recovery note (no deliberate crash) | Recovery dialog shown before observation, Continue resumes, no foreground session service started |
+| Route-off Journey with screen asleep | 63 observations by the checkpoint, latest 158 s after start; zero saved route points or observation coordinates/plus codes |
+| Force-stop/reopen active Journey | Foreground session service restored when visible; test Journey ended normally |
+| Synthetic saved route | MapLibre rendered the offline path; explicitly enabled OpenFreeMap tiles loaded; online maps returned to off |
+| Phone-generated GeoJSON and ATAK | Route and two advertised Remote ID markers; coarsened coordinates/time, salted UAS ID; ZIP/manifest/KML/CoT parsed |
+| Delete synthetic session | Normal deletion flow used; temporary synthetic data and export files removed after checks |
+| Location off/on | Original GPS/network providers restored, observation resumed with a fresh BLE result; no callback/runtime crash in checked logs |
+
+Release preparation passed **549 Gradle test executions (544 unique methods)** with zero failures,
+**seven Python tests**, lint, both debug APKs, both signed release APKs and the generic release
+bundle. The final generic debug APK was left installed; no Journey or observation service is active.
+The smoke tests do not measure detection accuracy or battery use. No physical trip or successful
+outdoor GNSS calibration was performed.
+
+A GNSS warning is a receiver condition, not proof of interference. Outdoor calibration and
+controlled interference trials were not performed. Partial translations need human review.
+ATAK packages are structurally checked; interoperability needs an actual ATAK client trial.
+The live map displays the phone's path, not the positions of nearby radios, and can reveal that
+path even while coordinate text is masked.
+
 ## Field test matrix before release
 
 Use devices whose identity and movement are known; record ground truth separately from app results.

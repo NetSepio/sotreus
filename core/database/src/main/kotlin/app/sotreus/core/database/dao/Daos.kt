@@ -378,17 +378,20 @@ interface SessionDao {
     @Upsert
     suspend fun upsertEntities(rows: List<SessionEntityEntity>)
 
-    @Query("SELECT * FROM session_entities WHERE session_id = :sessionId")
+    @Query("SELECT * FROM session_entities WHERE session_id = :sessionId AND is_flood = 0")
     suspend fun entities(sessionId: Long): List<SessionEntityEntity>
 
-    @Query("SELECT * FROM session_entities WHERE session_id = :sessionId")
+    @Query("SELECT * FROM session_entities WHERE session_id = :sessionId AND is_flood = 0")
     fun observeEntities(sessionId: Long): Flow<List<SessionEntityEntity>>
 
     @Query(
         "SELECT session_id AS id, COUNT(*) AS radios, SUM(CASE WHEN new_to_you THEN 1 ELSE 0 END) AS new_to_you " +
-            "FROM session_entities GROUP BY session_id",
+            "FROM session_entities WHERE is_flood = 0 GROUP BY session_id",
     )
     fun observeSummaries(): Flow<List<SessionSummaryRow>>
+
+    @Query("UPDATE session_entities SET is_flood = 1 WHERE session_id = :sessionId AND entity_id IN (:keys)")
+    suspend fun markFlood(sessionId: Long, keys: List<String>)
 
     @Insert
     suspend fun insertEvent(event: SessionEventEntity): Long
@@ -401,6 +404,11 @@ interface SessionDao {
 
     @Query("SELECT * FROM session_locations WHERE session_id = :sessionId ORDER BY at_ms DESC LIMIT 1")
     suspend fun lastLocation(sessionId: Long): SessionLocationEntity?
+
+    @Query("SELECT * FROM session_locations WHERE session_id = :sessionId ORDER BY at_ms LIMIT 50000")
+    suspend fun locations(sessionId: Long): List<SessionLocationEntity>
+    @Query("SELECT * FROM session_locations WHERE session_id = :sessionId ORDER BY at_ms LIMIT 50000")
+    fun observeLocations(sessionId: Long): Flow<List<SessionLocationEntity>>
 
     @Query("DELETE FROM sessions WHERE id = :id")
     suspend fun delete(id: Long)
@@ -420,7 +428,7 @@ interface SessionDao {
     @Query("DELETE FROM session_entities")
     suspend fun deleteAllEntities()
 
-    @Query("DELETE FROM session_events WHERE entity_id IS NOT NULL")
+    @Query("DELETE FROM session_events WHERE entity_id IS NOT NULL OR kind = 'SYSTEM_NOTE'")
     suspend fun deleteSensedEvents()
 
     @Query("DELETE FROM session_locations")

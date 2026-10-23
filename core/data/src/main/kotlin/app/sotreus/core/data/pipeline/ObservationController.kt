@@ -36,6 +36,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class ObservationController @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val hub: RadioHub,
     private val pipeline: ObservationPipeline,
     private val settingsRepository: SettingsRepository,
@@ -43,6 +44,9 @@ class ObservationController @Inject constructor(
     private val sessions: SessionDao,
     private val places: PlaceDao,
     private val location: PhoneLocation,
+    private val insights: app.sotreus.core.data.field.FieldInsights,
+    private val livePath: app.sotreus.core.data.field.LivePathRepository,
+    private val gnss: app.sotreus.core.data.field.GnssHealthRepository,
     @ApplicationScope private val scope: CoroutineScope,
 ) {
     private val foreground = MutableStateFlow(false)
@@ -56,7 +60,9 @@ class ObservationController @Inject constructor(
     private val _observing = MutableStateFlow(false)
     val observing: StateFlow<Boolean> = _observing.asStateFlow()
     private var settings = SotreusSettings()
+    @Volatile private var sessionLocates = false
     private var started = false
+    private val locationQuiet = app.sotreus.sensing.radio.LocationQuietWindow(System::currentTimeMillis)
 
     /** Call once from Application.onCreate (main thread). */
     fun start() {
@@ -68,6 +74,16 @@ class ObservationController @Inject constructor(
                 foreground.value = ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
             },
         )
+        scope.launch {
+            combine(foreground, sessions.observeActive(), app.sotreus.core.data.service.ObservationService.running) { visible, session, running ->
+                Triple(visible, session, running)
+            }.collect { (visible, session, running) ->
+                if (visible && session != null && !running) {
+                    runCatching { app.sotreus.core.data.service.ObservationService.start(context, session.kind, session.geotag, settingsRepository.current().journeyMovement) }
+                }
+            }
+        }
+        scope.launch { hub.freshWifiScans.collect { insights.wifiScan(it, hub.status.value.simulated) } }
         scope.launch { hub.observations.collect { pipeline.ingest(it, hub.status.value.simulated) } }
         scope.launch {
             settingsRepository.settings.map { it.currentPlaceId }.distinctUntilChanged().collect { id ->
@@ -76,16 +92,22 @@ class ObservationController @Inject constructor(
         }
         scope.launch {
             var wasSimulated = false
-            combine(settingsRepository.settings, foreground, sessions.observeActive(), permissions.access, boost) { s, fg, session, access, boosted ->
+            combine(settingsRepository.settings, combine(foreground, app.sotreus.core.data.service.ObservationService.running) { fg, service -> fg to service }, sessions.observeActive(), permissions.access, boost) { s, visibility, session, access, boosted ->
+                val (fg, service) = visibility
                 settings = s
+                sessionLocates = session != null && (session.geotag || (session.kind == SessionKind.JOURNEY && s.journeyMovement))
                 if (wasSimulated && !s.simulatedRadios) pipeline.clearSimulated()
                 wasSimulated = s.simulatedRadios
-                val wanted = (fg || session != null) && (s.simulatedRadios || access.canScan)
+                locationQuiet.observe(access.locationOn)
+                val wanted = (fg || (session != null && service)) && (s.simulatedRadios || (access.canScan && access.locationOn))
                 Triple(wanted, s.simulatedRadios, if (boosted) app.sotreus.core.model.ScanIntensity.PERFORMANCE else s.scanIntensity)
             }.distinctUntilChanged().collectLatest { (wanted, simulated, intensity) ->
                 // Location first: the place must reflect where the phone is before anything is tagged.
                 // Cancelled (by collectLatest) if the app leaves the foreground while waiting for a fix.
-                if (wanted && !_observing.value) location.settleBeforeScan()
+                if (wanted && !_observing.value) {
+                    delay(locationQuiet.radioHoldMs())
+                    location.settleBeforeScan()
+                }
                 withContext(NonCancellable) {
                     val now = System.currentTimeMillis()
                     if (wanted) {
@@ -112,10 +134,14 @@ class ObservationController @Inject constructor(
                 sessions.observeActive(),
             ) { fg, observing, s, access, session ->
                 val serviceLocates = session != null && (session.geotag || (session.kind == SessionKind.JOURNEY && s.journeyMovement))
-                fg && observing && !serviceLocates && (s.placeByLocation || s.plusCodeTags) &&
+                val wanted = fg && observing && !serviceLocates && (s.placeByLocation || s.plusCodeTags || s.trackerStopHistory || s.livePath) &&
                     PermissionGroup.LOCATION in access.granted && access.locationOn
-            }.distinctUntilChanged().collectLatest { on ->
-                if (on) location.updates().collect { location.offer(it) }
+                wanted to s.livePath
+            }.distinctUntilChanged().collectLatest { (on, fast) ->
+                if (on) {
+                    if (locationQuiet.locationHeld()) delay(500)
+                    location.updates(fast).collect { location.offer(it) }
+                }
             }
         }
         // A place's location or radius changed, or picking by location was turned on: check again.
@@ -127,6 +153,7 @@ class ObservationController @Inject constructor(
             var n = 0
             while (isActive) {
                 if (foreground.value && n % 5 == 0) withContext(Dispatchers.Main) { permissions.refresh() }
+                gnss.sync((foreground.value || sessionLocates) && _observing.value && permissions.access.value.locationOn && !settings.simulatedRadios, settings.gnssMonitoring, settings.gnssSpoofChecks, settings.gnssSensitivity)
                 pipeline.tick(System.currentTimeMillis(), hub.status.value, permissions.access.value, settings, _observing.value)
                 n++
                 delay(1_000)

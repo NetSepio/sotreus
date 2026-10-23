@@ -71,6 +71,8 @@ class ObservationPipeline @Inject constructor(
     private val sessions: SessionDao,
     private val attention: AttentionDao,
     private val classifier: SignatureClassifier,
+    private val insights: app.sotreus.core.data.field.FieldInsights,
+    private val gnss: app.sotreus.core.data.field.GnssHealthRepository,
     private val placeTracker: PlaceTracker,
     private val location: PhoneLocation,
     @ApplicationScope private val scope: CoroutineScope,
@@ -94,6 +96,7 @@ class ObservationPipeline @Inject constructor(
     private val attentionIds = HashMap<String, Long>()
     private val movement = JourneyMovement()
     private var movementEnabled = false
+    private var stopHistoryEnabled = false
     private var placeChangedAtMs = 0L
 
     @Volatile private var labels: Map<String, EntityLabelRow> = emptyMap()
@@ -138,6 +141,7 @@ class ObservationPipeline @Inject constructor(
     fun ingest(observation: Observation, simulated: Boolean) {
         // Cached APs must never become live sightings or trigger historical/tagged attention.
         if (observation.kind == FwKind.WIFI && !observation.fresh) return
+        insights.hear(observation, simulated, location.latest.value?.speedMps)
         val kind = if (observation.kind == FwKind.WIFI) RadioKind.WIFI else RadioKind.BLE
         val key = (if (simulated) SIMULATED_PREFIX else "") + Fingerprint.key(kind, observation.mac)
         synchronized(lock) {
@@ -194,6 +198,8 @@ class ObservationPipeline @Inject constructor(
         mutex.withLock {
             tickCount++
             tagPlusCodes = settings.plusCodeTags
+            stopHistoryEnabled = settings.trackerStopHistory
+            insights.tick(now, activeSession?.id, location.latest.value?.speedMps)
             placeByLocation = settings.currentPlaceByLocation
             bindSession(now)
             val detectMovement = settings.journeyMovement && activeSession?.kind == SessionKind.JOURNEY
@@ -212,7 +218,7 @@ class ObservationPipeline @Inject constructor(
     // --- Writing --------------------------------------------------------------------------
 
     private suspend fun flushLocked(now: Long) {
-        val batch: List<Sighting>
+        var batch: List<Sighting>
         synchronized(lock) {
             batch = dirty.mapNotNull { sightings.live[it] }
             dirty.clear()
@@ -226,6 +232,13 @@ class ObservationPipeline @Inject constructor(
             classifier.classify(toClassify, now).forEach { (key, c) ->
                 toClassify.firstOrNull { it.key == key }?.let { classified[key] = stamp(it) to c }
             }
+        }
+        batch = batch.map { row ->
+            val matched = row.copy(fleetIds = classified[row.key]?.second?.signatureIds.orEmpty())
+            val decoded = app.sotreus.intelligence.fieldwatch.PayloadLocation.applySticky(matched, classifier.fleets)
+            val enriched = decoded.copy(liveDecode = app.sotreus.intelligence.fieldwatch.SignatureFieldDecoder.liveChips(decoded, classifier.fleets))
+            synchronized(lock) { if (sightings.live[row.key]?.lastSeen == row.lastSeen) sightings.live[row.key] = enriched }
+            enriched
         }
         val unknown = batch.map { it.key }.filter { it !in rows }
         if (unknown.isNotEmpty()) unknown.chunked(500).forEach { chunk -> entities.getAll(chunk).forEach { rows[it.id] = it } }
@@ -278,6 +291,10 @@ class ObservationPipeline @Inject constructor(
             observations.insert(evidence)
         }
 
+        if (stopHistoryEnabled) batch.forEach { row ->
+            insights.stop(row, location.at(row.lastSeen), session?.id, labels[row.key]?.userState ?: UserEntityState.UNCLASSIFIED,
+                enabled = stopHistoryEnabled, simulated = row.key in simulatedIds)
+        }
         batch.forEach { recordEncounter(it, observedPlaces[it.key], session?.id) }
         accumulatePresence(batch, now)
         if (visitId != null) {
@@ -291,7 +308,7 @@ class ObservationPipeline @Inject constructor(
     }
 
     private fun stamp(s: Sighting): String =
-        "${s.name}|${s.serviceUuids.sorted()}|${s.manufacturerId}|${s.manufacturerDataHex}|${s.vendorIeOuis.sorted()}|${s.facts}"
+        "${classifier.revision}|${s.name}|${s.serviceUuids.sorted()}|${s.manufacturerId}|${s.manufacturerDataHex}|${s.vendorIeOuis.sorted()}|${s.facts}"
 
     private fun toEntity(s: Sighting, kind: RadioKind, c: Classification?, existing: EntityEntity?, count: Int): EntityEntity {
         val address = s.mac
@@ -306,9 +323,9 @@ class ObservationPipeline @Inject constructor(
             userName = existing?.userName,
             userState = existing?.userState ?: UserEntityState.UNCLASSIFIED,
             note = existing?.note,
-            family = c?.family ?: existing?.family,
-            signatureName = c?.signatureName ?: existing?.signatureName,
-            guess = c?.guess?.ifBlank { null } ?: existing?.guess,
+            family = if (c != null) c.family else existing?.family,
+            signatureName = if (c != null) c.signatureName else existing?.signatureName,
+            guess = if (c != null) c.guess.ifBlank { null } else existing?.guess,
             guessConfidence = c?.guessConfidence ?: existing?.guessConfidence ?: Confidence.LOW,
             notable = c?.notable ?: existing?.notable ?: false,
             vendor = s.vendor,
@@ -379,13 +396,14 @@ class ObservationPipeline @Inject constructor(
             val prev = sessionRows[s.key]
             val firstSeenOverall = rows[s.key]?.firstSeenMs ?: s.firstSeen
             val row = if (prev == null) {
-                SessionEntityEntity(session.id, s.key, s.lastSeen, s.lastSeen, 0, s.rssi.toLong(), 1, newToYou = firstSeenOverall >= session.startedAtMs)
+                SessionEntityEntity(session.id, s.key, s.lastSeen, s.lastSeen, 0, s.rssi.toLong(), 1, newToYou = firstSeenOverall >= session.startedAtMs, isFlood = s.key in insights.quiet)
             } else {
                 prev.copy(
                     lastSeenMs = s.lastSeen,
                     presentMs = prev.presentMs + minOf(s.lastSeen - prev.lastSeenMs, PRESENCE_STEP_CAP_MS).coerceAtLeast(0),
                     rssiSum = prev.rssiSum + s.rssi,
                     rssiCount = prev.rssiCount + 1,
+                    isFlood = prev.isFlood || s.key in insights.quiet,
                 )
             }
             sessionRows[s.key] = row
@@ -394,6 +412,7 @@ class ObservationPipeline @Inject constructor(
         sessions.upsertEntities(updated)
 
         batch.forEach { s ->
+            if (s.key in insights.quiet) return@forEach
             val label = labels[s.key]
             val c = classified[s.key]?.second
             val name = label?.userName ?: s.name.ifBlank { null } ?: c?.signatureName
@@ -435,6 +454,7 @@ class ObservationPipeline @Inject constructor(
         live.forEach { s ->
             val ageSeconds = (now - s.lastSeen) / 1000.0
             if (ageSeconds > settings.staleHoldSeconds) return@forEach
+            if (s.key in insights.quiet) return@forEach
             val label = labels[s.key]
             val c = classified[s.key]?.second
             val presence = presenceOf(s.key, label)
@@ -516,6 +536,7 @@ class ObservationPipeline @Inject constructor(
             } else {
                 age > wifiWindow || (status.wifiLastFreshMs > 0 && s.lastSeen < status.wifiLastFreshMs - 5_000)
             }
+            if (s.key in insights.hidden) return@mapNotNull null
             val label = labels[s.key]
             val c = classified[s.key]?.second
             val row = rows[s.key]
@@ -538,13 +559,15 @@ class ObservationPipeline @Inject constructor(
                 security = s.facts.security ?: s.facts.capabilities,
                 frequencyMhz = s.frequencyMhz.takeIf { kind == RadioKind.WIFI },
                 randomAddress = s.randomized,
-                needsAttention = s.key in attentionIds,
+                needsAttention = s.key in attentionIds && s.key !in insights.quiet,
                 simulated = s.key in simulatedIds,
+                decodedStatus = s.liveDecode.joinToString(" · ") { it.reportLabel() }.ifBlank { null },
             )
         }
         val confirmedPlace = currentPlace?.takeIf { !placeByLocation || location.fresh(now) != null }
         _snapshot.value = LiveSnapshot(
             atMs = now,
+            conditionNotes = listOfNotNull(insights.notice.value?.line(), gnss.state.value.notice?.line),
             observing = observing,
             simulated = status.simulated,
             radios = radios,

@@ -1,7 +1,7 @@
 /*
- * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit e71b9b2).
+ * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit ddc0d8c).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
- * Modified for Sotreus: package renamed.
+ * Modified for Sotreus: package renamed; adapted to Sotreus modules.
  */
 package app.sotreus.intelligence.fieldwatch
 
@@ -178,9 +178,12 @@ object OpenDroneId {
     }
 
     private fun systemMsg(m: ByteArray): PayloadLocation {
+        val kind = (m[1].toInt() and 0xFF) and 0x3
         val lat = i32le(m, 2) * 1e-7
         val lon = i32le(m, 6) * 1e-7
-        return PayloadLocation(opLat = lat, opLon = lon)
+        val altRaw = u16le(m, 18)
+        val alt = if (altRaw == 0) null else (altRaw * 0.5) - 1000.0
+        return PayloadLocation(opLat = lat, opLon = lon, opKind = kind, opAlt = alt)
     }
 
     private fun i32le(m: ByteArray, at: Int): Int {

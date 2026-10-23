@@ -61,5 +61,23 @@ object Migrations {
         }
     }
 
-    val ALL = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+    /** v7: bounded opt-in tracker stop history and Remote ID operator semantics. */
+    val MIGRATION_6_7 = object : Migration(6, 7) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("CREATE TABLE IF NOT EXISTS tracker_memory (stable_id TEXT NOT NULL, last_heard_ms INTEGER NOT NULL, PRIMARY KEY(stable_id))")
+            db.execSQL("CREATE TABLE IF NOT EXISTS tracker_stops (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, entity_id TEXT NOT NULL, stable_id TEXT NOT NULL, session_id INTEGER, lat REAL NOT NULL, lon REAL NOT NULL, first_ms INTEGER NOT NULL, last_ms INTEGER NOT NULL, hits INTEGER NOT NULL, return_gap_ms INTEGER NOT NULL)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_tracker_stops_entity_id ON tracker_stops (entity_id)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_tracker_stops_stable_id ON tracker_stops (stable_id)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_tracker_stops_session_id ON tracker_stops (session_id)")
+            db.execSQL("ALTER TABLE session_entities ADD COLUMN is_flood INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE context_events ADD COLUMN operator_kind INTEGER")
+            db.execSQL("ALTER TABLE context_events ADD COLUMN operator_alt_m REAL")
+            db.execSQL("ALTER TABLE context_events ADD COLUMN height_m REAL")
+            db.execSQL("ALTER TABLE context_events ADD COLUMN height_reference INTEGER")
+            db.execSQL("ALTER TABLE context_events ADD COLUMN eu_category TEXT")
+            db.execSQL("ALTER TABLE context_events ADD COLUMN eu_class TEXT")
+        }
+    }
+
+    val ALL = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
 }

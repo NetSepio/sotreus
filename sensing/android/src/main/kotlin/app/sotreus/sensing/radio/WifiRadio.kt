@@ -15,6 +15,7 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import app.sotreus.intelligence.fieldwatch.Observation
@@ -147,34 +148,38 @@ class WifiRadio(
 
     @SuppressLint("MissingPermission")
     private fun emitResults(fresh: Boolean) {
-        val nowWall = System.currentTimeMillis()
-        val results = runCatching { wifi.scanResults }.getOrDefault(emptyList())
-        if (results.isEmpty()) {
-            if (awaitingScan.get()) {
-                main.removeCallbacks(poll)
-                main.postDelayed(poll, 1_200L)
+        try {
+            val nowWall = System.currentTimeMillis()
+            val results = runCatching { wifi.scanResults }.getOrDefault(emptyList())
+            if (results.isEmpty()) {
+                if (awaitingScan.get()) {
+                    main.removeCallbacks(poll)
+                    main.postDelayed(poll, 1_200L)
+                }
+                return
             }
-            return
-        }
-        if (nowWall - lastEmitAt.get() < 350L) return
-        lastEmitAt.set(nowWall)
-        val elapsedUs = SystemClock.elapsedRealtimeNanos() / 1_000
-        if (fresh) awaitingScan.set(false)
-        var count = 0
-        val batch = ArrayList<Observation>(results.size)
-        results.forEach { result ->
-            if (result.BSSID.isNullOrBlank()) return@forEach
-            count++
-            val measuredAt = freshness.measuredAt(result.BSSID, result.timestamp, elapsedUs, nowWall)
-            // Neither a pending request nor a successful broadcast proves every returned AP is new.
-            val obs = toObservation(result, measuredAt ?: nowWall, measuredAt != null)
-            batch += obs
-            onObservation(obs)
-        }
-        val measured = batch.filter { it.fresh }
-        if (measured.isNotEmpty()) awaitingScan.set(false)
-        onScanFinished(count, measured.isNotEmpty())
-        if (measured.isNotEmpty()) onFreshScan(measured)
+            if (nowWall - lastEmitAt.get() < 350L) return
+            lastEmitAt.set(nowWall)
+            val elapsedUs = SystemClock.elapsedRealtimeNanos() / 1_000
+            if (fresh) awaitingScan.set(false)
+            var count = 0
+            val batch = ArrayList<Observation>(results.size)
+            results.forEach { result ->
+                if (result.BSSID.isNullOrBlank()) return@forEach
+                count++
+                val measuredAt = freshness.measuredAt(result.BSSID, result.timestamp, elapsedUs, nowWall)
+                // Neither a pending request nor a successful broadcast proves every returned AP is new.
+                val obs = runCatching { toObservation(result, measuredAt ?: nowWall, measuredAt != null) }
+                    .getOrElse { Log.e("SotreusWifi", "Invalid scan result", it); return@forEach }
+                batch += obs
+                runCatching { onObservation(obs) }.onFailure { Log.e("SotreusWifi", "Observation callback failed", it) }
+            }
+            val measured = batch.filter { it.fresh }
+            if (measured.isNotEmpty()) awaitingScan.set(false)
+            runCatching { onScanFinished(count, measured.isNotEmpty()) }.onFailure { Log.e("SotreusWifi", "Scan callback failed", it) }
+            if (measured.isNotEmpty()) runCatching { onFreshScan(measured) }.onFailure { Log.e("SotreusWifi", "Fresh scan callback failed", it) }
+
+        } catch (e: Exception) { Log.e("SotreusWifi", "Scan results failed", e) }
     }
 
     private fun toObservation(result: ScanResult, nowWall: Long, fresh: Boolean): Observation {

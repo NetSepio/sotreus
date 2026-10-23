@@ -743,6 +743,8 @@ data class Sighting(
     /** Remote ID System operator (pilot) location. Not the aircraft pin. */
     val payloadOpLat: Double? = null,
     val payloadOpLon: Double? = null,
+    val payloadOpKind: Int? = null,
+    val payloadOpAlt: Double? = null,
     /** Sticky Remote ID Basic ID / Self ID. TAK keys the aircraft on uas_id when present. */
     val payloadUasId: String? = null,
     /**

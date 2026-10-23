@@ -1,8 +1,13 @@
 package app.sotreus
 
+import androidx.compose.ui.res.stringResource
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -17,6 +22,7 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject lateinit var languages: app.sotreus.core.data.field.LanguageRepository
     @Inject lateinit var walletBridge: WalletActivityBridge
     @Inject lateinit var settings: SettingsRepository
     @Inject lateinit var friends: FriendRepository
@@ -32,8 +38,29 @@ class MainActivity : ComponentActivity() {
         walletBridge.attach(this)
         handleInvite(intent)
         setContent {
-            SotreusTheme {
-                SotreusApp(settings = settings, pendingInvite = friends.pendingInvite)
+            val language by languages.state.collectAsState()
+            val localized = remember(language.revision) { app.sotreus.core.data.field.languageContext(this, languages) }
+            var crash by remember { mutableStateOf(app.sotreus.core.data.field.CrashNotes.pending(this)) }
+            CompositionLocalProvider(androidx.compose.ui.platform.LocalContext provides localized) {
+                SotreusTheme {
+                    if (crash != null) {
+                        androidx.compose.material3.AlertDialog(
+                            onDismissRequest = {},
+                            title = { androidx.compose.material3.Text(stringResource(R.string.crash_recovery_title)) },
+                            text = { androidx.compose.foundation.layout.Column(Modifier.verticalScroll(rememberScrollState())) {
+                                androidx.compose.material3.Text(stringResource(R.string.crash_recovery_body))
+                                androidx.compose.material3.Text(crash.orEmpty())
+                            } },
+                            confirmButton = { androidx.compose.material3.TextButton(onClick = {
+                                app.sotreus.core.data.field.CrashNotes.dismiss(this)
+                                crash = null; (application as SotreusApplication).startObservation()
+                            }) { androidx.compose.material3.Text(stringResource(R.string.crash_continue)) } },
+                            dismissButton = { androidx.compose.material3.TextButton(onClick = {
+                                getSystemService(android.content.ClipboardManager::class.java).setPrimaryClip(android.content.ClipData.newPlainText("Sotreus crash", crash))
+                            }) { androidx.compose.material3.Text(stringResource(R.string.crash_copy)) } },
+                        )
+                    } else SotreusApp(settings = settings, pendingInvite = friends.pendingInvite)
+                }
             }
         }
     }

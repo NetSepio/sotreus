@@ -151,7 +151,7 @@ Add Actions secrets `GENERIC_KEYSTORE_BASE64`, `GENERIC_STORE_PASSWORD`, `GENERI
 `base64 -i signing/sotreus-generic.jks | tr -d '\n'`.
 
 ```bash
-git tag -a v1.1.0 -m "Sotreus 1.1.0" && git push origin v1.1.0
+git tag -a v1.1.1 -m "Sotreus 1.1.1" && git push origin v1.1.1
 ```
 
 Which auth and settings screens appear is decided **at runtime by the device**: Solana Mobile
@@ -205,6 +205,22 @@ uses the official IEEE MA-L, MA-M, MA-S, IAB and CID CSVs, plus Nordic Semicondu
 JSON definitions. It preserves the bundled official SIG appearance definitions where Nordic's
 subset has no entry. Source failures and unexpected coverage reductions stop the update.
 No database refresh happens silently on a user's phone.
+
+Version 1.1.1 adds **Settings → Field tools** for separately opted-in seven-day tracker stop
+history, calibrated GNSS health, live phone paths and online street maps. Live paths do not enable
+route storage. Stop history is a separate coordinate store; unknown/rotating BLE addresses are
+excluded, and a stable broadcast identifier still does not establish a physical identity.
+
+Session exports offer JSON, GeoJSON and ATAK Mission Packages. The default coarsens coordinates
+and times and salts identifiers per export. Radio hear points describe this phone's position;
+Remote ID advertised aircraft/operator positions are labelled separately and remain unverified.
+
+**Settings → Language packs** offers 26 partial community translations and a Sotreus English
+template for local imports. Missing or incompatible entries stay English. **Signatures** supports
+reviewing/importing packs and restoring bundled catalog 96 without replacing vendor data.
+Online map consent is separate from manual vendor lookup consent. OpenFreeMap map areas and the
+requester's IP are visible to the map service when enabled; see its
+[mobile integration guide](https://openfreemap.org/quick_start/).
 
 See [radio validation](RADIO_VALIDATION.md) for the field test matrix and current limits.
 

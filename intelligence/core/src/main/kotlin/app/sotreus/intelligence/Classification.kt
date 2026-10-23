@@ -27,13 +27,20 @@ data class Classification(
  * Catalog notes are not surfaced: Sotreus writes its own calm copy.
  */
 class SignatureClassifier(fleets: List<Fleet> = DefaultCatalog.fleets()) {
-    val fleets: List<Fleet> = fleets.filter { it.enabled }
-    private val byId = this.fleets.associateBy { it.id }
-    private val engine = SignatureEngine()
+    @Volatile var fleets: List<Fleet> = fleets.filter { it.enabled }
+        private set
+    @Volatile var revision: Long = 0
+        private set
+    private var byId = this.fleets.associateBy { it.id }
+    private var engine = SignatureEngine()
 
     val catalogSize: Int get() = fleets.size
 
-    fun classify(sightings: Collection<Sighting>, now: Long): Map<String, Classification> {
+    @Synchronized fun replaceFleets(next: List<Fleet>) {
+        fleets = next.filter { it.enabled }; byId = fleets.associateBy { it.id }; engine = SignatureEngine(); revision++
+    }
+
+    @Synchronized fun classify(sightings: Collection<Sighting>, now: Long): Map<String, Classification> {
         val hits = engine.match(sightings, fleets, now)
         return sightings.associate { s -> s.key to classifyOne(s, hits[s.key].orEmpty()) }
     }

@@ -1,7 +1,7 @@
 /*
- * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit e71b9b2).
+ * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit ddc0d8c).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
- * Modified for Sotreus: package renamed.
+ * Modified for Sotreus: package renamed; adapted to Sotreus modules.
  */
 package app.sotreus.intelligence.fieldwatch
 
@@ -462,7 +462,7 @@ internal object CatalogDecodes {
 
     /**
      * Packed Location after the 0x0D app code and counter (opendroneid.c).
-     * Flags at offset 3: SpeedMult bit 0, EWDirection bit 1.
+     * Flags at offset 3: SpeedMult bit 0, EWDirection bit 1, HeightType bit 2.
      * Direction byte is 0–179; EWDirection adds 180. SpeedHorizontal is
      * value×0.25, or value×0.75 + 255×0.25 when SpeedMult is set.
      */
@@ -501,6 +501,13 @@ internal object CatalogDecodes {
         u16le("alt_baro", "Altitude (baro)", 15, scale = 0.5, offsetAdd = -1000.0, unit = "m"),
         u16le("alt_geo", "Altitude (HAE)", 17, scale = 0.5, offsetAdd = -1000.0, unit = "m"),
         u16le("height", "Height", 19, scale = 0.5, offsetAdd = -1000.0, unit = "m"),
+        bits(
+            "height_ref", "Height from", 3, bitOffset = 2, bitWidth = 1,
+            enumLabels = mapOf(
+                "0" to "Takeoff",
+                "1" to "Over ground",
+            ),
+        ),
     )
 
     private fun selfIdFields(): List<DecodeField> = listOf(
@@ -508,9 +515,50 @@ internal object CatalogDecodes {
     )
 
     private fun systemFields(): List<DecodeField> = listOf(
+        bits(
+            "op_loc_type", "Operator location", 3, bitOffset = 0, bitWidth = 2,
+            enumLabels = mapOf(
+                "0" to "Takeoff",
+                "1" to "Live GPS",
+                "2" to "Fixed",
+            ),
+            live = true,
+        ),
         i32le("op_lat", "Operator lat", 4, scale = 1e-7, unit = "°"),
         i32le("op_lon", "Operator lon", 8, scale = 1e-7, unit = "°"),
+        bits(
+            "eu_category", "EU category", 19, bitOffset = 4, bitWidth = 4,
+            enumLabels = mapOf(
+                "0" to "Undeclared",
+                "1" to "Open",
+                "2" to "Specific",
+                "3" to "Certified",
+            ),
+            gate = euClassification(),
+        ),
+        bits(
+            "eu_class", "EU class", 19, bitOffset = 0, bitWidth = 4,
+            enumLabels = mapOf(
+                "0" to "Undeclared",
+                "1" to "C0",
+                "2" to "C1",
+                "3" to "C2",
+                "4" to "C3",
+                "5" to "C4",
+                "6" to "C5",
+                "7" to "C6",
+            ),
+            gate = euClassification(),
+        ),
+        u16le(
+            "op_alt", "Operator altitude", 20,
+            scale = 0.5, offsetAdd = -1000.0, unit = "m",
+            gate = neq(20, "0000"),
+        ),
     )
+
+    /** Classification bits 2–4 equal 1 (EU). Bit 2 set, bits 3 and 4 clear. */
+    private fun euClassification(): DecodeWhen = mask(3, "04", nmask(3, "18"))
 
     private fun operatorIdFields(): List<DecodeField> = listOf(
         utf8("operator_id", "Operator ID", 4, length = 20),

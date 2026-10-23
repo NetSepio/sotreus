@@ -48,14 +48,18 @@ class BleRadio(
 
     private val callback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
+            try {
             lastCallbackAt.set(System.currentTimeMillis())
             failStreak = 0
             lastError = null
             hint = ""
             emit(result)
+
+            } catch (e: Exception) { Log.e("SotreusBle", "Scan callback failed", e) }
         }
 
         override fun onBatchScanResults(results: MutableList<ScanResult>) {
+            try {
             if (results.isNotEmpty()) {
                 lastCallbackAt.set(System.currentTimeMillis())
                 failStreak = 0
@@ -63,9 +67,12 @@ class BleRadio(
                 hint = ""
             }
             results.forEach { emit(it) }
+
+            } catch (e: Exception) { Log.e("SotreusBle", "Scan callback failed", e) }
         }
 
         override fun onScanFailed(errorCode: Int) {
+            try {
             if (errorCode == ScanCallback.SCAN_FAILED_ALREADY_STARTED) {
                 running.set(true)
                 return
@@ -78,6 +85,8 @@ class BleRadio(
             hint = "BLE retrying"
             demoted = true
             onError(lastError!!)
+
+            } catch (e: Exception) { Log.e("SotreusBle", "Scan callback failed", e) }
         }
     }
 

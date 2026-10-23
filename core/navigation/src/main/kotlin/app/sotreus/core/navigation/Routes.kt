@@ -38,6 +38,9 @@ import kotlinx.serialization.Serializable
 @Serializable data object ContextSourcesRoute
 
 // Settings
+@Serializable data object FieldToolsRoute
+@Serializable data object LanguagesRoute
+@Serializable data class RouteMapRoute(val sessionId: Long = -1)
 @Serializable data object SensorsRoute
 @Serializable data object DiagnosticsRoute
 @Serializable data object SignaturesRoute

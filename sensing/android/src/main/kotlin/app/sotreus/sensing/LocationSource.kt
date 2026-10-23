@@ -30,7 +30,7 @@ import javax.inject.Inject
  * was read, so an old fix is never shown as current.
  */
 class LocationSource @Inject constructor(@ApplicationContext private val context: Context) {
-    data class Fix(val atMs: Long, val lat: Double, val lon: Double, val accuracyM: Float?)
+    data class Fix(val atMs: Long, val lat: Double, val lon: Double, val accuracyM: Float?, val mock: Boolean = false, val speedMps: Float? = null, val gps: Boolean = true)
 
     private val manager: LocationManager? get() = context.getSystemService(LocationManager::class.java)
 
@@ -129,7 +129,8 @@ class LocationSource @Inject constructor(@ApplicationContext private val context
         } else {
             time
         }
-        return Fix(atMs, latitude, longitude, if (hasAccuracy()) accuracy else null)
+        @Suppress("DEPRECATION") val mock = isFromMockProvider
+        return Fix(atMs, latitude, longitude, if (hasAccuracy()) accuracy else null, mock, if (hasSpeed()) speed else null, provider == LocationManager.GPS_PROVIDER)
     }
 
     private companion object {

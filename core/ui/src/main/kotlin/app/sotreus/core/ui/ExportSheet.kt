@@ -23,6 +23,7 @@ import app.sotreus.core.designsystem.theme.SotreusTheme
 /** Choices on the export sheet. Defaults are privacy-reduced (handoff §25). */
 data class ExportChoice(
     val exactCoordinates: Boolean = false,
+    val format: app.sotreus.core.model.ExportFormat = app.sotreus.core.model.ExportFormat.JSON,
     val rawIdentifiers: Boolean = false,
     val includeNotes: Boolean = false,
     val exactTimes: Boolean = false,
@@ -33,7 +34,7 @@ data class ExportChoice(
 /** Export sheet (not designed): composed from switch rows, a warning banner and buttons. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExportSheet(onExport: (ExportChoice) -> Unit, onDismiss: () -> Unit) {
+fun ExportSheet(onExport: (ExportChoice) -> Unit, onDismiss: () -> Unit, formats: List<app.sotreus.core.model.ExportFormat> = listOf(app.sotreus.core.model.ExportFormat.JSON)) {
     var choice by remember { mutableStateOf(ExportChoice()) }
     val c = SotreusTheme.colors
     ModalBottomSheet(
@@ -48,6 +49,13 @@ fun ExportSheet(onExport: (ExportChoice) -> Unit, onDismiss: () -> Unit) {
         ) {
             MonoLabel(stringResource(R.string.export_title))
             Text(stringResource(R.string.export_lead), style = SotreusTheme.typography.bodyS, color = c.textMuted)
+            if (formats.size > 1) RadioGroupRows(formats.map { format ->
+                RadioOption(format, when (format) {
+                    app.sotreus.core.model.ExportFormat.JSON -> "JSON"
+                    app.sotreus.core.model.ExportFormat.GEOJSON -> "GeoJSON"
+                    app.sotreus.core.model.ExportFormat.ATAK -> stringResource(R.string.export_format_atak)
+                })
+            }, choice.format, { choice = choice.copy(format = it) })
             Column {
                 SwitchRow(stringResource(R.string.export_exact_coords), choice.exactCoordinates, { choice = choice.copy(exactCoordinates = it) }, subtitle = stringResource(R.string.export_exact_coords_sub), bordered = false)
                 RowDivider()

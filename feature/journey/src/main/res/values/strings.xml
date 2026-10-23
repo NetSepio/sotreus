@@ -89,4 +89,13 @@
     <string name="journey_movement_disclosure">Journey movement evidence uses phone location while a Journey is active, including with the screen off. Saving a route is separate. Change this in Privacy.</string>
     <string name="chip_movement_ready">Movement · location ready</string>
     <string name="chip_movement_waiting">Movement · waiting for accurate location</string>
+    <string name="route_title">Route map</string>
+    <string name="route_lead">The path shows where this phone traveled. It does not locate another radio. A map can reveal locations even when coordinate text is masked.</string>
+    <string name="route_empty_title">No path to display</string>
+    <string name="route_empty_body">Enable live path in Field tools for an in-memory preview, or save the route during a session. Accurate GPS fixes are required. Earlier routes cannot be reconstructed when route saving was off.</string>
+    <string name="route_saved">Saved route · location was enabled for this session</string>
+    <string name="route_memory">In-memory path · route saving is separate</string>
+    <string name="route_tools">Path and map settings</string>
+    <string name="export_geojson">Export GeoJSON</string>
+    <string name="export_atak">Export ATAK package</string>
 </resources>

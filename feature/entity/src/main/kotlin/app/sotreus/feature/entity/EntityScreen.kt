@@ -116,6 +116,8 @@ data class EntityUiState(
     val maskCoordinates: Boolean = true,
     val proofsEnabled: Boolean = false,
     val onlineLookupEnabled: Boolean = false,
+    val decoded: List<app.sotreus.intelligence.fieldwatch.DecodedFieldValue> = emptyList(),
+    val stops: List<app.sotreus.core.database.entity.TrackerStopEntity> = emptyList(),
 )
 
 data class VendorLookupUiState(
@@ -134,6 +136,7 @@ class EntityViewModel @Inject constructor(
     device: DeviceProfileRepository,
     private val vendorLookup: VendorLookupRepository,
     vendorCache: VendorLookupDao,
+    stopHistory: app.sotreus.core.database.dao.TrackerStopDao,
 ) : ViewModel() {
     val entityId: String = handle.toRoute<EntityRoute>().entityId
     private val note = MutableStateFlow<String?>(null)
@@ -151,7 +154,10 @@ class EntityViewModel @Inject constructor(
         ticker,
         settings.settings,
         device.capabilities,
-    ) { detail, now, s, caps ->
+        ticker.map { repository.liveSighting(entityId)?.payloadUasId }.distinctUntilChanged().flatMapLatest { id ->
+            if (id.isNullOrBlank()) stopHistory.observe(entityId) else stopHistory.observeStable("rid:$id")
+        },
+    ) { detail, now, s, caps, stops ->
         EntityUiState(
             loading = false,
             detail = detail,
@@ -161,6 +167,8 @@ class EntityViewModel @Inject constructor(
             maskCoordinates = s.maskCoordinates,
             proofsEnabled = caps.onChainProofStamping,
             onlineLookupEnabled = s.onlineVendorLookup,
+            decoded = repository.decodedFields(entityId),
+            stops = stops.filter { now - it.lastMs <= 7 * 24 * 60 * 60_000L },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EntityUiState())
 
@@ -331,6 +339,25 @@ internal fun EntityContent(
 
         var noteText by remember(e.id) { mutableStateOf(e.note.orEmpty()) }
         LaunchedEffect(e.id) { noteText = e.note.orEmpty() }
+        if (state.decoded.isNotEmpty()) {
+            MonoLabel(stringResource(R.string.entity_decoded))
+            KeyValueTable(state.decoded.map { field ->
+                val coordinate = field.id.lowercase() in setOf("latitude", "longitude", "lat", "lon", "op_lat", "op_lon", "operator_lat", "operator_lon")
+                field.label to if (state.maskCoordinates && coordinate) stringResource(R.string.entity_masked) else field.display
+            })
+            state.decoded.filter { it.note.isNotBlank() }.map { it.note }.distinct().forEach { note ->
+                Text(note, style = SotreusTheme.typography.caption, color = c.textMuted)
+            }
+        }
+        if (state.stops.isNotEmpty()) {
+            MonoLabel(stringResource(R.string.entity_stop_history))
+            Text(stringResource(R.string.entity_stop_caveat), style = SotreusTheme.typography.caption, color = c.textMuted)
+            state.stops.forEach { stop ->
+                val where = if (state.maskCoordinates) stringResource(R.string.entity_coords_masked) else "%.5f, %.5f".format(stop.lat, stop.lon)
+                InfoRow(dateShort(stop.lastMs), subtitle = stringResource(R.string.entity_stop_samples, where, stop.hits) +
+                    if (stop.returnGapMs > 0) stringResource(R.string.entity_stop_return, stop.returnGapMs / 60_000) else "")
+            }
+        }
         NoteField(noteText, { noteText = it; onNote(it) }, stringResource(R.string.entity_notes_hint), stringResource(R.string.entity_notes))
 
         Spacer(Modifier.weight(1f))

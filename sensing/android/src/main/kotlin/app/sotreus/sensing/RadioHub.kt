@@ -60,6 +60,9 @@ class RadioHub @Inject constructor(
     private val _status = MutableStateFlow(RadioStatus())
     val status: StateFlow<RadioStatus> = _status.asStateFlow()
 
+    private val _freshWifiScans = kotlinx.coroutines.flow.MutableSharedFlow<List<Observation>>(extraBufferCapacity = 4)
+    val freshWifiScans = _freshWifiScans.asSharedFlow()
+
     private val bleTimes = ArrayDeque<Long>()
     private var loop: Job? = null
     private var ble: BleRadio? = null
@@ -96,6 +99,7 @@ class RadioHub @Inject constructor(
         val w = WifiRadio(
             context,
             onObservation = { obs -> _observations.tryEmit(obs) },
+            onFreshScan = { batch -> _freshWifiScans.tryEmit(batch) },
             onScanFinished = { _, fresh ->
                 if (fresh) _status.update { it.copy(wifiLastFreshMs = System.currentTimeMillis(), wifiScanRequested = false) }
             },

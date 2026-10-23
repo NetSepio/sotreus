@@ -51,6 +51,7 @@ class ExportService @Inject constructor(
     private val observations: ObservationDao,
     private val sessions: SessionDao,
     private val places: PlaceDao,
+    private val contextEvents: app.sotreus.core.database.dao.ContextDao,
 ) {
     suspend fun exportEntity(entityId: String, options: ExportOptions): Uri? {
         val entity = entities.get(entityId) ?: return null
@@ -63,6 +64,56 @@ class ExportService @Inject constructor(
         val obs = observations.forSession(sessionId)
         val ents = obs.map { it.entityId }.distinct().chunked(500).flatMap { entities.getAll(it) }
         return write("session", document(options, ents, obs, session.name))
+    }
+
+    suspend fun exportSpatial(sessionId: Long, options: ExportOptions, format: app.sotreus.core.model.ExportFormat): Uri = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val route = sessions.locations(sessionId)
+        val obs = observations.forSession(sessionId)
+        val ents = obs.map { it.entityId }.distinct().chunked(500).flatMap { entities.getAll(it) }.associateBy { it.id }
+        val privacy = SpatialPrivacy(options)
+        fun id(raw: String) = privacy.id(raw)
+        fun fix(at: Long, lat: Double?, lon: Double?) = privacy.fix(at, lat, lon)
+        val path = route.mapNotNull { fix(it.atMs, it.lat, it.lon) }
+        val markers = obs.groupBy { it.entityId }.values.mapNotNull { group ->
+            val row = group.filter { it.lat != null && it.lon != null }.maxByOrNull { it.rssi } ?: return@mapNotNull null
+            val where = fix(row.observedAtMs, row.lat, row.lon) ?: return@mapNotNull null
+            val entity = ents[row.entityId]
+            val name = if (options.hashIdentifiers) entity?.family?.name ?: "Radio" else entity?.advertisedName ?: row.entityId
+            SpatialMarker(id(row.entityId), name, where, "This phone at radio hear time", if (options.includeNotes) entity?.note.orEmpty() else "")
+        }
+        val remoteMarkers = contextEvents.forSession(sessionId).filter { it.kind == app.sotreus.core.model.ContextKind.REMOTE_ID }
+            .groupBy { it.subjectId }.flatMap { (subject, rows) ->
+                val aircraft = rows.lastOrNull { it.lat != null && it.lon != null }
+                val operator = rows.lastOrNull { it.operatorLat != null && it.operatorLon != null }
+                listOfNotNull(
+                    aircraft?.let { row -> fix(row.atMs, row.lat, row.lon)?.let { SpatialMarker(id("rid:$subject"), if (options.hashIdentifiers) "Remote ID aircraft" else row.title,
+                        it, "Aircraft position advertised over Remote ID; unverified") } },
+                    operator?.let { row -> fix(row.atMs, row.operatorLat, row.operatorLon)?.let { SpatialMarker(id("rid-operator:$subject"), "Remote ID operator",
+                        it, "Operator position advertised over Remote ID; unverified") } },
+                )
+            }
+        val allMarkers = markers + remoteMarkers
+        require(path.isNotEmpty() || allMarkers.isNotEmpty()) { "No saved spatial observations. Route saving must be enabled when recording a session." }
+        when (format) {
+            app.sotreus.core.model.ExportFormat.GEOJSON -> writeBytes("session", "geojson", SpatialExport.geoJson(path, allMarkers).toByteArray())
+            app.sotreus.core.model.ExportFormat.ATAK -> writeBytes("session", "zip", SpatialExport.atak(path, allMarkers))
+            else -> error("Select a spatial format")
+        }
+    }
+
+    private fun writeBytes(name: String, extension: String, bytes: ByteArray): Uri {
+        val dir = exportDirectory()
+        val file = File(dir, "sotreus-$name-${System.currentTimeMillis()}.$extension")
+        file.writeBytes(bytes)
+        return FileProvider.getUriForFile(context, "${context.packageName}.exports", file)
+    }
+
+    private fun exportDirectory(): File {
+        val directory = File(context.cacheDir, "exports").apply { mkdirs() }
+        directory.listFiles()?.sortedByDescending { it.lastModified() }?.forEachIndexed { index, file ->
+            if (index >= 20 || System.currentTimeMillis() - file.lastModified() > 24 * 60 * 60_000) file.delete()
+        }
+        return directory
     }
 
     private suspend fun document(options: ExportOptions, ents: List<EntityEntity>, obs: List<ObservationEntity>, sessionName: String?): String {
@@ -139,8 +190,7 @@ class ExportService @Inject constructor(
         observeAll().first().associate { it.id to it.name }
 
     private fun write(kind: String, json: String): Uri {
-        val dir = File(context.cacheDir, "exports").apply { mkdirs() }
-        dir.listFiles()?.forEach { it.delete() }
+        val dir = exportDirectory()
         val file = File(dir, "sotreus-$kind-${System.currentTimeMillis()}.json")
         file.writeText(json)
         return FileProvider.getUriForFile(context, "${context.packageName}.exports", file)

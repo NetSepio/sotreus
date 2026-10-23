@@ -29,9 +29,12 @@ class DataControls @Inject constructor(
     private val context: ContextDao,
     private val settings: SettingsRepository,
     private val vendorLookups: VendorLookupRepository,
+    private val trackerStops: app.sotreus.core.database.dao.TrackerStopDao,
+    private val insights: app.sotreus.core.data.field.FieldInsights,
 ) {
     /** A session's observations, encounters, timeline, locations, context and attention events. */
     suspend fun deleteSession(sessionId: Long) {
+        trackerStops.deleteForSession(sessionId)
         context.deleteForSession(sessionId)
         observations.deleteForSession(sessionId)
         encounters.deleteForSession(sessionId)
@@ -60,6 +63,7 @@ class DataControls @Inject constructor(
 
     /** All observations, context records and everything derived from them. Labels, notes and places are kept. */
     suspend fun deleteAllObservations() {
+        insights.clearStops()
         vendorLookups.clearCache()
         context.deleteAll()
         observations.deleteAll()
@@ -91,6 +95,8 @@ class DataControls @Inject constructor(
 
     /** Applies the retention policy. Returns how many observations were removed. */
     suspend fun applyRetention(policy: RetentionPolicy, now: Long = System.currentTimeMillis()): Int {
+        trackerStops.prune(now - 7 * 24 * 60 * 60_000L)
+        trackerStops.pruneMemory(now - 7 * 24 * 60 * 60_000L)
         if (policy == RetentionPolicy.KEEP_ALL) return 0
         val cutoff = now - RETENTION_DAYS * 24 * 60 * 60 * 1000L
         val removed = observations.deleteOlderThan(cutoff, keepTagged = policy == RetentionPolicy.KEEP_TAGGED_EXPIRE_REST)

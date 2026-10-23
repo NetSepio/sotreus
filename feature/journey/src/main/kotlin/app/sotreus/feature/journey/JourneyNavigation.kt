@@ -9,8 +9,9 @@ import app.sotreus.core.navigation.SessionRoute
 import app.sotreus.core.navigation.SotreusNavigator
 
 fun NavGraphBuilder.journeyGraph(nav: SotreusNavigator) {
+    composable<app.sotreus.core.navigation.RouteMapRoute> { RouteMapScreen(nav::back, { nav.navigate(app.sotreus.core.navigation.FieldToolsRoute) }) }
     composable<JourneyRoute> { SessionsScreen(navigate = nav::navigate) }
-    composable<SessionLiveRoute> { LiveSessionScreen(replace = nav::replace) }
+    composable<SessionLiveRoute> { LiveSessionScreen(replace = nav::replace, navigate = nav::navigate) }
     composable<SessionRoute> { SessionSummaryScreen(navigate = nav::navigate, onBack = nav::back) }
     composable<CompareRoute> { CompareScreen(navigate = nav::navigate, onBack = nav::back) }
 }

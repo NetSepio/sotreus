@@ -104,14 +104,14 @@ class LiveSessionViewModel @Inject constructor(
 }
 
 @Composable
-internal fun LiveSessionScreen(replace: (Any) -> Unit, vm: LiveSessionViewModel = hiltViewModel()) {
+internal fun LiveSessionScreen(replace: (Any) -> Unit, navigate: (Any) -> Unit = replace, vm: LiveSessionViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
-    LiveSessionContent(state, vm::addNote, { vm.end(replace) }, { replace(SessionRoute(vm.id)) })
+    LiveSessionContent(state, vm::addNote, { vm.end(replace) }, { replace(SessionRoute(vm.id)) }, { navigate(app.sotreus.core.navigation.RouteMapRoute(vm.id)) })
 }
 
 /** Screen 11. Freshness stays visible; Wi-Fi delays are shown as system notes. */
 @Composable
-internal fun LiveSessionContent(state: LiveUiState, onNote: (String) -> Unit, onEnd: () -> Unit, onSummary: () -> Unit) {
+internal fun LiveSessionContent(state: LiveUiState, onNote: (String) -> Unit, onEnd: () -> Unit, onSummary: () -> Unit, onMap: () -> Unit = {}) {
     val c = SotreusTheme.colors
     var noting by remember { mutableStateOf(false) }
     val v = state.view
@@ -141,6 +141,7 @@ internal fun LiveSessionContent(state: LiveUiState, onNote: (String) -> Unit, on
                 )
             }
             FreshnessChips(s, state.snapshot)
+            app.sotreus.core.ui.GhostButton(stringResource(R.string.route_title), onMap)
             StatGrid(
                 listOf(
                     Stat(v.radios.toString(), stringResource(R.string.stat_radios)),
@@ -201,6 +202,7 @@ internal fun timelineItem(e: SessionEventEntity): TimelineItem {
         )
         SessionEventKind.WIFI_SCAN_DELAYED -> Triple(stringResource(UiR.string.event_wifi_delayed), GlyphSpec(GlyphShape.SYSTEM_NOTE, GlyphTone.NEUTRAL), true)
         SessionEventKind.BLE_PAUSED -> Triple(stringResource(UiR.string.event_ble_paused), GlyphSpec(GlyphShape.SYSTEM_NOTE, GlyphTone.NEUTRAL), true)
+        SessionEventKind.SYSTEM_NOTE -> Triple(e.text.orEmpty(), GlyphSpec(GlyphShape.SYSTEM_NOTE, GlyphTone.NEUTRAL), true)
         SessionEventKind.USER_NOTE -> Triple(stringResource(R.string.note_prefix, e.text.orEmpty()), GlyphSpec(GlyphShape.SYSTEM_NOTE, GlyphTone.NEUTRAL), false)
         SessionEventKind.STARTED -> Triple(stringResource(UiR.string.event_started), GlyphSpec(GlyphShape.SYSTEM_NOTE, GlyphTone.NEUTRAL), true)
         SessionEventKind.ENDED -> Triple(stringResource(UiR.string.event_ended), GlyphSpec(GlyphShape.SYSTEM_NOTE, GlyphTone.NEUTRAL), true)
