@@ -97,7 +97,7 @@ internal fun WelcomeContent(onStart: () -> Unit, onWhatCanSee: () -> Unit) {
                 RowDivider(strong = true)
                 Principle(stringResource(R.string.onb_local_first), stringResource(R.string.onb_local_first_body))
                 Principle(stringResource(R.string.onb_receive_only), stringResource(R.string.onb_receive_only_body))
-                Principle(stringResource(R.string.onb_evidence), stringResource(R.string.onb_evidence_body))
+                Principle(stringResource(R.string.onb_memory), stringResource(R.string.onb_memory_body))
             }
             Spacer(Modifier.weight(1f))
             Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.xl)) {

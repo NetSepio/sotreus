@@ -362,7 +362,7 @@ internal fun EntityContent(
 
         Spacer(Modifier.weight(1f))
         Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.l)) {
-            if (e.radio == RadioKind.BLE) PrimaryButton(stringResource(R.string.entity_check_proximity), onProximity)
+            PrimaryButton(stringResource(R.string.entity_check_proximity), onProximity)
             GhostButton(stringResource(R.string.entity_export), onExport)
         }
 

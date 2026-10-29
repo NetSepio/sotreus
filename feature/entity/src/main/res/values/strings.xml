@@ -94,7 +94,16 @@
     <string name="prox_tick">Tick sound</string>
     <string name="prox_tick_sub">Faster ticks when louder</string>
     <string name="prox_stop">Stop checking</string>
-    <string name="prox_not_ble">Proximity check works on Bluetooth LE advertisers only.</string>
+    <string name="prox_wifi_slow">Android limits Wi-Fi scans, so Wi-Fi readings arrive every few seconds and can pause. Move slowly and wait for a new reading.</string>
+    <string name="heatmap_kicker">Signal map</string>
+    <string name="heatmap_lead">Walk the area with the phone held flat. Each spot is colored by how loud this radio was where this phone was. Kept in memory on this phone only.</string>
+    <string name="heatmap_start">Map this walk</string>
+    <string name="heatmap_pause">Pause map</string>
+    <string name="heatmap_reset">Reset map</string>
+    <string name="heatmap_no_gps">No GPS yet. This walk is not on a map; streets stay off until two GPS fixes agree.</string>
+    <string name="heatmap_hold_flat">Hold the phone flat. Steps are paused while it is tilted.</string>
+    <string name="heatmap_no_sensors">This phone has no compass or motion sensor for steps, so the walk cannot be drawn. The reading above still works.</string>
+    <string name="heatmap_caveat">The ring marks where this phone heard the radio loudest. It is not the radio\'s position and not a distance.</string>
     <string name="entity_identity_wifi_local">This BSSID is locally assigned. It may change or be shared; address continuity has low confidence.</string>
     <string name="vendor_lookup_title">Online vendor lookup</string>
     <string name="vendor_lookup_explanation">A vendor prefix can identify the address-block registrant. It does not identify an owner or exact product model.</string>

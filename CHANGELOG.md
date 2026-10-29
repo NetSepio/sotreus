@@ -2,6 +2,30 @@
 
 All notable changes to Sotreus Android. Versions follow `versionName` in `app/build.gradle.kts`.
 
+## 1.1.2 — 2026-10-29
+
+### Added
+
+- Add a signal map to the proximity check (Fieldwatch 1.1.31–1.1.32 Hunt heat cloud, upstream
+  commit `b67f207`): opt-in "Map this walk" follows steps and compass, places the walk on two
+  agreeing GPS fixes, colors each spot by loudness and rings the loudest patch. It never places the
+  other radio. In memory only; street tiles only with Online street maps on.
+- Allow the proximity check for Wi-Fi entities, with a caveat that Android throttles Wi-Fi scans.
+- Mark radios heard during a session on the route map, at this phone's position when heard. A mark
+  uses the session timeline's wording.
+
+### Fixed
+
+- Show a session's route when only network fixes (about ±100 m) were saved, labelled as an
+  approximate path, instead of "No path to display". Accurate GPS fixes are still preferred.
+- Fall back to the session's saved route when live path is on but has no GPS fix yet.
+
+### Changed
+
+- Rewrite the welcome screen: "Perceive the signals." headline, a shorter lead, and a Memory row in
+  place of the Evidence row.
+- Bump Android version to 1.1.2 (code 5). No schema change.
+
 ## 1.1.1 — 2026-10-23
 
 ### Added

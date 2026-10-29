@@ -162,5 +162,8 @@
     <string name="reason_address_stable">The same broadcast address was observed. Shared transport, radio range and coincidence can also explain this.</string>
     <string name="reason_address_changeable">This address may change. Evidence applies to this address only; it does not establish a unique physical device or intent.</string>
     <string name="route_recenter">Recenter</string>
+    <string name="route_mark_heard">%1$s · this phone was here</string>
+    <string name="heat_weak">Weak</string>
+    <string name="heat_strong">Strong</string>
     <string name="export_format_atak">ATAK data package</string>
 </resources>

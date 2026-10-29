@@ -1,14 +1,20 @@
 package app.sotreus.feature.entity
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.media.ToneGenerator
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,6 +22,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -28,12 +35,15 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import app.sotreus.core.data.field.SignalMap
+import app.sotreus.core.data.field.SignalMapRepository
 import app.sotreus.core.data.pipeline.ObservationController
 import app.sotreus.core.data.pipeline.ObservationPipeline
 import app.sotreus.core.data.repository.EntityRepository
@@ -48,10 +58,14 @@ import app.sotreus.core.ui.AutoSizeText
 import app.sotreus.core.ui.BackTopBar
 import app.sotreus.core.ui.CaveatBox
 import app.sotreus.core.ui.ChipTone
+import app.sotreus.core.ui.CompactButton
 import app.sotreus.core.ui.GhostButton
+import app.sotreus.core.ui.HeatImage
 import app.sotreus.core.ui.MonoLabel
 import app.sotreus.core.ui.RssiSparkline
 import app.sotreus.core.ui.ScreenColumn
+import app.sotreus.core.ui.SignalHeatMap
+import app.sotreus.core.ui.SotreusCard
 import app.sotreus.core.ui.StateChip
 import app.sotreus.core.ui.StatusPill
 import app.sotreus.core.ui.SwitchRow
@@ -62,6 +76,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
@@ -86,11 +101,19 @@ class ProximityViewModel @Inject constructor(
     private val pipeline: ObservationPipeline,
     private val controller: ObservationController,
     private val settings: SettingsRepository,
+    private val signalMaps: SignalMapRepository,
 ) : ViewModel() {
     private val entityId = handle.toRoute<ProximityRoute>().entityId
     private val _state = MutableStateFlow(ProximityUiState())
     val state: StateFlow<ProximityUiState> = _state.asStateFlow()
     val tickSound: StateFlow<Boolean> = settings.settings.map { it.tickSound }.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+    private val _mapping = MutableStateFlow(false)
+
+    /** The signal map for this radio, kept until Reset or until another radio is mapped. */
+    val map: StateFlow<SignalMapUi> = combine(signalMaps.state, _mapping, settings.settings) { m, on, prefs ->
+        SignalMapUi(m.takeIf { it.entityId == entityId } ?: SignalMap(entityId), on, prefs.onlineRouteMaps)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SignalMapUi())
+    private var mapJob: Job? = null
     private var tone: ToneGenerator? = null
     private var tickJob: Job? = null
 
@@ -131,6 +154,14 @@ class ProximityViewModel @Inject constructor(
 
     fun setTick(on: Boolean) = viewModelScope.launch { settings.setTickSound(on) }
 
+    fun setMapping(on: Boolean) {
+        mapJob?.cancel()
+        mapJob = if (on) viewModelScope.launch { signalMaps.follow(entityId) } else null
+        _mapping.value = on
+    }
+
+    fun resetMap() = signalMaps.reset(entityId)
+
     override fun onCleared() {
         controller.setBoost(false)
         tone?.release()
@@ -141,20 +172,38 @@ class ProximityViewModel @Inject constructor(
     }
 }
 
+data class SignalMapUi(val map: SignalMap = SignalMap(), val mapping: Boolean = false, val online: Boolean = false)
+
 @Composable
 internal fun ProximityScreen(onBack: () -> Unit, vm: ProximityViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     val tick by vm.tickSound.collectAsStateWithLifecycle()
+    val map by vm.map.collectAsStateWithLifecycle()
     val view = LocalView.current
+    val context = LocalContext.current
     DisposableEffect(Unit) {
         view.keepScreenOn = true
         onDispose { view.keepScreenOn = false }
     }
-    ProximityContent(state, tick, vm::setTick, onBack)
+    // Location only places the walk on a map; without it the map stays a local picture.
+    val locationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.setMapping(true) }
+    val onMapping: (Boolean) -> Unit = { on ->
+        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (on && !granted) locationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) else vm.setMapping(on)
+    }
+    ProximityContent(state, tick, vm::setTick, onBack, map, onMapping, vm::resetMap)
 }
 
 @Composable
-internal fun ProximityContent(state: ProximityUiState, tick: Boolean, onTick: (Boolean) -> Unit, onStop: () -> Unit) {
+internal fun ProximityContent(
+    state: ProximityUiState,
+    tick: Boolean,
+    onTick: (Boolean) -> Unit,
+    onStop: () -> Unit,
+    map: SignalMapUi = SignalMapUi(),
+    onMapping: (Boolean) -> Unit = {},
+    onResetMap: () -> Unit = {},
+) {
     val c = SotreusTheme.colors
     val e = state.entity
     ScreenColumn(top = SotreusTheme.spacing.screenH) {
@@ -163,9 +212,8 @@ internal fun ProximityContent(state: ProximityUiState, tick: Boolean, onTick: (B
             MonoLabel(stringResource(R.string.prox_kicker))
             AutoSizeText(e?.let { entityTitle(it.userName, it.advertisedName, it.radio, it.family) } ?: "", SotreusTheme.typography.titleS, c.text)
         }
-        if (e != null && e.radio != RadioKind.BLE) {
-            CaveatBox(stringResource(R.string.prox_kicker), stringResource(R.string.prox_not_ble))
-            return@ScreenColumn
+        if (e != null && e.radio == RadioKind.WIFI) {
+            CaveatBox(stringResource(R.string.prox_kicker), stringResource(R.string.prox_wifi_slow))
         }
         val dash = stringResource(R.string.prox_dash)
         Column(
@@ -209,9 +257,51 @@ internal fun ProximityContent(state: ProximityUiState, tick: Boolean, onTick: (B
             style = SotreusTheme.typography.body.copy(fontSize = SotreusTheme.typography.rowTitle.fontSize * 0.965f),
             color = c.textMuted,
         )
+        SignalMapCard(map, onMapping, onResetMap)
         SwitchRow(stringResource(R.string.prox_tick), tick, onTick, subtitle = stringResource(R.string.prox_tick_sub))
         Spacer(Modifier.weight(1f))
         GhostButton(stringResource(R.string.prox_stop), onStop, minHeight = SotreusTheme.sizes.buttonPrimary, strong = true)
+    }
+}
+
+/** Walk-and-paint map (Fieldwatch Hunt). Opt-in per check; colors where this phone was, never the other radio. */
+@Composable
+private fun SignalMapCard(ui: SignalMapUi, onMapping: (Boolean) -> Unit, onReset: () -> Unit) {
+    val c = SotreusTheme.colors
+    val m = ui.map
+    SotreusCard {
+        Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.m)) {
+            MonoLabel(stringResource(R.string.heatmap_kicker))
+            Text(stringResource(R.string.heatmap_lead), style = SotreusTheme.typography.body, color = c.textMuted)
+            if (ui.mapping || m.marks.isNotEmpty()) {
+                val f = m.field
+                SignalHeatMap(
+                    heat = f?.let { HeatImage(it.pixels, it.cols, it.rows, it.north, it.west, it.south, it.east) },
+                    hereLat = m.hereLat.takeIf { ui.mapping },
+                    hereLon = m.hereLon.takeIf { ui.mapping },
+                    uncertaintyM = if (ui.mapping) m.uncertaintyM else 0.0,
+                    hotLat = f?.hotLat,
+                    hotLon = f?.hotLon,
+                    onGlobe = m.onGlobe,
+                    online = ui.online,
+                    holdFlat = m.holdFlat,
+                    modifier = Modifier.fillMaxWidth().height(340.dp),
+                )
+                val status = when {
+                    !m.sensors -> R.string.heatmap_no_sensors
+                    m.holdFlat -> R.string.heatmap_hold_flat
+                    !m.onGlobe -> R.string.heatmap_no_gps
+                    else -> null
+                }
+                status?.let { Text(stringResource(it), style = SotreusTheme.typography.body, color = c.textSoft) }
+                // Required copy: the loudest patch is not the radio's position.
+                Text(stringResource(R.string.heatmap_caveat), style = SotreusTheme.typography.body, color = c.textMuted)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.m)) {
+                CompactButton(stringResource(if (ui.mapping) R.string.heatmap_pause else R.string.heatmap_start), { onMapping(!ui.mapping) })
+                if (m.marks.isNotEmpty()) CompactButton(stringResource(R.string.heatmap_reset), onReset)
+            }
+        }
     }
 }
 
@@ -235,5 +325,17 @@ private fun ProximityPreview() {
     val samples = (0 until 240).map { i -> now - 60_000 + i * 250L to (-70 + i / 14) }
     SotreusTheme {
         ProximityContent(ProximityUiState(FakeSotreusData.greyTag, ProximityCue.LOUDER, samples, now, -52, -61), tick = true, onTick = {}, onStop = {})
+    }
+}
+
+@Preview(widthDp = 390, heightDp = 1400, showBackground = true, backgroundColor = 0xFF0B0E13)
+@Composable
+private fun ProximitySignalMapPreview() {
+    val now = FakeSotreusData.NOW
+    val samples = (0 until 240).map { i -> now - 60_000 + i * 250L to (-70 + i / 14) }
+    val marks = (0 until 20).map { i -> app.sotreus.intelligence.fieldwatch.GpsSample(now - 20_000 + i * 1_000L, 1.0, 1.0 + i * 1.5e-5, -90 + i * 2) }
+    val map = SignalMapUi(SignalMap(FakeSotreusData.greyTag.id, marks, 1.0, 1.0 + 19 * 1.5e-5, onGlobe = false), mapping = true)
+    SotreusTheme {
+        ProximityContent(ProximityUiState(FakeSotreusData.greyTag, ProximityCue.LOUDER, samples, now, -52, -61), tick = true, onTick = {}, onStop = {}, map = map)
     }
 }

@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="onb_wordmark">SOTREUS</string>
-    <string name="onb_headline_1">See the signals.</string>
+    <string name="onb_headline_1">Perceive the signals.</string>
     <string name="onb_headline_2">Remember the encounters.</string>
-    <string name="onb_lead">Sotreus shows what this phone can observe over Bluetooth LE and Wi-Fi, learns what is normal for a place, and remembers what you have encountered before.</string>
+    <string name="onb_lead">See the Bluetooth and Wi-Fi radios around you, learn what is normal for each place, and notice what is new.</string>
     <string name="onb_local_first">Local-first</string>
-    <string name="onb_local_first_body">No account. Your radio history stays on this phone.</string>
+    <string name="onb_local_first_body">No account. Everything stays on this phone.</string>
     <string name="onb_receive_only">Receive-only</string>
-    <string name="onb_receive_only_body">Sotreus listens to broadcasts. It never pairs, joins or interferes.</string>
-    <string name="onb_evidence">Evidence</string>
-    <string name="onb_evidence_body">A radio being present does not prove surveillance, intent or ownership. You decide what it means.</string>
+    <string name="onb_receive_only_body">Listens only. Never pairs, joins or interferes.</string>
+    <string name="onb_memory">Memory</string>
+    <string name="onb_memory_body">Recognises radios you have met before, wherever you meet them again.</string>
     <string name="onb_start">Start local-only</string>
     <string name="onb_what_can_see">What Sotreus can and can’t see</string>
     <string name="onb_no_signin">Nothing here needs sign-in. You can add a profile later in Settings.</string>

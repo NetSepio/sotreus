@@ -57,8 +57,8 @@ android {
     defaultConfig {
         // One application ID for every distribution (and for iOS). Code namespace stays app.sotreus.
         applicationId = "com.sotreus.app"
-        versionCode = 4
-        versionName = "1.1.1"
+        versionCode = 5
+        versionName = "1.1.2"
     }
 
     // Release only. Debug keeps the debug keystore. A missing key fails the release build

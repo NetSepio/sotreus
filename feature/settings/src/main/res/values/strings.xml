@@ -227,7 +227,7 @@
     <string name="field_live_path">Show live path</string>
     <string name="field_live_path_sub">Keep a smoothed path in memory while observing. Outside a session, keep the last 15 minutes. Route saving still controls whether a path is stored.</string>
     <string name="field_online_maps">Online street maps</string>
-    <string name="field_online_maps_sub">Load OpenFreeMap tiles when a route map is open. The map provider sees your IP address and requested map area. Offline paths work with this off.</string>
+    <string name="field_online_maps_sub">Load OpenFreeMap tiles when a route map or signal map is open. The map provider sees your IP address and requested map area. Offline paths and signal maps work with this off.</string>
     <string name="field_gnss_title">GNSS health</string>
     <string name="field_gnss_sub">Calibrate outdoors for one minute, standing still with a clear sky. Receiver changes can come from nearby electronics or poor reception. A warning does not locate or identify a source. Monitoring runs while observing with foreground location access.</string>
     <string name="field_gnss_enable">Monitor GNSS health</string>
