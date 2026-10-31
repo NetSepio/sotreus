@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:cap="urn:oasis:names:tc:emergency:cap:1.2">
+  <link rel="hub" href="https://pubsubhubbub.appspot.com/"/>
+  <link type="application/atom+xml" rel="self" href="https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-germany"/>
+  <link type="text/html" rel="alternate" href="https://meteoalarm.org"/>
+  <rights>Copyright © 2026 MeteoAlarm.Org. Licensed under terms equivalent to CC BY 4.0, with additional requirements for redistributing outlined in our Terms and Conditions.</rights>
+  <generator>MeteoAlarm Producer Server</generator>
+  <logo>https://feeds.meteoalarm.org/images/logo.svg</logo>
+  <author>
+    <name>meteoalarm.org</name>
+    <uri>https://meteoalarm.org</uri>
+    <email>meteoalarm@geosphere.at</email>
+  </author>
+  <id>tag:meteoalarm.org,2021-02-19:DE</id>
+  <title>MeteoAlarm - Alerting Europe for Extreme Weather</title>
+  <updated>2026-10-31T10:35:15.195994Z</updated>
+  <entry>
+    <cap:geocode>
+      <valueName>EMMA_ID</valueName>
+      <value>DE309</value>
+    </cap:geocode>
+    <link title="Kreis Cham" href="https://meteoalarm.org?geocode=EMMA_ID:DE309" hreflang="en"/>
+    <cap:areaDesc>Kreis Cham</cap:areaDesc>
+    <cap:event>light snowfall</cap:event>
+    <cap:sent>2026-10-31T10:08:00+00:00</cap:sent>
+    <cap:expires>2026-11-01T09:00:00+00:00</cap:expires>
+    <cap:onset>2026-10-31T20:00:00+00:00</cap:onset>
+    <cap:certainty>Likely</cap:certainty>
+    <cap:severity>Minor</cap:severity>
+    <cap:urgency>Immediate</cap:urgency>
+    <cap:scope>Public</cap:scope>
+    <cap:message_type>Alert</cap:message_type>
+    <cap:status>Actual</cap:status>
+    <cap:identifier>2.49.0.0.276.0.DWD.PVW.1793441280000.33aa44fa-1ca9-4950-aa68-00c62d2a060d.MUL</cap:identifier>
+    <link type="application/cap+xml" href="https://feeds.meteoalarm.org/api/v1/warnings/feeds-germany/8e49843a-0e5a-4cf1-bb46-f576b674261c"/>
+    <link title="Germany" rel="related" href="https://meteoalarm.org?region=DE" hreflang="en"/>
+    <author>
+      <name>meteoalarm.org</name>
+      <uri>https://meteoalarm.org</uri>
+    </author>
+    <published>2026-10-31T10:08:00Z</published>
+    <id>https://feeds.meteoalarm.org/api/v1/warnings/feeds-germany/8e49843a-0e5a-4cf1-bb46-f576b674261c?index_info=1&amp;index_area=2&amp;index_geocode=0</id>
+    <title>Yellow Snow-ice Warning issued for Germany - Kreis Cham</title>
+    <updated>2026-10-31T10:08:00Z</updated>
+  </entry>
+<entry>
+    <cap:geocode>
+      <valueName>EMMA_ID</valueName>
+      <value>DE391</value>
+    </cap:geocode>
+    <link title="Kreis Regen" href="https://meteoalarm.org?geocode=EMMA_ID:DE391" hreflang="en"/>
+    <cap:areaDesc>Kreis Regen</cap:areaDesc>
+    <cap:event>light snowfall</cap:event>
+    <cap:sent>2026-10-31T10:08:00+00:00</cap:sent>
+    <cap:expires>2026-11-01T09:00:00+00:00</cap:expires>
+    <cap:onset>2026-10-31T20:00:00+00:00</cap:onset>
+    <cap:certainty>Likely</cap:certainty>
+    <cap:severity>Minor</cap:severity>
+    <cap:urgency>Immediate</cap:urgency>
+    <cap:scope>Public</cap:scope>
+    <cap:message_type>Alert</cap:message_type>
+    <cap:status>Actual</cap:status>
+    <cap:identifier>2.49.0.0.276.0.DWD.PVW.1793441280000.33aa44fa-1ca9-4950-aa68-00c62d2a060d.MUL</cap:identifier>
+    <link type="application/cap+xml" href="https://feeds.meteoalarm.org/api/v1/warnings/feeds-germany/8e49843a-0e5a-4cf1-bb46-f576b674261c"/>
+    <link title="Germany" rel="related" href="https://meteoalarm.org?region=DE" hreflang="en"/>
+    <author>
+      <name>meteoalarm.org</name>
+      <uri>https://meteoalarm.org</uri>
+    </author>
+    <published>2026-10-31T10:08:00Z</published>
+    <id>https://feeds.meteoalarm.org/api/v1/warnings/feeds-germany/8e49843a-0e5a-4cf1-bb46-f576b674261c?index_info=1&amp;index_area=1&amp;index_geocode=0</id>
+    <title>Yellow Snow-ice Warning issued for Germany - Kreis Regen</title>
+    <updated>2026-10-31T10:08:00Z</updated>
+  </entry>
+<entry>
+    <cap:geocode>
+      <valueName>EMMA_ID</valueName>
+      <value>DE380</value>
+    </cap:geocode>
+    <link title="Kreis Freyung-Grafenau" href="https://meteoalarm.org?geocode=EMMA_ID:DE380" hreflang="en"/>
+    <cap:areaDesc>Kreis Freyung-Grafenau</cap:areaDesc>
+    <cap:event>light snowfall</cap:event>
+    <cap:sent>2026-10-31T10:08:00+00:00</cap:sent>
+    <cap:expires>2026-11-01T09:00:00+00:00</cap:expires>
+    <cap:onset>2026-10-31T20:00:00+00:00</cap:onset>
+    <cap:certainty>Likely</cap:certainty>
+    <cap:severity>Minor</cap:severity>
+    <cap:urgency>Immediate</cap:urgency>
+    <cap:scope>Public</cap:scope>
+    <cap:message_type>Alert</cap:message_type>
+    <cap:status>Actual</cap:status>
+    <cap:identifier>2.49.0.0.276.0.DWD.PVW.1793441280000.33aa44fa-1ca9-4950-aa68-00c62d2a060d.MUL</cap:identifier>
+    <link type="application/cap+xml" href="https://feeds.meteoalarm.org/api/v1/warnings/feeds-germany/8e49843a-0e5a-4cf1-bb46-f576b674261c"/>
+    <link title="Germany" rel="related" href="https://meteoalarm.org?region=DE" hreflang="en"/>
+    <author>
+      <name>meteoalarm.org</name>
+      <uri>https://meteoalarm.org</uri>
+    </author>
+    <published>2026-10-31T10:08:00Z</published>
+    <id>https://feeds.meteoalarm.org/api/v1/warnings/feeds-germany/8e49843a-0e5a-4cf1-bb46-f576b674261c?index_info=1&amp;index_area=0&amp;index_geocode=0</id>
+    <title>Yellow Snow-ice Warning issued for Germany - Kreis Freyung-Grafenau</title>
+    <updated>2026-10-31T10:08:00Z</updated>
+  </entry>
+<entry>
+    <cap:geocode>
+      <valueName>EMMA_ID</valueName>
+      <value>DE029</value>
+    </cap:geocode>
+    <link title="Kreis und Stadt Rosenheim" href="https://meteoalarm.org?geocode=EMMA_ID:DE029" hreflang="en"/>
+    <cap:areaDesc>Kreis und Stadt Rosenheim</cap:areaDesc>
+    <cap:event>light snowfall</cap:event>
+    <cap:sent>2026-10-31T10:08:00+00:00</cap:sent>
+    <cap:expires>2026-11-01T11:00:00+00:00</cap:expires>
+    <cap:onset>2026-10-31T20:00:00+00:00</cap:onset>
+    <cap:certainty>Likely</cap:certainty>
+    <cap:severity>Minor</cap:severity>
+    <cap:urgency>Immediate</cap:urgency>
+    <cap:scope>Public</cap:scope>
+    <cap:message_type>Alert</cap:message_type>
+    <cap:status>Actual</cap:status>
+    <cap:identifier>2.49.0.0.276.0.DWD.PVW.1793441280000.d5fe91a8-ca3e-4501-9ae1-c65129ed854a.MUL</cap:identifier>
+    <link type="application/cap+xml" href="https://feeds.meteoalarm.org/api/v1/warnings/feeds-germany/9ca36f4c-fab6-4462-a3fe-6c4a4a202cf0"/>
+    <link title="Germany" rel="related" href="https://meteoalarm.org?region=DE" hreflang="en"/>
+    <author>
+      <name>meteoalarm.org</name>
+      <uri>https://meteoalarm.org</uri>
+    </author>
+    <published>2026-10-31T10:08:00Z</published>
+    <id>https://feeds.meteoalarm.org/api/v1/warnings/feeds-germany/9ca36f4c-fab6-4462-a3fe-6c4a4a202cf0?index_info=1&amp;index_area=8&amp;index_geocode=0</id>
+    <title>Yellow Snow-ice Warning issued for Germany - Kreis und Stadt Rosenheim</title>
+    <updated>2026-10-31T10:08:00Z</updated>
+  </entry>
+</feed>

@@ -11,6 +11,9 @@ enum class NowView { BANDS, LIST }
 /** How much of the phone's location an aircraft query reveals (architecture handoff §14.1). */
 enum class AircraftMode { OFF, COARSE_AREA, EXACT_AREA }
 
+/** How precisely the phone's location is rounded before an air-quality request (architecture handoff §14.5). */
+enum class AirQualityMode { OFF, COARSE, FINE }
+
 /** CelesTrak groups Sotreus can predict. [celestrakGroup] is the CelesTrak GROUP name. */
 enum class SatelliteGroup(val celestrakGroup: String) {
     EARTH_OBSERVATION("resource"),
@@ -54,6 +57,19 @@ data class SotreusSettings(
     val satelliteGroups: Set<SatelliteGroup> = SatelliteGroup.entries.toSet(),
     /** Local Remote ID decoding (beta until validated across devices and regions). */
     val remoteIdEnabled: Boolean = true,
+    /** USGS earthquakes: the world list is downloaded and filtered on the phone. Sends no location. */
+    val earthquakesEnabled: Boolean = false,
+    val earthquakeRadiusKm: Int = 300,
+    /** GDACS disasters: the world list is downloaded and filtered on the phone. Sends no location. */
+    val hazardsEnabled: Boolean = false,
+    val airQualityMode: AirQualityMode = AirQualityMode.OFF,
+    /**
+     * Official weather warnings for where this phone is: NWS in the US, MeteoAlarm in covered European
+     * countries. The region is looked up on the phone; only its state or country code is sent.
+     */
+    val officialWarnings: Boolean = false,
+    /** OpenAQ measured air quality. Needs the user's own API key; sends it and one 0.5° cell's bounds. */
+    val openAqEnabled: Boolean = false,
     /** Independent opt-ins: stopping location storage does not disable Journey detection. */
     val trackerStopHistory: Boolean = false,
     val gnssMonitoring: Boolean = false,
@@ -61,6 +77,10 @@ data class SotreusSettings(
     val gnssSensitivity: String = "MEDIUM",
     val livePath: Boolean = false,
     val onlineRouteMaps: Boolean = false,
+    /** Draw saved plate readers on path maps. The list is downloaded separately; nothing is sent about you. */
+    val cameraPlates: Boolean = false,
+    /** Draw saved speed, red-light, gunshot and other cameras on path maps. */
+    val cameraOthers: Boolean = false,
     val languageTag: String = "en",
 
 )

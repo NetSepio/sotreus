@@ -143,4 +143,24 @@ class PlaceLocationTest {
     private companion object {
         const val NOW = 1_800_000_000_000L
     }
+
+    @Test
+    fun unsavedPlaceLabelIsABlockOrAMaskedArea() {
+        assertEquals("7FG49QCJ+", PlusCode.areaLabel(20.3700625, 2.7821875, masked = false))
+        assertEquals("7FG49Q00+", PlusCode.areaLabel(20.3700625, 2.7821875, masked = true))
+        // A step across the street stays in the same ~275 m block.
+        assertEquals(PlusCode.areaLabel(20.3700625, 2.7821875, false), PlusCode.areaLabel(20.3701, 2.7822, false))
+    }
+
+    @Test
+    fun radiusChoicesReachAVenueAndOldRadiiMapToTheNearest() {
+        assertEquals(1000, PlaceGeofence.RADIUS_CHOICES_M.max())
+        assertEquals(150, PlaceGeofence.nearestChoice(100 + 26))
+        assertEquals(50, PlaceGeofence.nearestChoice(60))
+        assertEquals(PlaceGeofence.DEFAULT_RADIUS_M, PlaceGeofence.nearestChoice(null))
+        // A mall-sized place holds the phone anywhere inside it.
+        val mall = PlaceGeofence.Area(1, 1.3, 103.8, 1000)
+        assertEquals(1L, PlaceGeofence.match(listOf(mall), PlaceGeofence.Fix(0, 1.3 + 900 / 111_320.0, 103.8, 20f), null))
+        assertEquals(null, PlaceGeofence.match(listOf(mall), PlaceGeofence.Fix(0, 1.3 + 1_200 / 111_320.0, 103.8, 20f), 1L))
+    }
 }

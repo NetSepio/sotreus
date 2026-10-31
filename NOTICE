@@ -20,7 +20,9 @@ Fieldwatch (https://github.com/OffGridPete/Fieldwatch)
   and crash diagnostics); each ported file keeps its notice. Version 1.1.1 selectively updates
   domain logic to upstream commit ddc0d8cde52b7708884668c9c666c92db1c2f427 (catalog 96).
   The proximity signal map (HuntTrack, HuntHeat, HuntHeatRaster) is ported from upstream commit
-  b67f207 (Fieldwatch 1.1.34).
+  b67f207 (Fieldwatch 1.1.34). The known-camera lists (FlockJson, FlockStore, KnownCameras,
+  PathCameras) are ported from upstream commit 4f74cec (Fieldwatch 1.1.37), without the spoken
+  camera warning.
   Partial community language packs in core/data/src/main/assets/languages are adapted from
   that revision with English fallback and are not reviewed/certified translations. The offline lookup tables in
   sensing/android/src/main/assets/lookups/radiodb.bin are packed from IEEE Registration Authority
@@ -38,12 +40,21 @@ predict4java (https://github.com/g4dpz/predict4java)
 
 Natural Earth (https://www.naturalearthdata.com, https://github.com/nvkelso/natural-earth-vector)
   Public domain. Made with Natural Earth. Land and 1:50m coastline data packed into
-  feature/context/src/main/assets/globe by tools/geodata/build_globe_assets.py.
+  feature/context/src/main/assets/globe by tools/geodata/build_globe_assets.py. Country, US state
+  and populated-place data packed into context/core/src/main/assets/regions by
+  tools/geodata/build_region_assets.py and build_place_names.py, for on-phone area names and
+  warning-service lookup.
 
 Context data (fetched at runtime, not bundled)
   Aircraft state vectors: The OpenSky Network (https://opensky-network.org). Used under the
   OpenSky Network terms of use; see https://opensky-network.org/about/terms-of-use.
   Orbital elements: CelesTrak (https://celestrak.org), Dr T.S. Kelso.
+  Earthquakes: U.S. Geological Survey. Disasters: Global Disaster Alert and Coordination System,
+  GDACS. Weather alerts: U.S. National Weather Service; MeteoAlarm.org (EUMETNET), CC BY 4.0-
+  equivalent terms. Air quality: CAMS via Open-Meteo (CC BY 4.0, non-commercial tier); OpenAQ with
+  each station's own licence, using the user's own API key.
+  Known cameras: (c) OpenStreetMap contributors, ODbL 1.0, via the DeFlock / FlockHopper export
+  (plate readers) and Fieldwatch (other cameras). Downloaded on request.
 
 Map data
   (c) OpenStreetMap contributors (https://www.openstreetmap.org/copyright), served by OpenFreeMap

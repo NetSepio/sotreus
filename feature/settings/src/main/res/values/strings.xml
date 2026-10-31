@@ -257,4 +257,28 @@
     <string name="field_high">High</string>
     <string name="signatures_catalog">Fieldwatch catalog 96 · %1$d signatures</string>
     <string name="signatures_preview_count">%1$d signatures · catalog %2$d</string>
+    <!-- Known cameras (Fieldwatch lists, OpenStreetMap data) -->
+    <string name="field_cameras_title">Known cameras</string>
+    <string name="field_cameras_sub">Lists of cameras people have mapped in OpenStreetMap, United States only. Each list is downloaded whole, so nothing about you is sent. Path maps show them in the Network colour and count the ones a path passed. They are not sensed by this phone and can be out of date.</string>
+    <string name="field_cameras_plates">Plate readers on path maps</string>
+    <string name="field_cameras_others">Speed, red-light and other cameras on path maps</string>
+    <string name="field_cameras_size_plates">about 38 MB</string>
+    <string name="field_cameras_size_others">about 0.6 MB</string>
+    <string name="field_cameras_missing">Not on this phone (%1$s download)</string>
+    <string name="field_cameras_saved">%1$s saved · %2$s</string>
+    <string name="field_cameras_downloading">Downloading · %1$d%%</string>
+    <string name="field_cameras_reading">Reading the list…</string>
+    <string name="field_cameras_failed_kept">%1$s The saved list is kept.</string>
+    <string name="field_cameras_download">Download list</string>
+    <string name="field_cameras_update">Check for a newer list</string>
+    <string name="field_cameras_delete">Delete list</string>
+    <string name="field_cameras_credit">© OpenStreetMap contributors, ODbL 1.0. Plate readers via the DeFlock / FlockHopper export; other cameras via Fieldwatch.</string>
+    <string name="field_cameras_fail_reach">Could not reach the list.</string>
+    <string name="field_cameras_fail_trust">The list\'s secure connection could not be checked.</string>
+    <string name="field_cameras_fail_server">The list server refused the request.</string>
+    <string name="field_cameras_fail_space">Not enough free space for the list.</string>
+    <string name="field_cameras_fail_large">The list was larger than expected and was not saved.</string>
+    <string name="field_cameras_fail_read">The downloaded list could not be read.</string>
+    <string name="field_cameras_fail_save">The list could not be saved.</string>
+    <string name="field_cameras_fail_other">The download stopped.</string>
 </resources>

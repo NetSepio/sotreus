@@ -45,6 +45,15 @@ object PlusCode {
         return format(String(digits, 0, length))
     }
 
+    /** About 275 m: the unsaved-place label, stable while walking around a block. */
+    const val AREA_LENGTH = 8
+
+    /**
+     * The label for where the phone is when no saved place matches: an [AREA_LENGTH] code, or the
+     * [COARSE_LENGTH] code (about 5.5 km) when coordinates are masked on screen.
+     */
+    fun areaLabel(lat: Double, lon: Double, masked: Boolean): String = encode(lat, lon, if (masked) COARSE_LENGTH else AREA_LENGTH)
+
     /** Shortens a code to [length] digits (even, at most 8), padding like the reference, e.g. `7FG49Q00+`. */
     fun coarsen(code: String, length: Int): String {
         require(length in 2..SEPARATOR_POSITION && length % 2 == 0) { "length must be even, 2..8" }

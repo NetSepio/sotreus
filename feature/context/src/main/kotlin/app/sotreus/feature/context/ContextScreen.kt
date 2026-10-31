@@ -54,7 +54,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
-enum class ContextTab { AIRCRAFT, SATELLITES, REMOTE_ID }
+enum class ContextTab { AIRCRAFT, SATELLITES, REMOTE_ID, ENVIRONMENT }
 
 data class ContextUiState(
     val tab: ContextTab = ContextTab.SATELLITES,
@@ -67,6 +67,7 @@ data class ContextUiState(
     val remoteIdHistory: List<ContextEventEntity> = emptyList(),
     val location: app.sotreus.context.ContextLocation? = null,
     val observing: Boolean = false,
+    val environment: app.sotreus.context.environment.EnvironmentState = app.sotreus.context.environment.EnvironmentState(),
     val now: Long = System.currentTimeMillis(),
 )
 
@@ -75,20 +76,23 @@ class ContextViewModel @Inject constructor(
     private val repo: ContextRepository,
     settings: SettingsRepository,
     pipeline: ObservationPipeline,
+    environment: app.sotreus.context.environment.EnvironmentRepository,
 ) : ViewModel() {
     private val tab = MutableStateFlow(ContextTab.SATELLITES)
 
     private val location = repo.locationUpdates().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    // Collecting the environment flow is what downloads it, so it runs only while Context is visible.
     val state: StateFlow<ContextUiState> = combine(
-        combine(tab, settings.settings, location) { t, s, l -> Triple(t, s, l) },
+        combine(tab, settings.settings, location, environment.environment()) { t, s, l, e -> Triple(t, s, l) to e },
         repo.aircraft(),
         repo.satellites(),
         combine(repo.remoteId.live, repo.recentRemoteId(System.currentTimeMillis() - DAY_MS)) { l, r -> l to r },
         pipeline.snapshot,
-    ) { (t, s, l), a, sat, (live, recent), snap ->
-        val loc = l ?: (a as? AircraftState.Ready)?.location ?: (sat as? SatelliteState.Ready)?.location
-        ContextUiState(t, s, a, sat, live, recent.distinctBy { it.subjectId }, recent, loc, snap.observing, System.currentTimeMillis())
+    ) { (head, env), a, sat, (live, recent), snap ->
+        val (t, s, l) = head
+        val loc = l ?: (a as? AircraftState.Ready)?.location ?: (sat as? SatelliteState.Ready)?.location ?: env.location
+        ContextUiState(t, s, a, sat, live, recent.distinctBy { it.subjectId }, recent, loc, snap.observing, env, System.currentTimeMillis())
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ContextUiState())
 
     fun tab(t: ContextTab) { tab.value = t }
@@ -121,16 +125,19 @@ internal fun ContextContent(state: ContextUiState, onTab: (ContextTab) -> Unit, 
                 ContextTab.SATELLITES to stringResource(R.string.ctx_tab_satellites),
                 ContextTab.AIRCRAFT to stringResource(R.string.ctx_tab_aircraft),
                 ContextTab.REMOTE_ID to stringResource(R.string.ctx_tab_remote_id),
+                ContextTab.ENVIRONMENT to stringResource(R.string.ctx_tab_environment),
             ),
             state.tab,
             onTab,
         )
-        ContextScene(
-            mode = when (state.tab) {
-                ContextTab.SATELLITES -> SceneMode.GLOBE
-                ContextTab.AIRCRAFT -> SceneMode.AIRCRAFT
-                ContextTab.REMOTE_ID -> SceneMode.REMOTE_ID
-            },
+        val mode = when (state.tab) {
+            ContextTab.SATELLITES -> SceneMode.GLOBE
+            ContextTab.AIRCRAFT -> SceneMode.AIRCRAFT
+            ContextTab.REMOTE_ID -> SceneMode.REMOTE_ID
+            ContextTab.ENVIRONMENT -> null
+        }
+        if (mode != null) ContextScene(
+            mode = mode,
             location = state.location,
             satellites = state.satellites as? SatelliteState.Ready,
             aircraft = state.aircraft as? AircraftState.Ready,
@@ -143,6 +150,7 @@ internal fun ContextContent(state: ContextUiState, onTab: (ContextTab) -> Unit, 
             ContextTab.AIRCRAFT -> AircraftTab(state, onRefreshAircraft, navigate)
             ContextTab.SATELLITES -> SatellitesTab(state, navigate)
             ContextTab.REMOTE_ID -> RemoteIdTab(state, navigate)
+            ContextTab.ENVIRONMENT -> EnvironmentTab(state.environment, state.now, navigate, state.settings.maskCoordinates)
         }
     }
 }

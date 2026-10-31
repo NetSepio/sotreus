@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import app.sotreus.core.model.AircraftMode
+import app.sotreus.core.model.AirQualityMode
 import app.sotreus.core.model.GeotagMode
 import app.sotreus.core.model.SatelliteGroup
 import app.sotreus.core.model.NowView
@@ -68,6 +69,18 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val satellitesEnabled = booleanPreferencesKey("satellites_enabled")
         val satelliteGroups = stringPreferencesKey("satellite_groups")
         val remoteIdEnabled = booleanPreferencesKey("remote_id_enabled")
+        val earthquakesEnabled = booleanPreferencesKey("earthquakes_enabled")
+        val earthquakeRadius = intPreferencesKey("earthquake_radius_km")
+        val hazardsEnabled = booleanPreferencesKey("hazards_enabled")
+        val airQualityMode = stringPreferencesKey("air_quality_mode")
+        val officialWarnings = booleanPreferencesKey("official_warnings")
+        // Before warnings followed the phone's location, a region was picked by hand.
+        val legacyNwsArea = stringPreferencesKey("nws_area")
+        val legacyMeteoAlarmCountry = stringPreferencesKey("meteoalarm_country")
+        val openAqEnabled = booleanPreferencesKey("openaq_enabled")
+        val openAqKey = stringPreferencesKey("openaq_key_wrapped")
+        val cameraPlates = booleanPreferencesKey("camera_plates")
+        val cameraOthers = booleanPreferencesKey("camera_others")
         val presenceKey = stringPreferencesKey("presence_key_wrapped")
         val walletAuthToken = stringPreferencesKey("wallet_auth_token_mainnet_wrapped")
         val walletPackage = stringPreferencesKey("wallet_package")
@@ -87,6 +100,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
             gnssSensitivity = p[Keys.gnssSensitivity] ?: d.gnssSensitivity,
             livePath = p[Keys.livePath] ?: d.livePath,
             onlineRouteMaps = p[Keys.onlineRouteMaps] ?: d.onlineRouteMaps,
+            cameraPlates = p[Keys.cameraPlates] ?: d.cameraPlates,
+            cameraOthers = p[Keys.cameraOthers] ?: d.cameraOthers,
             languageTag = p[Keys.languageTag] ?: d.languageTag,
             currentPlaceId = p[Keys.currentPlace]?.takeIf { it > 0 },
             currentPlaceByLocation = p[Keys.currentPlaceAuto] ?: d.currentPlaceByLocation,
@@ -114,6 +129,13 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
             satelliteGroups = p[Keys.satelliteGroups]?.split(",")?.mapNotNull { n -> SatelliteGroup.entries.firstOrNull { it.name == n } }?.toSet()
                 ?: d.satelliteGroups,
             remoteIdEnabled = p[Keys.remoteIdEnabled] ?: d.remoteIdEnabled,
+            earthquakesEnabled = p[Keys.earthquakesEnabled] ?: d.earthquakesEnabled,
+            earthquakeRadiusKm = p[Keys.earthquakeRadius] ?: d.earthquakeRadiusKm,
+            hazardsEnabled = p[Keys.hazardsEnabled] ?: d.hazardsEnabled,
+            airQualityMode = p[Keys.airQualityMode].enumOr(d.airQualityMode),
+            officialWarnings = p[Keys.officialWarnings]
+                ?: (!p[Keys.legacyNwsArea].isNullOrEmpty() || !p[Keys.legacyMeteoAlarmCountry].isNullOrEmpty()),
+            openAqEnabled = p[Keys.openAqEnabled] ?: d.openAqEnabled,
         )
     }
 
@@ -124,6 +146,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
     suspend fun setGnssMonitoring(on: Boolean) { store.edit { it[Keys.gnssMonitoring] = on } }
     suspend fun setLivePath(on: Boolean) { store.edit { it[Keys.livePath] = on } }
     suspend fun setOnlineRouteMaps(on: Boolean) { store.edit { it[Keys.onlineRouteMaps] = on } }
+    suspend fun setCameraPlates(on: Boolean) { store.edit { it[Keys.cameraPlates] = on } }
+    suspend fun setCameraOthers(on: Boolean) { store.edit { it[Keys.cameraOthers] = on } }
     suspend fun setLanguageTag(tag: String) { store.edit { it[Keys.languageTag] = tag } }
 
 
@@ -209,10 +233,25 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
     suspend fun setSatellitesEnabled(v: Boolean) { store.edit { it[Keys.satellitesEnabled] = v } }
     suspend fun setSatelliteGroups(v: Set<SatelliteGroup>) { store.edit { it[Keys.satelliteGroups] = v.joinToString(",") { g -> g.name } } }
     suspend fun setRemoteIdEnabled(v: Boolean) { store.edit { it[Keys.remoteIdEnabled] = v } }
+    suspend fun setEarthquakesEnabled(v: Boolean) { store.edit { it[Keys.earthquakesEnabled] = v } }
+    suspend fun setEarthquakeRadiusKm(v: Int) { store.edit { it[Keys.earthquakeRadius] = v } }
+    suspend fun setHazardsEnabled(v: Boolean) { store.edit { it[Keys.hazardsEnabled] = v } }
+    suspend fun setAirQualityMode(v: AirQualityMode) { store.edit { it[Keys.airQualityMode] = v.name } }
+    suspend fun setOfficialWarnings(v: Boolean) {
+        store.edit {
+            it[Keys.officialWarnings] = v
+            it.remove(Keys.legacyNwsArea)
+            it.remove(Keys.legacyMeteoAlarmCountry)
+        }
+    }
+    suspend fun setOpenAqEnabled(v: Boolean) { store.edit { it[Keys.openAqEnabled] = v } }
     suspend fun setShowAddresses(v: Boolean) { store.edit { it[Keys.showAddresses] = v } }
     suspend fun setForceSolanaUi(v: Boolean) { store.edit { it[Keys.forceSolana] = v } }
 
     // Wrapped (Keystore-encrypted) secrets. Callers wrap/unwrap with SecretBox.
+    /** The user's own OpenAQ API key. Never exported, never logged. */
+    val openAqKeyWrapped: Flow<String?> = store.data.map { it[Keys.openAqKey] }
+    suspend fun setOpenAqKeyWrapped(v: String?) { store.edit { if (v == null) it.remove(Keys.openAqKey) else it[Keys.openAqKey] = v } }
     suspend fun presenceKeyWrapped(): String? = store.data.first()[Keys.presenceKey]
     suspend fun setPresenceKeyWrapped(v: String?) { store.edit { if (v == null) it.remove(Keys.presenceKey) else it[Keys.presenceKey] = v } }
     suspend fun walletAuthTokenWrapped(): String? = store.data.first()[Keys.walletAuthToken]

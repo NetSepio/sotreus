@@ -3,6 +3,8 @@ package app.sotreus.context
 import app.sotreus.context.aircraft.AircraftReport
 import app.sotreus.context.aircraft.AircraftResult
 import app.sotreus.context.aircraft.OpenSkyProvider
+import app.sotreus.context.environment.EnvironmentGeo
+import app.sotreus.context.environment.EnvironmentSources
 import app.sotreus.context.remoteid.RemoteIdTracker
 import app.sotreus.context.satellite.CelesTrakCatalog
 import app.sotreus.context.satellite.OrbitalElements
@@ -16,6 +18,9 @@ import app.sotreus.core.database.dao.SessionDao
 import app.sotreus.core.database.entity.ContextEventEntity
 import app.sotreus.core.model.AircraftMode
 import app.sotreus.core.model.ContextKind
+import app.sotreus.core.model.Hazard
+import app.sotreus.core.model.Nearby
+import app.sotreus.core.model.Quake
 import app.sotreus.core.model.Provenance
 import app.sotreus.core.model.SatelliteGroup
 import app.sotreus.sensing.LocationSource
@@ -111,7 +116,13 @@ data class SessionContext(
     val aircraft: List<ContextEventEntity>,
     val remoteId: List<ContextEventEntity>,
     val satellitePasses: List<SatellitePass>,
-)
+    /** Earthquakes during the session, within the earthquake radius of where the session was. */
+    val quakes: List<Nearby<Quake>> = emptyList(),
+    /** GDACS events whose dates overlap the session, near where the session was. */
+    val hazards: List<Nearby<Hazard>> = emptyList(),
+) {
+    val isEmpty: Boolean get() = aircraft.isEmpty() && remoteId.isEmpty() && satellitePasses.isEmpty() && quakes.isEmpty() && hazards.isEmpty()
+}
 
 /**
  * Context sources (architecture handoff §14): aircraft reported by a network provider, satellite
@@ -129,6 +140,7 @@ class ContextRepository @Inject constructor(
     private val catalog: CelesTrakCatalog,
     private val dao: ContextDao,
     val remoteId: RemoteIdTracker,
+    private val environment: EnvironmentSources,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val viewers = MutableStateFlow(0)
@@ -237,6 +249,24 @@ class ContextRepository @Inject constructor(
         val p = GeoPoint(fix.lat, fix.lon)
         phoneFix = now to p
         return ContextLocation(p, ContextLocation.Source.PHONE)
+    }
+
+    /**
+     * A location without waiting for a new fix: the current place, the session's last fix, or the
+     * platform's last known fix from the past [QUICK_FIX_MAX_AGE_MS]. Good enough for regional data
+     * while [resolveLocation] waits for a fresh fix.
+     */
+    suspend fun quickLocation(): ContextLocation? {
+        val s = settings.settings.first()
+        s.currentPlaceId?.let { places.get(it) }?.let { p ->
+            if (p.lat != null && p.lon != null) return ContextLocation(GeoPoint(p.lat!!, p.lon!!), ContextLocation.Source.PLACE, p.name)
+        }
+        sessions.observeActive().first()?.let { sessions.lastLocation(it.id) }?.let { l ->
+            if (System.currentTimeMillis() - l.atMs < FIX_MAX_AGE_MS) return ContextLocation(GeoPoint(l.lat, l.lon), ContextLocation.Source.SESSION)
+        }
+        phoneFix?.let { (at, p) -> if (System.currentTimeMillis() - at < FIX_MAX_AGE_MS) return ContextLocation(p, ContextLocation.Source.PHONE) }
+        val last = location.lastKnown()?.takeIf { !it.mock && System.currentTimeMillis() - it.atMs < QUICK_FIX_MAX_AGE_MS } ?: return null
+        return ContextLocation(GeoPoint(last.lat, last.lon), ContextLocation.Source.PHONE)
     }
 
     /** The context location, re-resolved every minute (place, session or phone). */
@@ -373,17 +403,41 @@ class ContextRepository @Inject constructor(
         } else {
             emptyList()
         }
+        // The USGS and GDACS lists carry no request location, so reading them here sends nothing about the session.
+        val quakes = if (point != null && s.contextEnabled && s.earthquakesEnabled) {
+            environment.refreshQuakes(ENVIRONMENT_SESSION_MAX_AGE_MS)
+            environment.cachedQuakes()?.value.orEmpty()
+                .filter { it.atMs in session.startedAtMs..end }
+                .let { EnvironmentGeo.nearbyQuakes(it, point, s.earthquakeRadiusKm.toDouble()) }
+        } else {
+            emptyList()
+        }
+        val hazards = if (point != null && s.contextEnabled && s.hazardsEnabled) {
+            environment.refreshHazards(ENVIRONMENT_SESSION_MAX_AGE_MS)
+            // The list holds current events only, and an event's "to" date is its last update. A
+            // list fetched after the session started still listed the event, so it was ongoing.
+            val cached = environment.cachedHazards()
+            val listedDuring = cached != null && cached.fetchedAtMs >= session.startedAtMs
+            cached?.value.orEmpty()
+                .filter { it.fromMs <= end && (listedDuring || it.toMs + DAY_MS >= session.startedAtMs) }
+                .let { EnvironmentGeo.nearbyHazards(it, point) }
+        } else {
+            emptyList()
+        }
         return SessionContext(
             aircraft = rows.filter { it.kind == ContextKind.AIRCRAFT }.sortedBy { it.distanceKm ?: Double.MAX_VALUE },
             remoteId = rows.filter { it.kind == ContextKind.REMOTE_ID }.groupBy { it.subjectId }.map { (_, track) -> track.first() },
             satellitePasses = passes,
+            quakes = quakes,
+            hazards = hazards,
         )
     }
 
-    /** Deletes stored context records and the cached satellite catalog. */
+    /** Deletes stored context records and the cached satellite catalog and environment feeds. */
     suspend fun clearAll() {
         dao.deleteAll()
         catalog.clear()
+        environment.clear()
         passCache.withLock { cachedPasses = null }
         phoneFix = null
     }
@@ -396,7 +450,11 @@ class ContextRepository @Inject constructor(
         const val CATALOG_MAX_AGE_MS = 24 * 3_600_000L
         const val OVERHEAD_TICK_MS = 15_000L
         const val FIX_MAX_AGE_MS = 10 * 60_000L
+        const val QUICK_FIX_MAX_AGE_MS = 60 * 60_000L
         const val NO_LOCATION_RETRY_MS = 15_000L
+        const val ENVIRONMENT_SESSION_MAX_AGE_MS = 30 * 60_000L
+        /** GDACS "to" dates are the last update, so an event counts as ongoing for a day after it. */
+        private const val DAY_MS = 24 * 3_600_000L
         /** An aircraft reported again within this gap extends the same session record. */
         const val CONTINUE_MS = 5 * 60_000L
 

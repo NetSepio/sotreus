@@ -225,9 +225,9 @@ class PlaceRepository @Inject constructor(
         places.get(id)?.let { places.update(it.copy(radiusM = radiusM, updatedAtMs = System.currentTimeMillis())) }
     }
 
-    suspend fun createWithLocation(name: String, lat: Double?, lon: Double?, select: Boolean = true): Long {
+    suspend fun createWithLocation(name: String, lat: Double?, lon: Double?, select: Boolean = true, radiusM: Int? = null): Long {
         val id = create(name, select = false)
-        if (lat != null && lon != null) setLocation(id, lat, lon)
+        if (lat != null && lon != null) setLocation(id, lat, lon, radiusM)
         if (select) select(id, if (lat != null && lon != null) lat to lon else null)
         return id
     }

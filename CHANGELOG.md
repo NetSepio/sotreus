@@ -2,6 +2,45 @@
 
 All notable changes to Sotreus Android. Versions follow `versionName` in `app/build.gradle.kts`.
 
+## 1.1.3 — 2026-10-31
+
+### Added
+
+- Add Context › Environment, with each source off by default and labelled Network or Predicted:
+  USGS earthquakes and GDACS disasters (world lists filtered on the phone; nothing about you is
+  sent), Open-Meteo air quality (one rounded 0.5° or 0.1° cell centre), and OpenAQ station
+  readings with the user's own Keystore-wrapped API key. Sources load in parallel, cached data shows
+  at once, and only what a source returned is drawn; empty or unavailable sources are named in one line.
+- Add official weather warnings that follow the phone's location: NWS in the US and MeteoAlarm in 39
+  European countries. The region is looked up on the phone from bundled Natural Earth boundaries;
+  only the state or country code is sent. Elsewhere nothing is requested.
+- Show air quality on the regional scale: European AQI in Europe, US AQI in the US and elsewhere,
+  with a note naming the scale.
+- Name the area on the phone (town, state or province, country) from bundled Natural Earth places.
+  Environment opens with it; with coordinates masked, only the state and country are shown.
+- Show earthquakes and GDACS events that overlapped a session in its summary.
+- Port Fieldwatch 1.1.37 known cameras (upstream commit `4f74cec`): download the United States
+  plate-reader list and the speed, red-light and other camera list (OpenStreetMap data, ODbL) from
+  Field tools. Route maps draw them in the Network colour, labelled "mapped, not sensed", and count
+  the ones a path passed within 150 m. No spoken warning.
+- Name an unsaved place by its plus code (block, or area when coordinates are masked); the Now
+  header alternates it with the area name.
+- Let a new place choose how far it reaches (50 m to 1 km), so moving around a café, campus or mall
+  keeps the place; leaving it switches to another saved place or the plus code.
+- Attach the R8 mapping files for both flavors to each GitHub release.
+
+### Fixed
+
+- Download MeteoAlarm feeds, which refused an Atom or JSON `Accept` header.
+- Count a GDACS event that is still listed as current as overlapping a session.
+
+### Changed
+
+- Move Live path on Now to a round icon beside the observing pill.
+- Narrow GDACS distances to the area each event type usually affects (cyclones 400 km, earthquakes
+  300 km, floods 200 km, volcanoes and wildfires 100 km from the event centre).
+- Bump Android version to 1.1.3 (code 6). No schema change; new settings default off.
+
 ## 1.1.2 — 2026-10-29
 
 ### Added

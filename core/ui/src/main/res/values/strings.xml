@@ -163,6 +163,7 @@
     <string name="reason_address_changeable">This address may change. Evidence applies to this address only; it does not establish a unique physical device or intent.</string>
     <string name="route_recenter">Recenter</string>
     <string name="route_mark_heard">%1$s · this phone was here</string>
+    <string name="route_camera_cluster">%1$d mapped cameras here · zooming in</string>
     <string name="heat_weak">Weak</string>
     <string name="heat_strong">Strong</string>
     <string name="export_format_atak">ATAK data package</string>

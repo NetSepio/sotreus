@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -36,6 +38,10 @@ data class NowUiState(
     val sort: NowSort = NowSort.STRONGEST,
     val openAttention: List<AttentionListItem> = emptyList(),
     val places: List<PlaceSummary> = emptyList(),
+    /** Plus code of where the phone is, shown when no saved place matches. Null without a recent fix. */
+    val hereCode: String? = null,
+    /** Town, state and country for an unsaved place, looked up on the phone. Null without a fix or outside listed areas. */
+    val hereArea: app.sotreus.context.environment.AreaName? = null,
 ) {
     val live: List<LiveRadio> get() = snapshot.radios.filterNot { it.stale }
     val families: Int get() = live.mapNotNull { it.family }.distinct().size
@@ -82,7 +88,15 @@ class NowViewModel @Inject constructor(
     private val placeRepository: PlaceRepository,
     attention: AttentionRepository,
     private val location: app.sotreus.sensing.LocationSource,
+    phone: app.sotreus.core.data.pipeline.PhoneLocation,
+    areas: app.sotreus.context.environment.AreaNameRepository,
 ) : ViewModel() {
+    /** The area for the latest fix, looked up again only when the phone has moved about a kilometre. */
+    private val hereArea = phone.latest
+        .map { fix -> fix?.takeIf { !it.mock }?.let { Math.round(it.lat * 100) / 100.0 to Math.round(it.lon * 100) / 100.0 } }
+        .distinctUntilChanged()
+        .map { cell -> cell?.let { (lat, lon) -> areas.areaAt(lat, lon) } }
+
     /** Set when a place was created but no location fix was available. */
     val locationFailed = MutableStateFlow(false)
 
@@ -94,9 +108,15 @@ class NowViewModel @Inject constructor(
         settings.settings,
         combine(filter, sort) { f, s -> f to s },
         attention.observeOpen(),
-        placeRepository.observePlaces(),
-    ) { snap, s, (f, so), att, places ->
-        NowUiState(snapshot = snap, settings = s, view = s.nowView, filter = f, sort = so, openAttention = att, places = places)
+        combine(placeRepository.observePlaces(), phone.latest, hereArea) { p, fix, area -> Triple(p, fix, area) },
+    ) { snap, s, (f, so), att, (places, fix, area) ->
+        // Only a recent, real fix labels the unsaved place; an old one would name somewhere the phone has left.
+        val here = fix?.takeIf { !it.mock && snap.atMs - it.atMs in 0..HERE_MAX_AGE_MS }
+            ?.let { app.sotreus.intelligence.PlusCode.areaLabel(it.lat, it.lon, s.maskCoordinates) }
+        NowUiState(
+            snapshot = snap, settings = s, view = s.nowView, filter = f, sort = so, openAttention = att, places = places,
+            hereCode = here, hereArea = area.takeIf { here != null },
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NowUiState())
 
     fun hideBurst() { insights.hideBurst() }
@@ -106,9 +126,13 @@ class NowViewModel @Inject constructor(
     fun setFilter(f: NowFilter) { filter.value = f }
     fun setSort(s: NowSort) { sort.value = s }
     fun selectPlace(id: Long?) = viewModelScope.launch { placeRepository.select(id) }
-    fun createPlace(name: String, withLocation: Boolean) = viewModelScope.launch {
+    fun createPlace(name: String, withLocation: Boolean, radiusM: Int) = viewModelScope.launch {
         val fix = if (withLocation) location.currentFix() else null
-        placeRepository.createWithLocation(name, fix?.lat, fix?.lon, select = true)
+        placeRepository.createWithLocation(name, fix?.lat, fix?.lon, select = true, radiusM = radiusM)
         locationFailed.value = withLocation && fix == null
+    }
+
+    private companion object {
+        const val HERE_MAX_AGE_MS = 2 * 60_000L
     }
 }

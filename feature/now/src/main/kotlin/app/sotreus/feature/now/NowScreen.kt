@@ -1,6 +1,15 @@
 package app.sotreus.feature.now
 
+import androidx.compose.foundation.border
+import androidx.compose.animation.togetherWith
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import app.sotreus.core.designsystem.icon.SotreusIcons
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -110,7 +119,7 @@ internal fun NowScreen(navigate: (Any) -> Unit, vm: NowViewModel = hiltViewModel
             places = state.places,
             currentId = state.snapshot.placeId,
             onSelect = { vm.selectPlace(it); picker = false },
-            onCreate = { name, withLocation -> vm.createPlace(name, withLocation); picker = false },
+            onCreate = { name, withLocation, radius -> vm.createPlace(name, withLocation, radius); picker = false },
             onDetails = { id -> picker = false; navigate(PlaceRoute(id)) },
             onDismiss = { picker = false },
             byLocation = state.settings.placeByLocation,
@@ -134,8 +143,7 @@ internal fun NowContent(
 ) {
     val snap = state.snapshot
     ScreenColumn(top = SotreusTheme.spacing.screenH) {
-        Header(state, onPlace)
-        if (state.settings.livePath) GhostButton(stringResource(R.string.now_live_path), onRoute)
+        Header(state, onPlace, onRoute)
         snap.conditionNotes.forEach { note -> CaveatBox(stringResource(R.string.now_radio_conditions), note) }
         if (snap.conditionNotes.any { it.contains("flood", true) }) GhostButton(stringResource(R.string.now_hide_burst), onHideBurst)
         Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.xl)) {
@@ -169,9 +177,18 @@ private fun radioName(id: String) = stringResource(
 )
 
 @Composable
-private fun Header(state: NowUiState, onPlace: () -> Unit) {
+private fun Header(state: NowUiState, onPlace: () -> Unit, onRoute: () -> Unit) {
     val c = SotreusTheme.colors
-    val placeName = state.snapshot.placeName ?: stringResource(R.string.now_unsaved_place)
+    // No saved place here: name the spot by its plus code, which follows the phone as it moves.
+    val unsaved = state.snapshot.placeName == null
+    val placeName = state.snapshot.placeName ?: state.hereCode ?: stringResource(R.string.now_unsaved_place)
+    // With coordinates masked, the area is the state and country; otherwise the nearest town and its state.
+    val areaText = state.hereArea?.takeIf { unsaved }?.let { a ->
+        val town = a.town
+        if (state.settings.maskCoordinates || town == null) listOfNotNull(a.region, a.country).joinToString(", ").ifBlank { null }
+        else listOfNotNull(town, a.region).joinToString(", ")
+    }
+    val animate = remember { android.animation.ValueAnimator.areAnimatorsEnabled() }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.xl)) {
         val a11y = stringResource(R.string.now_place_picker_a11y, placeName)
         Column(
@@ -179,9 +196,28 @@ private fun Header(state: NowUiState, onPlace: () -> Unit) {
                 .semantics(mergeDescendants = true) { contentDescription = a11y },
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            MonoLabel(stringResource(if (state.snapshot.placeByLocation) R.string.now_place_kicker_location else R.string.now_place_kicker), small = true)
-            // Long place names step down in size instead of being cut off.
-            AutoSizeText(placeName, SotreusTheme.typography.titleS, c.text)
+            MonoLabel(
+                if (areaText != null && !animate && state.hereCode != null) stringResource(R.string.now_place_kicker_with_code, state.hereCode!!)
+                else stringResource(
+                    when {
+                        areaText != null && animate -> R.string.now_place_kicker_unsaved
+                        unsaved && state.hereCode != null && state.settings.maskCoordinates -> R.string.now_place_kicker_area
+                        unsaved && state.hereCode != null -> R.string.now_place_kicker_code
+                        state.snapshot.placeByLocation -> R.string.now_place_kicker_location
+                        else -> R.string.now_place_kicker
+                    },
+                ),
+                small = true,
+            )
+            val code = state.hereCode
+            when {
+                // Unsaved, with both an area name and a plus code: swap between them, a little smaller than a place name.
+                areaText != null && code != null && animate -> SwapTitle(listOf(areaText, code))
+                // Animations off: the area as the title; the plus code stays in the line above.
+                areaText != null -> AutoSizeText(areaText, unsavedTitle(), c.text)
+                // Long place names step down in size instead of being cut off.
+                else -> AutoSizeText(placeName, SotreusTheme.typography.titleS, c.text)
+            }
         }
         val pill = when {
             state.snapshot.locating -> stringResource(R.string.now_locating)
@@ -189,7 +225,49 @@ private fun Header(state: NowUiState, onPlace: () -> Unit) {
             state.settings.simulatedRadios -> stringResource(R.string.now_simulated)
             else -> stringResource(R.string.now_observing)
         }
-        StatusPill(pill, live = state.snapshot.observing)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.m)) {
+            if (state.settings.livePath) LivePathButton(onRoute)
+            StatusPill(pill, live = state.snapshot.observing)
+        }
+    }
+}
+
+@Composable
+private fun unsavedTitle() = SotreusTheme.typography.titleS.copy(fontSize = SotreusTheme.typography.titleS.fontSize * 0.8f)
+
+/** Alternates between [lines] every few seconds: the new line slides up and fades in as the old one leaves. */
+@Composable
+private fun SwapTitle(lines: List<String>) {
+    var index by remember(lines) { mutableIntStateOf(0) }
+    LaunchedEffect(lines) {
+        while (true) {
+            kotlinx.coroutines.delay(SWAP_MS)
+            index = (index + 1) % lines.size
+        }
+    }
+    androidx.compose.animation.AnimatedContent(
+        targetState = lines[index % lines.size],
+        transitionSpec = {
+            (androidx.compose.animation.slideInVertically { it / 2 } + androidx.compose.animation.fadeIn()) togetherWith
+                (androidx.compose.animation.slideOutVertically { -it / 2 } + androidx.compose.animation.fadeOut())
+        },
+        label = "unsaved-place",
+    ) { line -> AutoSizeText(line, unsavedTitle(), SotreusTheme.colors.text) }
+}
+
+private const val SWAP_MS = 4_000L
+
+/** Opens the live path map: a round icon beside the status pill instead of a full-width button. */
+@Composable
+private fun LivePathButton(onClick: () -> Unit) {
+    val c = SotreusTheme.colors
+    val label = stringResource(R.string.now_live_path)
+    Box(
+        Modifier.size(SotreusTheme.sizes.minTouch).clip(CircleShape).border(1.dp, c.lineStrong, CircleShape)
+            .clickable(role = Role.Button, onClick = onClick).semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(SotreusIcons.Journey, contentDescription = null, tint = c.textSoft, modifier = Modifier.size(SotreusTheme.sizes.iconSize))
     }
 }
 

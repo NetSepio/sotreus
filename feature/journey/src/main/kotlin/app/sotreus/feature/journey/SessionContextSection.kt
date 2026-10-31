@@ -18,7 +18,7 @@ import kotlin.math.roundToInt
 internal fun SessionContextSection(ctx: SessionContext) {
     val eo = ctx.satellitePasses.filter { it.elements.group == SatelliteGroup.EARTH_OBSERVATION }
     val otherSats = ctx.satellitePasses - eo.toSet()
-    if (ctx.aircraft.isEmpty() && ctx.remoteId.isEmpty() && ctx.satellitePasses.isEmpty()) return
+    if (ctx.isEmpty) return
     MonoLabel(stringResource(R.string.summary_context))
     MonoLabel(stringResource(R.string.summary_context_note), small = true)
     Column {
@@ -34,6 +34,20 @@ internal fun SessionContextSection(ctx: SessionContext) {
             InfoRow(
                 title = stringResource(R.string.summary_ctx_aircraft, ctx.aircraft.size),
                 subtitle = closest.joinToString(" · ") { (t, d) -> if (d != null) "$t $d" else t },
+            ) { StateChip(stringResource(R.string.summary_prov_network), ChipTone.NEUTRAL) }
+        }
+        if (ctx.quakes.isNotEmpty()) {
+            InfoRow(
+                title = stringResource(R.string.summary_ctx_quakes, ctx.quakes.size),
+                subtitle = ctx.quakes.take(4).map { (q, d) ->
+                    stringResource(R.string.summary_ctx_quake_item, q.magnitude, d.roundToInt(), clockTime(q.atMs))
+                }.joinToString(" · "),
+            ) { StateChip(stringResource(R.string.summary_prov_network), ChipTone.NEUTRAL) }
+        }
+        if (ctx.hazards.isNotEmpty()) {
+            InfoRow(
+                title = stringResource(R.string.summary_ctx_hazards, ctx.hazards.size),
+                subtitle = ctx.hazards.take(3).map { (h, d) -> stringResource(R.string.summary_ctx_hazard_item, h.name, d.roundToInt()) }.joinToString(" · "),
             ) { StateChip(stringResource(R.string.summary_prov_network), ChipTone.NEUTRAL) }
         }
         if (eo.isNotEmpty()) {

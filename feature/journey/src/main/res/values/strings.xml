@@ -83,6 +83,10 @@
     <string name="summary_ctx_closest">closest %1$d km</string>
     <string name="summary_ctx_eo">Earth-observation satellite predicted overhead · %1$d</string>
     <string name="summary_ctx_other_sats">Other satellite passes predicted · %1$d</string>
+    <string name="summary_ctx_quakes">Earthquakes reported during this session · %1$d</string>
+    <string name="summary_ctx_quake_item">M%1$.1f, %2$d km from the session, %3$s</string>
+    <string name="summary_ctx_hazards">GDACS events listed during this session · %1$d</string>
+    <string name="summary_ctx_hazard_item">%1$s, %2$d km from the session</string>
     <string name="summary_prov_sensed">Sensed</string>
     <string name="summary_prov_network">Network</string>
     <string name="summary_prov_predicted">Predicted</string>
@@ -103,4 +107,19 @@
     </plurals>
     <string name="export_geojson">Export GeoJSON</string>
     <string name="export_atak">Export ATAK package</string>
+    <!-- Known cameras (downloaded lists, OpenStreetMap data) -->
+    <string name="camera_flock">Flock plate reader</string>
+    <string name="camera_plate">Plate reader</string>
+    <string name="camera_speed">Speed camera</string>
+    <string name="camera_red">Red-light camera</string>
+    <string name="camera_gunshot">Gunshot detector</string>
+    <string name="camera_other">Camera</string>
+    <string name="camera_faces">faces %1$s</string>
+    <string name="camera_label">%1$s · mapped, not sensed</string>
+    <string name="route_cameras_header">Known cameras within 150 m of this path</string>
+    <string name="route_cameras_chip">Network</string>
+    <string name="route_cameras_row">%1$d facing the path · %2$d with no direction</string>
+    <string name="route_cameras_none">No listed cameras within 150 m of this path.</string>
+    <string name="route_cameras_missing">A camera list that is switched on is not on this phone yet. Download it in Path and map settings.</string>
+    <string name="route_cameras_credit">Camera locations © OpenStreetMap contributors (ODbL). People mapped them; this phone did not sense them. A list can be out of date.</string>
 </resources>

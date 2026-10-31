@@ -149,6 +149,38 @@ object FakeSotreusData {
 
     const val WALLET = "7xKpQh2mD9a5Vw8Lr3TnB6cY1sFzE4uJg0Ho3fQe"
 
+    // Environment context (architecture handoff §14.5). Places and names are placeholders.
+    val AIR = app.sotreus.core.model.AirReading(34, 52, 11.0, 19.0, 62.0, 14.0, NOW - 2 * 3_600_000L)
+    val QUAKES = listOf(
+        app.sotreus.core.model.Nearby(app.sotreus.core.model.Quake("us7000fake1", 4.8, "52 km SSE of Example Town", NOW - 3 * 3_600_000L, NOW, 0.9, 104.2, 10.0, "https://earthquake.usgs.gov/"), 140.0),
+        app.sotreus.core.model.Nearby(app.sotreus.core.model.Quake("us7000fake2", 2.9, "Example Strait", NOW - 2 * 86_400_000L, NOW, 2.4, 102.1, 35.0, null), 260.0),
+    )
+    val HAZARDS = listOf(
+        app.sotreus.core.model.Nearby(
+            app.sotreus.core.model.Hazard(
+                "TC-1000001", app.sotreus.core.model.HazardType.TROPICAL_CYCLONE, app.sotreus.core.model.HazardLevel.ORANGE, "Tropical Cyclone EXAMPLE-26",
+                "Tropical storm (maximum wind speed of 102 km/h)", NOW - 2 * 86_400_000L, NOW - 3_600_000L, 6.0, 108.0, "https://www.gdacs.org/",
+            ),
+            610.0,
+        ),
+    )
+
+    val NWS_ALERTS = listOf(
+        app.sotreus.core.model.WeatherAlert("urn:fake:1", app.sotreus.core.model.AlertSource.NWS, "Winter Weather Advisory", null, "Moderate", "Example Mountains", NOW - 3_600_000L, NOW + 20 * 3_600_000L, "NWS Example", null),
+        app.sotreus.core.model.WeatherAlert("urn:fake:2", app.sotreus.core.model.AlertSource.NWS, "Frost Advisory", null, "Minor", "Example Valley", NOW + 6 * 3_600_000L, NOW + 14 * 3_600_000L, "NWS Example", null),
+    )
+    val METEOALARM_GROUPS = listOf(
+        app.sotreus.core.model.AlertGroup("Snow-ice Warning", "Yellow", "Minor", listOf("Kreis A", "Kreis B", "Kreis C", "Kreis D"), NOW + 2 * 3_600_000L, NOW + 14 * 3_600_000L, "https://meteoalarm.org"),
+    )
+    val STATION = app.sotreus.core.model.StationReading(
+        2178, "Example Station", "AirNow", 7.4,
+        listOf(
+            app.sotreus.core.model.StationValue("PM2.5", "µg/m³", 21.4, NOW - 40 * 60_000L),
+            app.sotreus.core.model.StationValue("O₃", "ppm", 0.031, NOW - 100 * 60_000L),
+        ),
+        "Example Board",
+    )
+
     private fun entity(
         id: String, kind: RadioKind, name: String?, family: DeviceFamily?, signature: String?, guess: String?, rssi: Int,
         state: UserEntityState = UserEntityState.UNCLASSIFIED, userName: String? = null, notable: Boolean = false, security: String? = null,

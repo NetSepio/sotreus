@@ -56,8 +56,12 @@ object PlaceGeofence {
     /** A hand pick made without a fix adopts the first fix that arrives within this window. */
     const val ANCHOR_ADOPT_MS = 10 * 60_000L
 
-    /** Radii the user can choose for a place. */
-    val RADIUS_CHOICES_M = listOf(50, 100, 150, 300)
+    /** Radii the user can choose for a place: a room or café up to a mall, campus or convention centre. */
+    val RADIUS_CHOICES_M = listOf(50, 150, 300, 500, 1000)
+
+    /** The choice closest to [radiusM], so a place saved with an older radius still shows a selection. */
+    fun nearestChoice(radiusM: Int?): Int =
+        RADIUS_CHOICES_M.minBy { kotlin.math.abs(it - (radiusM ?: DEFAULT_RADIUS_M)) }
 
     fun usable(fix: Fix): Boolean = (fix.accuracyM ?: 0f) <= MAX_ACCURACY_M
 

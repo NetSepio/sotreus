@@ -157,6 +157,8 @@ jobs:
           cp app/build/outputs/apk/generic/release/app-generic-release.apk "dist/Sotreus-${version}-generic.apk"
           cp app/build/outputs/apk/solanaMobile/release/app-solanaMobile-release.apk "dist/Sotreus-${version}-solana-mobile.apk"
           cp app/build/outputs/bundle/genericRelease/app-generic-release.aab "dist/Sotreus-${version}-generic.aab"
+          # R8 mappings decode crash stack traces from these exact builds; a rebuild may not match.
+          (cd app/build/outputs/mapping && zip -qr "$GITHUB_WORKSPACE/dist/Sotreus-${version}-mapping.zip" genericRelease/mapping.txt solanaMobileRelease/mapping.txt)
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then
             tag="$GITHUB_REF_NAME"
           else
@@ -168,6 +170,7 @@ jobs:
           - \`Sotreus-${version}-generic.apk\` — sideload on a normal Android phone. Signed with the Play upload key. An install from Google Play will not update from this file.
           - \`Sotreus-${version}-solana-mobile.apk\` — Solana Mobile phones, and the file to submit to the dApp Store.
           - \`Sotreus-${version}-generic.aab\` — upload to the Play Console.
+          - \`Sotreus-${version}-mapping.zip\` — R8 mappings for both flavors, to decode crash stack traces.
 
           Both APKs use \`com.sotreus.app\` with different certificates. Install one.
           EOF
@@ -188,3 +191,4 @@ jobs:
           files: |
             dist/*.apk
             dist/*.aab
+            dist/*.zip

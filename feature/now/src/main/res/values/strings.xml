@@ -3,6 +3,10 @@
     <string name="now_place_kicker">Place ▾</string>
     <string name="now_place_kicker_location">Place · by location ▾</string>
     <string name="now_unsaved_place">Unsaved place</string>
+    <string name="now_place_kicker_unsaved">Unsaved place ▾</string>
+    <string name="now_place_kicker_with_code">Unsaved · %1$s ▾</string>
+    <string name="now_place_kicker_code">Unsaved · plus code ▾</string>
+    <string name="now_place_kicker_area">Unsaved · area (masked) ▾</string>
     <string name="now_observing">Observing</string>
     <string name="now_simulated">Simulated</string>
     <string name="now_paused">Paused</string>
@@ -112,4 +116,8 @@
     <string name="now_live_path">Live path</string>
     <string name="now_radio_conditions">Radio conditions</string>
     <string name="now_hide_burst">Hide this burst</string>
+    <string name="picker_radius_label">Place reaches</string>
+    <string name="picker_radius_m">%1$d m</string>
+    <string name="picker_radius_km">%1$d km</string>
+    <string name="picker_radius_note">50 m for a room or café, 300 m for a park or campus, up to 1 km for a mall or convention centre. Moving around inside keeps this place; leaving it switches to another saved place or the plus code.</string>
 </resources>

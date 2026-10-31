@@ -304,8 +304,8 @@ private fun LocationSection(state: PlaceUiState, onUseCurrent: () -> Unit, onPic
             }
             // The place's radius: within it, small moves and GPS jitter keep observations at this place.
             SegmentedToggle(
-                PlaceGeofence.RADIUS_CHOICES_M.map { it to stringResource(R.string.loc_radius_option, it) },
-                place.radiusM ?: PlaceGeofence.DEFAULT_RADIUS_M,
+                PlaceGeofence.RADIUS_CHOICES_M.map { it to if (it >= 1000) stringResource(R.string.loc_radius_option_km, it / 1000) else stringResource(R.string.loc_radius_option, it) },
+                PlaceGeofence.nearestChoice(place.radiusM),
                 onRadius,
             )
             Text(stringResource(R.string.loc_radius_note), style = SotreusTheme.typography.caption, color = c.textMuted)

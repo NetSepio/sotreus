@@ -51,7 +51,8 @@
     <string name="loc_coords">%1$s, %2$s</string>
     <string name="loc_radius">Within about %1$d m</string>
     <string name="loc_radius_option">%1$d m</string>
-    <string name="loc_radius_note">Radius. While the phone is within it, Sotreus counts observations as this place, so small moves don’t split a visit.</string>
+    <string name="loc_radius_option_km">%1$d km</string>
+    <string name="loc_radius_note">Radius. While the phone is within it, Sotreus counts observations as this place, so moving around a café, campus or mall doesn’t split a visit. Leaving it switches to another saved place or the plus code.</string>
     <string name="loc_masked">Coordinates masked</string>
     <string name="loc_reveal">Show</string>
     <string name="loc_use_current">Use current location</string>

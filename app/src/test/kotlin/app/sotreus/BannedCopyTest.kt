@@ -15,6 +15,7 @@ class BannedCopyTest {
     private val banned = listOf(
         "threat", "spy", "tracked", "tracking you", "surveillance detected", "area is clean",
         "safe area", "unsafe", "verified location", "you are being",
+        "air is clean", "you are safe", "you are in danger",
     )
     private val allowed = listOf("not a threat score.")
 

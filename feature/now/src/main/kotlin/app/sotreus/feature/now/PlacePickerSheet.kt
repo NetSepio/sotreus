@@ -35,7 +35,7 @@ internal fun PlacePickerSheet(
     places: List<PlaceSummary>,
     currentId: Long?,
     onSelect: (Long?) -> Unit,
-    onCreate: (String, Boolean) -> Unit,
+    onCreate: (String, Boolean, Int) -> Unit,
     onDetails: (Long) -> Unit,
     onDismiss: () -> Unit,
     byLocation: Boolean = false,
@@ -76,12 +76,12 @@ internal fun PlacePickerSheet(
             if (byLocation) Text(stringResource(R.string.picker_note_location), style = SotreusTheme.typography.caption, color = c.textDim)
         }
     }
-    if (creating) NewPlaceDialog(onCreate = { name, withLocation -> creating = false; onCreate(name, withLocation) }, onDismiss = { creating = false })
+    if (creating) NewPlaceDialog(onCreate = { name, withLocation, radius -> creating = false; onCreate(name, withLocation, radius) }, onDismiss = { creating = false })
 }
 
 /** New place: a name, and optionally this phone's current location (asked for in context). */
 @Composable
-private fun NewPlaceDialog(onCreate: (String, Boolean) -> Unit, onDismiss: () -> Unit) {
+private fun NewPlaceDialog(onCreate: (String, Boolean, Int) -> Unit, onDismiss: () -> Unit) {
     val c = SotreusTheme.colors
     val context = androidx.compose.ui.platform.LocalContext.current
     fun granted() = listOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION).any {
@@ -89,6 +89,7 @@ private fun NewPlaceDialog(onCreate: (String, Boolean) -> Unit, onDismiss: () ->
     }
     var name by remember { mutableStateOf("") }
     var withLocation by remember { mutableStateOf(granted()) }
+    var radius by remember { mutableStateOf(app.sotreus.intelligence.PlaceGeofence.DEFAULT_RADIUS_M) }
     val permission = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()) { r ->
         withLocation = r.values.any { it }
     }
@@ -110,10 +111,20 @@ private fun NewPlaceDialog(onCreate: (String, Boolean) -> Unit, onDismiss: () ->
                     subtitle = stringResource(R.string.picker_save_location_sub),
                     bordered = false,
                 )
+                if (withLocation) {
+                    // How far the place reaches: a café or a whole mall, so moving around inside keeps the place.
+                    app.sotreus.core.ui.MonoLabel(stringResource(R.string.picker_radius_label), small = true)
+                    app.sotreus.core.ui.SegmentedToggle(
+                        app.sotreus.intelligence.PlaceGeofence.RADIUS_CHOICES_M.map { it to radiusLabel(it) },
+                        radius,
+                        { radius = it },
+                    )
+                    Text(stringResource(R.string.picker_radius_note), style = SotreusTheme.typography.caption, color = c.textMuted)
+                }
             }
         },
         confirmButton = {
-            androidx.compose.material3.TextButton(onClick = { onCreate(name.trim(), withLocation) }, enabled = name.isNotBlank()) {
+            androidx.compose.material3.TextButton(onClick = { onCreate(name.trim(), withLocation, radius) }, enabled = name.isNotBlank()) {
                 Text(stringResource(R.string.picker_create), style = SotreusTheme.typography.button, color = if (name.isNotBlank()) c.accent else c.textDim)
             }
         },
@@ -122,3 +133,8 @@ private fun NewPlaceDialog(onCreate: (String, Boolean) -> Unit, onDismiss: () ->
         },
     )
 }
+
+/** "50 m" … "1 km": short enough for five segments at phone width. */
+@Composable
+internal fun radiusLabel(m: Int): String =
+    if (m >= 1000) stringResource(R.string.picker_radius_km, m / 1000) else stringResource(R.string.picker_radius_m, m)

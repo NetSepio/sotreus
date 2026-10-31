@@ -1,0 +1,199 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "bbox": [
+    165.2951,
+    -13.7894,
+    165.2951,
+    -13.7894
+   ],
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     165.2951,
+     -13.7894
+    ]
+   },
+   "properties": {
+    "eventtype": "EQ",
+    "eventid": 1574916,
+    "episodeid": 1743890,
+    "eventname": "",
+    "glide": "",
+    "name": "Earthquake in Vanuatu Islands",
+    "description": "Earthquake in Vanuatu Islands",
+    "url": {
+     "geometry": "https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=EQ&eventid=1574916&episodeid=1743890",
+     "report": "https://www.gdacs.org/report.aspx?eventid=1574916&episodeid=1743890&eventtype=EQ",
+     "details": "https://www.gdacs.org/gdacsapi/api/events/geteventdata?eventtype=EQ&eventid=1574916"
+    },
+    "alertlevel": "Green",
+    "alertscore": 1,
+    "episodealertlevel": "Green",
+    "episodealertscore": 0.0,
+    "istemporary": "false",
+    "iscurrent": "true",
+    "country": "Vanuatu Islands",
+    "fromdate": "2026-10-31T09:18:32",
+    "todate": "2026-10-31T09:18:32",
+    "datemodified": "2026-10-31T09:44:04",
+    "iso3": "",
+    "source": "NEIC",
+    "sourceid": "",
+    "severitydata": {
+     "severity": 4.9,
+     "severitytext": "Magnitude 4.9M, Depth:10km",
+     "severityunit": "M"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "bbox": [
+    142.9,
+    22.2,
+    142.9,
+    22.2
+   ],
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     142.9,
+     22.2
+    ]
+   },
+   "properties": {
+    "eventtype": "TC",
+    "eventid": 1001343,
+    "episodeid": 32,
+    "eventname": "IN-FA-26",
+    "glide": "",
+    "name": "Tropical Cyclone IN-FA-26",
+    "description": "Tropical Cyclone IN-FA-26",
+    "url": {
+     "geometry": "https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=TC&eventid=1001343&episodeid=32",
+     "report": "https://www.gdacs.org/report.aspx?eventid=1001343&episodeid=32&eventtype=TC",
+     "details": "https://www.gdacs.org/gdacsapi/api/events/geteventdata?eventtype=TC&eventid=1001343"
+    },
+    "alertlevel": "Green",
+    "alertscore": 1,
+    "episodealertlevel": "Green",
+    "episodealertscore": 1.0,
+    "istemporary": "false",
+    "iscurrent": "true",
+    "country": "Japan, Marshall Islands",
+    "fromdate": "2026-10-25T06:00:00",
+    "todate": "2026-10-31T06:00:00",
+    "datemodified": "2026-10-31T07:52:04",
+    "iso3": "MHL",
+    "source": "JTWC",
+    "sourceid": "",
+    "countryonland": "",
+    "severitydata": {
+     "severity": 240.7392,
+     "severitytext": "Hurricane/Typhoon > 74 mph (maximum wind speed of 241 km/h)",
+     "severityunit": "km/h"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "bbox": [
+    127.4,
+    31.2,
+    127.4,
+    31.2
+   ],
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     127.4,
+     31.2
+    ]
+   },
+   "properties": {
+    "eventtype": "TC",
+    "eventid": 1001338,
+    "episodeid": 46,
+    "eventname": "CHAMPI-26",
+    "glide": "TC-2026-000192-GUM",
+    "name": "Tropical Cyclone CHAMPI-26",
+    "description": "Tropical Cyclone CHAMPI-26",
+    "url": {
+     "geometry": "https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=TC&eventid=1001338&episodeid=46",
+     "report": "https://www.gdacs.org/report.aspx?eventid=1001338&episodeid=46&eventtype=TC",
+     "details": "https://www.gdacs.org/gdacsapi/api/events/geteventdata?eventtype=TC&eventid=1001338"
+    },
+    "alertlevel": "Red",
+    "alertscore": 3,
+    "episodealertlevel": "Green",
+    "episodealertscore": 1.0,
+    "istemporary": "false",
+    "iscurrent": "false",
+    "country": "Philippines, Guam, Northern Mariana Islands, Japan, China, South Korea",
+    "fromdate": "2026-10-14T12:00:00",
+    "todate": "2026-10-25T18:00:00",
+    "datemodified": "2026-10-26T22:00:19",
+    "iso3": "GUM",
+    "source": "JTWC",
+    "sourceid": "",
+    "countryonland": "",
+    "severitydata": {
+     "severity": 296.2944,
+     "severitytext": "Tropical Storm (maximum wind speed of 296 km/h)",
+     "severityunit": "km/h"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "bbox": [
+    12.876,
+    48.127,
+    12.876,
+    48.127
+   ],
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     12.876,
+     48.127
+    ]
+   },
+   "properties": {
+    "eventtype": "DR",
+    "eventid": 1018332,
+    "episodeid": 26,
+    "eventname": "Europe-2026",
+    "glide": "DR-2025-000239-ALB",
+    "name": "Drought in Andorra, Albania, Austria, Bosnia  and  Herzegovina, Belgium, Bulgaria, Belarus, Switzerland, Czech Republic, Germany, Denmark, Spain, France, Croatia, Hungary, Ireland, Italy, Liechtenstein, Luxembourg, Moldova, Montenegro, Netherlands, Poland, Romania, Serbia, Sweden, Slovenia, Slovakia, Ukraine, ",
+    "description": "Drought in Andorra, Albania, Austria, Bosnia  and  Herzegovina, Belgium, Bulgaria, Belarus, Switzerland, Czech Republic, Germany, Denmark, Spain, France, Croatia, Hungary, Ireland, Italy, Liechtenstein, Luxembourg, Moldova, Montenegro, Netherlands, Poland, Romania, Serbia, Sweden, Slovenia, Slovakia, Ukraine, ",
+    "url": {
+     "geometry": "https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=DR&eventid=1018332&episodeid=26",
+     "report": "https://www.gdacs.org/report.aspx?eventid=1018332&episodeid=26&eventtype=DR",
+     "details": "https://www.gdacs.org/gdacsapi/api/events/geteventdata?eventtype=DR&eventid=1018332"
+    },
+    "alertlevel": "Orange",
+    "alertscore": 2,
+    "episodealertlevel": "Orange",
+    "episodealertscore": 1.25,
+    "istemporary": "false",
+    "iscurrent": "false",
+    "country": "Andorra, Albania, Austria, Bosnia & Herzegovina, Belgium, Bulgaria, Belarus, Switzerland, Czech Republic, Germany, Denmark, Spain, France, Croatia, Hungary, Ireland, Italy, Liechtenstein, Luxembourg, Moldova, Montenegro, Netherlands, Poland, Romania, Serbia, Sweden, Slovenia, Slovakia, Ukraine, ",
+    "fromdate": "2025-12-21T00:00:00",
+    "todate": "2026-10-29T00:00:00",
+    "datemodified": "2026-10-31T05:57:02",
+    "iso3": "AND",
+    "source": "GDO",
+    "sourceid": "",
+    "severitydata": {
+     "severity": 2009754.0,
+     "severitytext": "Medium impact for agricultural drought in 2009754 km2",
+     "severityunit": "km2"
+    }
+   }
+  }
+ ]
+}
