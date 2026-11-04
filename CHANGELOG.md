@@ -2,6 +2,49 @@
 
 All notable changes to Sotreus Android. Versions follow `versionName` in `app/build.gradle.kts`.
 
+## 1.1.4 — 2026-11-05
+
+### Added
+
+- Add the Bitchat mesh signature (Fieldwatch catalog 97, upstream commit `cf03b3c`). It matches
+  the BLE service advertisement only, not the name, and is not on the default watchlist.
+
+- Add a Map background choice in Field tools: None (plain grid), Downloaded area only, or Online
+  street maps. Downloaded area only never loads tiles while a map is open; MapLibre's connection
+  flag is switched off, so the map server does not see where a map is opened.
+- Download one street area (10, 25 or 50 km around this phone, centre rounded to 0.05°) for offline
+  use, with a tile estimate before the download, progress, cancel, replace and delete. The old area
+  is kept until a new one finishes. It also serves the proximity check's signal map.
+- Open the route map full screen, with Close view / Whole path, a Recenter button after panning, a
+  scale bar, and an "About this map" sheet holding the key, the map source, known cameras and
+  caveats. With no street map, a faint grid one scale-bar step wide shows distance.
+- Draw the path with a dark casing, fading from earlier to newer; a hollow dot marks the start and
+  a solid dot the newest end. On a live path the solid dot is this phone's latest fix (30 s or
+  newer) with an accuracy ring. Approximate network-fix paths are dashed.
+- Open a live route map on this phone's latest fix and accuracy ring before the first GPS fix of
+  25 m or better starts the path, with a note saying so. An open map stays when that fix goes stale.
+
+### Fixed
+
+- Ease the route map between fixes instead of re-fitting the whole path on every update.
+- Match Samsung SmartTags by name or service FD5A only (Fieldwatch catalog 98, upstream commit
+  `5bf0d43`). A Samsung phone, TV, Buds or watch that only sends Samsung's company ID no longer
+  matches the SmartTag row.
+- Keep imported signatures when the bundled catalog moves on. A pack saved under an older catalog
+  still loads; its copies of stock rows give way to the bundled ones.
+
+### Changed
+
+- Remove the Seed Vault Wallet package from the solanaMobile manifest queries. Wallet connection
+  still goes through Mobile Wallet Adapter.
+- Bring the GPS warning wording up to Fieldwatch 1.1.41 (upstream commit `24562fb`): an
+  app-generated location reads "An app on this phone is generating the GPS location" instead of
+  "Mock location app", and the notes are shorter. Wi-Fi throttle and disclaimer text say Android
+  instead of OS.
+- Replace the Online street maps switch with the Map background choice; a phone that had it on
+  keeps online maps.
+- Bump the stock catalog to 98 and Android version to 1.1.4 (code 7). No database schema change.
+
 ## 1.1.3 — 2026-10-31
 
 ### Added

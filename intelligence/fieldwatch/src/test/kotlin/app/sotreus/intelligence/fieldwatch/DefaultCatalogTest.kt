@@ -1,7 +1,8 @@
 /*
  * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit e71b9b2).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
- * Modified for Sotreus: tests for unported DeviceDetailText removed.
+ * Modified for Sotreus: tests for unported DeviceDetailText removed. Bitchat (catalog 97) and
+ * SmartTag (catalog 98) tests from upstream commits cf03b3c and 5bf0d43.
  */
 package app.sotreus.intelligence.fieldwatch
 
@@ -592,6 +593,60 @@ class DefaultCatalogTest {
     }
 
     @Test
+    fun bitchatMatchesMainnetServiceUuidOnly() {
+        val stock = DefaultCatalog.fleets()
+        val row = stock.single { it.id == "fleet-bitchat" }
+        assertEquals(SignatureClass.MESH, row.kind)
+        assertTrue(row.attentionNote.isBlank())
+        assertFalse("fleet-bitchat" in DefaultCatalog.defaultWatchlist().mapNotNull { it.fleetId })
+        assertEquals(
+            listOf("f47b5e2d-4a9e-4c5a-9b3f-8e1d2c3a4b5c"),
+            row.rules.map { it.text },
+        )
+        val mainnet = ble(
+            name = "",
+            serviceUuids = listOf("F47B5E2D-4A9E-4C5A-9B3F-8E1D2C3A4B5C"),
+        ).copy(key = "BLE:b1", mac = "AA:BB:CC:DD:EE:51")
+        val testnet = ble(
+            name = "",
+            serviceUuids = listOf("F47B5E2D-4A9E-4C5A-9B3F-8E1D2C3A4B5A"),
+        ).copy(key = "BLE:b2", mac = "AA:BB:CC:DD:EE:52")
+        val characteristic = ble(
+            name = "",
+            serviceUuids = listOf("A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D"),
+        ).copy(key = "BLE:b3", mac = "AA:BB:CC:DD:EE:53")
+        val namedOnly = ble(name = "Bitchat").copy(key = "BLE:b4", mac = "AA:BB:CC:DD:EE:54")
+        val hits = SignatureEngine().match(listOf(mainnet, testnet, characteristic, namedOnly), stock)
+        assertTrue("mainnet service UUID", "fleet-bitchat" in hits.getValue(mainnet.key))
+        assertFalse("testnet UUID", "fleet-bitchat" in hits.getValue(testnet.key))
+        assertFalse("characteristic UUID", "fleet-bitchat" in hits.getValue(characteristic.key))
+        assertFalse("name alone", "fleet-bitchat" in hits.getValue(namedOnly.key))
+        assertTrue(DeviceExplain.guess(mainnet, listOf("Bitchat")).headline.contains("Bitchat BLE mesh"))
+    }
+
+    @Test
+    fun smartTagMatchesNameOrFd5aNotSamsungCompanyId() {
+        val stock = DefaultCatalog.fleets()
+        val fleet = stock.single { it.id == "fleet-smarttag" }
+        assertTrue(fleet.matchAny)
+        assertTrue(fleet.attentionNote.isBlank())
+        assertFalse(fleet.rules.any { it.kind == RuleKind.MANUFACTURER_ID })
+        assertTrue(fleet.rules.any { it.kind == RuleKind.SERVICE_UUID && it.text.equals("FD5A", true) })
+        val engine = SignatureEngine()
+        val tv = ble(name = "", manufacturerId = 0x0075, manufacturerDataHex = "0102")
+            .copy(key = "BLE:tv", mac = "AA:BB:CC:DD:EE:75")
+        val named = ble(name = "SmartTag").copy(key = "BLE:st", mac = "AA:BB:CC:DD:EE:76")
+        val spaced = ble(name = "Galaxy Smart Tag").copy(key = "BLE:sp", mac = "AA:BB:CC:DD:EE:77")
+        val uuid = ble(name = "", serviceUuids = listOf("FD5A"))
+            .copy(key = "BLE:fd", mac = "AA:BB:CC:DD:EE:78")
+        val hits = engine.match(listOf(tv, named, spaced, uuid), stock)
+        assertFalse("Samsung company ID", "fleet-smarttag" in hits.getValue(tv.key))
+        assertTrue("SmartTag name", "fleet-smarttag" in hits.getValue(named.key))
+        assertTrue("Smart Tag name", "fleet-smarttag" in hits.getValue(spaced.key))
+        assertTrue("FD5A", "fleet-smarttag" in hits.getValue(uuid.key))
+    }
+
+    @Test
     fun chipoloMatchesServiceUuidNotNeighborUuids() {
         val stock = DefaultCatalog.fleets()
         val chipolo = stock.single { it.id == "fleet-chipolo" }
@@ -600,7 +655,7 @@ class DefaultCatalogTest {
         assertTrue(chipolo.rules.any { it.kind == RuleKind.SERVICE_UUID && it.text.equals("FE33", true) })
         assertFalse(chipolo.rules.any { it.text.equals("FE65", true) || it.text.equals("FE34", true) })
         assertTrue(DeviceExplain.uuidGloss("FE33")!!.contains("Chipolo"))
-        assertEquals(254, stock.size)
+        assertEquals(255, stock.size)
 
         val unnamed = ble(name = "", serviceUuids = listOf("FE33"))
             .copy(key = "BLE:c1", mac = "AA:BB:CC:DD:EE:41")

@@ -19,7 +19,7 @@ class FieldValidationTest {
         assertTrue(TranslationValidation.validate(original, mapOf("count" to "%1\$d %2\$s %")).isEmpty())
     }
     @Test fun signatureRoundTripPreservesCurrentStockAndRejectsOlderOrAmbiguousReplacements() {
-        val stock = SignatureExchange.pack(DefaultCatalog.fleets(), 96, "1.1.1", "")
+        val stock = SignatureExchange.pack(DefaultCatalog.fleets(), SignaturePackValidation.STOCK_VERSION, "1.1.1", "")
         assertEquals(stock.fleets, SignaturePackValidation.parse(SignatureExchange.encode(stock)).fleets)
         fun rejected(pack: SignaturePack) = assertTrue(runCatching { SignaturePackValidation.parse(SignatureExchange.encode(pack)) }.isFailure)
         rejected(stock.copy(catalogVersion = 92))
@@ -27,6 +27,10 @@ class FieldValidationTest {
         rejected(stock.copy(fleets = listOf(stock.fleets.first(), stock.fleets.first())))
         val custom = stock.fleets.first().copy(id = "my-local-signature")
         assertEquals(listOf(custom), SignaturePackValidation.parse(SignatureExchange.encode(stock.copy(catalogVersion = 0, fleets = listOf(custom)))).fleets)
+        // A pack this phone saved under catalog 96 still loads after the stock catalog moves on.
+        val savedOld = stock.copy(catalogVersion = 96, fleets = stock.fleets + custom)
+        assertEquals(savedOld.fleets, SignaturePackValidation.parse(SignatureExchange.encode(savedOld), saved = true).fleets)
+        rejected(savedOld)
     }
     @Test fun crashNoteRedactsAddressesUrlsAndCoordinatePrecision() {
         val raw = "Error 00:11:22:33:44:55 at 12.345678,-77.123456 https://example.test/key-secret\n at app.sotreus.Main.onCreate(Main.kt:12)"

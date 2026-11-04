@@ -217,7 +217,7 @@ Remote ID advertised aircraft/operator positions are labelled separately and rem
 
 **Settings → Language packs** offers 26 partial community translations and a Sotreus English
 template for local imports. Missing or incompatible entries stay English. **Signatures** supports
-reviewing/importing packs and restoring bundled catalog 96 without replacing vendor data.
+reviewing/importing packs and restoring bundled catalog 98 without replacing vendor data.
 Online map consent is separate from manual vendor lookup consent. OpenFreeMap map areas and the
 requester's IP are visible to the map service when enabled; see its
 [mobile integration guide](https://openfreemap.org/quick_start/).

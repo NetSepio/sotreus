@@ -149,6 +149,9 @@ object FakeSotreusData {
 
     const val WALLET = "7xKpQh2mD9a5Vw8Lr3TnB6cY1sFzE4uJg0Ho3fQe"
 
+    /** A short walk for route-map previews (lat, lon). Made up; not anyone's real path. */
+    val ROUTE: List<Pair<Double, Double>> = List(24) { i -> 47.6062 + i * 0.00018 to -122.3321 + kotlin.math.sin(i / 4.0) * 0.0006 }
+
     // Environment context (architecture handoff §14.5). Places and names are placeholders.
     val AIR = app.sotreus.core.model.AirReading(34, 52, 11.0, 19.0, 62.0, 14.0, NOW - 2 * 3_600_000L)
     val QUAKES = listOf(

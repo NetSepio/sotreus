@@ -4,10 +4,14 @@ import app.sotreus.intelligence.fieldwatch.*
 
 /** Imports may extend this catalog, but cannot silently restore obsolete stock matches. */
 object SignaturePackValidation {
-    const val STOCK_VERSION = 96
+    const val STOCK_VERSION = 98
     const val MAX_BYTES = 4_194_304
 
-    fun parse(text: String): SignaturePack {
+    /**
+     * [saved] is the pack this phone wrote itself. An older saved pack still loads: its own
+     * signatures are kept and its copies of stock rows give way to the bundled catalog.
+     */
+    fun parse(text: String, saved: Boolean = false): SignaturePack {
         require(text.toByteArray().size <= MAX_BYTES) { "Signature pack is too large" }
         val p = SignatureExchange.parsePack(text).pack
         require(p.formatVersion == SignaturePack.FORMAT_VERSION) { "Unsupported signature pack version" }
@@ -17,7 +21,7 @@ object SignaturePackValidation {
                 (f.decode?.fields?.size ?: 0) <= 128
         }) { "Signature pack exceeds the supported limits or has duplicate identifiers" }
         val stockIds = DefaultCatalog.fleets().map { it.id }.toSet()
-        require(p.catalogVersion >= STOCK_VERSION || p.fleets.none { it.id in stockIds }) { "This pack would replace newer bundled signatures" }
+        require(saved || p.catalogVersion >= STOCK_VERSION || p.fleets.none { it.id in stockIds }) { "This pack would replace newer bundled signatures" }
         return p
     }
 }

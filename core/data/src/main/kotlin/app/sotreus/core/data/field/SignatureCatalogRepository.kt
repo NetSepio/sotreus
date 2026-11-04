@@ -26,7 +26,7 @@ class SignatureCatalogRepository @Inject constructor(@ApplicationContext context
     val fleets = _fleets.asStateFlow()
     init {
         if (file.length() in 1..MAX_BYTES.toLong()) runCatching {
-            val pack = preview(file.readText())
+            val pack = SignaturePackValidation.parse(file.readText(), saved = true)
             apply(pack)
         }
     }

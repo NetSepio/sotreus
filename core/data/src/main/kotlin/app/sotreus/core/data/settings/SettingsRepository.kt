@@ -13,6 +13,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import app.sotreus.core.model.AircraftMode
 import app.sotreus.core.model.AirQualityMode
 import app.sotreus.core.model.GeotagMode
+import app.sotreus.core.model.MapBackground
 import app.sotreus.core.model.SatelliteGroup
 import app.sotreus.core.model.NowView
 import app.sotreus.core.model.RetentionPolicy
@@ -39,7 +40,9 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val gnssSensitivity = stringPreferencesKey("gnss_sensitivity")
         val gnssMonitoring = booleanPreferencesKey("gnss_monitoring")
         val livePath = booleanPreferencesKey("live_path")
+        /** Read only, so a phone that had Online street maps on keeps them after the choice became three-way. */
         val onlineRouteMaps = booleanPreferencesKey("online_route_maps")
+        val mapBackground = stringPreferencesKey("map_background")
         val languageTag = stringPreferencesKey("language_tag")
         val currentPlace = longPreferencesKey("current_place_id")
         val currentPlaceAuto = booleanPreferencesKey("current_place_auto")
@@ -99,7 +102,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
             gnssSpoofChecks = p[Keys.gnssSpoofChecks] ?: d.gnssSpoofChecks,
             gnssSensitivity = p[Keys.gnssSensitivity] ?: d.gnssSensitivity,
             livePath = p[Keys.livePath] ?: d.livePath,
-            onlineRouteMaps = p[Keys.onlineRouteMaps] ?: d.onlineRouteMaps,
+            mapBackground = p[Keys.mapBackground].enumOr(if (p[Keys.onlineRouteMaps] == true) MapBackground.ONLINE else d.mapBackground),
             cameraPlates = p[Keys.cameraPlates] ?: d.cameraPlates,
             cameraOthers = p[Keys.cameraOthers] ?: d.cameraOthers,
             languageTag = p[Keys.languageTag] ?: d.languageTag,
@@ -145,7 +148,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
     suspend fun setGnssSensitivity(level: String) { require(level in setOf("LOW", "MEDIUM", "HIGH")); store.edit { it[Keys.gnssSensitivity] = level } }
     suspend fun setGnssMonitoring(on: Boolean) { store.edit { it[Keys.gnssMonitoring] = on } }
     suspend fun setLivePath(on: Boolean) { store.edit { it[Keys.livePath] = on } }
-    suspend fun setOnlineRouteMaps(on: Boolean) { store.edit { it[Keys.onlineRouteMaps] = on } }
+    suspend fun setMapBackground(v: MapBackground) { store.edit { it[Keys.mapBackground] = v.name; it.remove(Keys.onlineRouteMaps) } }
     suspend fun setCameraPlates(on: Boolean) { store.edit { it[Keys.cameraPlates] = on } }
     suspend fun setCameraOthers(on: Boolean) { store.edit { it[Keys.cameraOthers] = on } }
     suspend fun setLanguageTag(tag: String) { store.edit { it[Keys.languageTag] = tag } }

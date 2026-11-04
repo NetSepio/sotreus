@@ -12,6 +12,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import org.maplibre.android.MapLibre
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
+import app.sotreus.core.model.MapBackground
+import app.sotreus.core.model.MapStyles
 
 /** A MapView that follows the screen's lifecycle and is destroyed with the composable. */
 @Composable
@@ -36,13 +38,15 @@ internal fun rememberLifecycleMapView(): MapView {
 }
 
 /**
- * Street style only when online maps are on. The blank local style makes no network requests, so
- * the tile server never learns where this phone is unless the user chose that.
+ * [MapBackground.NONE] is a blank local style with no network requests. [MapBackground.OFFLINE] reads the street
+ * style and tiles only from the area downloaded on this phone: MapLibre's connection flag is switched off, so nothing
+ * is requested even where the area ends. [MapBackground.ONLINE] loads tiles as the map moves.
  */
-internal fun mapStyle(online: Boolean, ink: Color): Style.Builder =
-    if (online) Style.Builder().fromUri(ONLINE_STYLE)
-    else Style.Builder().fromJson("""{"version":8,"sources":{},"layers":[{"id":"background","type":"background","paint":{"background-color":"${ink.hex()}"}}]}""")
+internal fun mapStyle(background: MapBackground, ink: Color): Style.Builder {
+    MapLibre.setConnected(if (background == MapBackground.OFFLINE) false else null)
+    return if (background == MapBackground.NONE) Style.Builder().fromJson("""{"version":8,"sources":{},"layers":[{"id":"background","type":"background","paint":{"background-color":"${ink.hex()}"}}]}""")
+    else Style.Builder().fromUri(MapStyles.STREETS)
+}
 
 internal fun Color.hex(): String = String.format("#%06X", toArgb() and 0xFFFFFF)
 
-private const val ONLINE_STYLE = "https://tiles.openfreemap.org/styles/dark"

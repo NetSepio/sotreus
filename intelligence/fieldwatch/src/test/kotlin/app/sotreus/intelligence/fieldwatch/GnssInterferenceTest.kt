@@ -2,6 +2,8 @@
  * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit ddc0d8c).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
  * Modified for Sotreus: package renamed; adapted to Sotreus modules.
+ * Mock-location wording test from upstream commit 24562fb, without the unported GNSS path pin
+ * and debrief section.
  */
 package app.sotreus.intelligence.fieldwatch
 
@@ -272,8 +274,27 @@ class GnssInterferenceTest {
         val det = quiet()
         val snap = feed(det, 5, 0L, agc = 2.0, cn0 = 40.0, sv = 11, side = GnssSide(mock = true))
         val mock = snap.lives.single { it.kind == GnssKind.MOCK }
-        assertTrue(mock.detail.contains("mock location"))
+        assertEquals(GnssCopy.MOCK, mock.detail)
+        assertTrue(mock.detail.contains("generating the GPS location"))
+        assertFalse(mock.detail.contains("mock", ignoreCase = true))
         assertTrue(snap.lives.none { it.kind == GnssKind.SPOOFING })
+        val armed = feed(det, 55, 5_000L, agc = 2.0, cn0 = 40.0, sv = 11, side = GnssSide(mock = true))
+        assertEquals("ALERT: interference (Low)", armed.statusLine)
+        val shown = GnssAlerts().onLives(snap.lives, GnssConfidence.HIGH, 1L)
+        val open = shown.notice!!
+        assertTrue(open.showDialog)
+        assertEquals("Possible GPS interference (Low)", open.title)
+        assertEquals("Possible GNSS interference · Low", open.line)
+        assertEquals(GnssCopy.MOCK, open.body)
+        assertFalse(open.body.contains("router", ignoreCase = true))
+        assertEquals(
+            "Possible G P S interference. An app on this phone is generating the location.",
+            shown.cue!!.phrase,
+        )
+        val mark = GnssMark(at = 1_700_000_000_000L, kind = "mock", confidence = "Low", detail = mock.detail)
+        assertTrue(mark.reportLine().contains("Possible GNSS interference"))
+        assertTrue(mark.reportLine().contains("generating the GPS location"))
+        assertFalse(mark.reportLine().contains("mock", ignoreCase = true))
     }
 
     @Test

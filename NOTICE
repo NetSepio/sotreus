@@ -23,6 +23,8 @@ Fieldwatch (https://github.com/OffGridPete/Fieldwatch)
   b67f207 (Fieldwatch 1.1.34). The known-camera lists (FlockJson, FlockStore, KnownCameras,
   PathCameras) are ported from upstream commit 4f74cec (Fieldwatch 1.1.37), without the spoken
   camera warning.
+  Version 1.1.4 adds catalog 97 (Bitchat, upstream cf03b3c) and catalog 98 (SmartTag, upstream
+  5bf0d43), and takes the GPS warning wording from upstream commit 24562fb (Fieldwatch 1.1.41).
   Partial community language packs in core/data/src/main/assets/languages are adapted from
   that revision with English fallback and are not reviewed/certified translations. The offline lookup tables in
   sensing/android/src/main/assets/lookups/radiodb.bin are packed from IEEE Registration Authority

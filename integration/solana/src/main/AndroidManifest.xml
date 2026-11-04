@@ -20,7 +20,6 @@
         </intent>
         <package android:name="app.phantom" />
         <package android:name="com.solflare.mobile" />
-        <package android:name="com.solanamobile.seedvault.wallet" />
         <package android:name="com.solanamobile.wallet" />
         <package android:name="app.backpack.mobile" />
         <package android:name="app.backpack.mobile.standalone" />

@@ -2,6 +2,7 @@
  * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit ddc0d8c).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
  * Modified for Sotreus: package renamed; adapted to Sotreus modules.
+ * Catalog 97 (Bitchat) and 98 (SmartTag) from upstream commits cf03b3c and 5bf0d43.
  */
 package app.sotreus.intelligence.fieldwatch
 
@@ -277,6 +278,7 @@ object DefaultCatalog {
         meshtastic(),
         helium(),
         meshCore(),
+        bitchat(),
         goTenna(),
         senseCap(),
         rakWisGate(),
@@ -416,14 +418,13 @@ object DefaultCatalog {
         colorIndex = Hue.TRACKER,
         kind = SignatureClass.FINDER,
         matchAny = true,
-        notes = "Samsung SmartTag / SmartTag+ item finder. Addresses often rotate.",
+        notes = "Samsung SmartTag / SmartTag+ item finder. Matches the name or service FD5A. Addresses often rotate.",
         builtIn = true,
         rules = listOf(
             name("SmartTag"),
             name("Smart Tag"),
             name("Galaxy SmartTag"),
             uuid("FD5A"),
-            mfg(0x0075),
         ),
     )
 
@@ -2511,6 +2512,20 @@ object DefaultCatalog {
         rules = listOf(
             bleName("MeshCore"),
             bleGlob("MeshCore*"),
+        ),
+    )
+
+    private fun bitchat() = Fleet(
+        id = "fleet-bitchat",
+        name = "Bitchat",
+        enabled = true,
+        colorIndex = Hue.MESH,
+        kind = SignatureClass.MESH,
+        matchAny = true,
+        notes = "Bitchat BLE mesh chat between nearby phones. Matches the mainnet service advertisement, so a renamed phone still matches. Pattern match, not that person.",
+        builtIn = true,
+        rules = listOf(
+            uuid("f47b5e2d-4a9e-4c5a-9b3f-8e1d2c3a4b5c"),
         ),
     )
 

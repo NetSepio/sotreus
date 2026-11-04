@@ -102,6 +102,7 @@ class ProximityViewModel @Inject constructor(
     private val controller: ObservationController,
     private val settings: SettingsRepository,
     private val signalMaps: SignalMapRepository,
+    private val offlineMaps: app.sotreus.core.data.field.OfflineMapRepository,
 ) : ViewModel() {
     private val entityId = handle.toRoute<ProximityRoute>().entityId
     private val _state = MutableStateFlow(ProximityUiState())
@@ -110,14 +111,15 @@ class ProximityViewModel @Inject constructor(
     private val _mapping = MutableStateFlow(false)
 
     /** The signal map for this radio, kept until Reset or until another radio is mapped. */
-    val map: StateFlow<SignalMapUi> = combine(signalMaps.state, _mapping, settings.settings) { m, on, prefs ->
-        SignalMapUi(m.takeIf { it.entityId == entityId } ?: SignalMap(entityId), on, prefs.onlineRouteMaps)
+    val map: StateFlow<SignalMapUi> = combine(signalMaps.state, _mapping, settings.settings, offlineMaps.state) { m, on, prefs, _ ->
+        SignalMapUi(m.takeIf { it.entityId == entityId } ?: SignalMap(entityId), on, offlineMaps.effective(prefs.mapBackground))
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SignalMapUi())
     private var mapJob: Job? = null
     private var tone: ToneGenerator? = null
     private var tickJob: Job? = null
 
     init {
+        offlineMaps.refresh()
         controller.setBoost(true)
         viewModelScope.launch {
             val entity = entities.get(entityId)
@@ -172,7 +174,7 @@ class ProximityViewModel @Inject constructor(
     }
 }
 
-data class SignalMapUi(val map: SignalMap = SignalMap(), val mapping: Boolean = false, val online: Boolean = false)
+data class SignalMapUi(val map: SignalMap = SignalMap(), val mapping: Boolean = false, val background: app.sotreus.core.model.MapBackground = app.sotreus.core.model.MapBackground.NONE)
 
 @Composable
 internal fun ProximityScreen(onBack: () -> Unit, vm: ProximityViewModel = hiltViewModel()) {
@@ -283,7 +285,7 @@ private fun SignalMapCard(ui: SignalMapUi, onMapping: (Boolean) -> Unit, onReset
                     hotLat = f?.hotLat,
                     hotLon = f?.hotLon,
                     onGlobe = m.onGlobe,
-                    online = ui.online,
+                    background = ui.background,
                     holdFlat = m.holdFlat,
                     modifier = Modifier.fillMaxWidth().height(340.dp),
                 )

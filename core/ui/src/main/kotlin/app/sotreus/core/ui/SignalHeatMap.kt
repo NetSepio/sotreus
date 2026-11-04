@@ -22,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import app.sotreus.core.designsystem.theme.SotreusTheme
+import app.sotreus.core.model.MapBackground
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
@@ -56,7 +57,7 @@ data class HeatImage(
 /**
  * Signal map: this phone's walk colored by loudness, a ring on the loudest patch, and the phone's
  * dot with its uncertainty circle. Nothing on it marks where the other radio is. Street tiles load
- * only when [online] is on and the walk has been placed on a GPS fix ([onGlobe]); before that the
+ * only when [background] is not [MapBackground.NONE] and the walk has been placed on a GPS fix ([onGlobe]); before that the
  * picture uses local coordinates and stays blank.
  */
 @Composable
@@ -68,7 +69,7 @@ fun SignalHeatMap(
     hotLat: Double?,
     hotLon: Double?,
     onGlobe: Boolean,
-    online: Boolean,
+    background: MapBackground,
     holdFlat: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -85,10 +86,10 @@ fun SignalHeatMap(
     var following by remember { mutableStateOf(true) }
     var styled by remember { mutableIntStateOf(0) }
     val view = rememberLifecycleMapView()
-    val streets = online && onGlobe
-    LaunchedEffect(map, streets) {
+    val streets = background != MapBackground.NONE && onGlobe
+    LaunchedEffect(map, streets, background) {
         map?.let { target ->
-            target.setStyle(mapStyle(streets, c.ink)) {
+            target.setStyle(mapStyle(if (streets) background else MapBackground.NONE, c.ink)) {
                 it.addSource(GeoJsonSource("uncertainty", FeatureCollection.fromFeatures(emptyArray())))
                 it.addSource(GeoJsonSource("here", FeatureCollection.fromFeatures(emptyArray())))
                 it.addSource(GeoJsonSource("hot", FeatureCollection.fromFeatures(emptyArray())))

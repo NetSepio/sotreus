@@ -263,7 +263,7 @@ private fun SettingsSolanaPreview() {
                 build = AppBuildInfo("1.0.0", 1, "com.sotreus.app", "debug", Distribution.SOLANA_MOBILE, 1),
                 solanaDevice = true,
                 profile = LocalProfileEntity("p", "Night owl", "nightowl", null, 0),
-                wallet = LinkedIdentityEntity(1, app.sotreus.core.model.LinkedIdentityKind.SOLANA_WALLET, FakeSotreusData.WALLET, app.sotreus.core.model.SolanaCluster.MAINNET_BETA, "Seed Vault", true, 0),
+                wallet = LinkedIdentityEntity(1, app.sotreus.core.model.LinkedIdentityKind.SOLANA_WALLET, FakeSotreusData.WALLET, app.sotreus.core.model.SolanaCluster.MAINNET_BETA, "Wallet", true, 0),
                 friends = 3, places = 4, stamped = 3, families = 19, wifiLimited = true,
             ),
         ) {}

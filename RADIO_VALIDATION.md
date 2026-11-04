@@ -80,7 +80,7 @@ updating the prior e71b9b2 import selectively rather than replacing Sotreus' rad
 
 | Priority | Recommendation implemented | Sotreus integration |
 |---|---|---|
-| High | Catalog and recognition corrections | Catalog 96, narrowed Flock tests, current Chipolo matching, Polar/GoPro disambiguation, richer payload decoders |
+| High | Catalog and recognition corrections | Catalog 98 (since 1.1.4), narrowed Flock tests, current Chipolo matching, Polar/GoPro disambiguation, richer payload decoders |
 | High | Scanner recovery and callback isolation | Radio/provider broadcasts, Location off/on quiet window, malformed record/callback guards, foreground session restoration |
 | Medium | Local crash recovery | Java/native exit notes where available, redaction, copy/Continue gate, no automatic upload |
 | Medium | Seven-day tracker stops | Separate opt-in, public finder address or explicit UAS ID, two samples, accurate nonmock fixes, eight stops/400 identifiers, deletion and retention |

@@ -1195,14 +1195,14 @@
     "signatures_restore": "Restore bundled signatures",
     "signatures_import_title": "Apply signature pack?",
     "signatures_import_body": "This changes device classifications. Existing observations, labels and the vendor database remain. Review the source of this file before importing.",
-    "signatures_restore_body": "Remove imported signature changes and restore bundled catalog 96. Labels, observations and vendor data remain.",
+    "signatures_restore_body": "Remove imported signature changes and restore bundled catalog 98. Labels, observations and vendor data remain.",
     "field_open_path": "Open live path",
     "field_spoof": "Additional spoofing checks",
     "field_spoof_sub": "Compare independent position, motion and system network-time evidence. A single mismatch does not establish spoofing.",
     "field_low": "Low",
     "field_medium": "Medium",
     "field_high": "High",
-    "signatures_catalog": "Fieldwatch catalog 96 · %1$d signatures",
+    "signatures_catalog": "Fieldwatch catalog 98 · %1$d signatures",
     "signatures_preview_count": "%1$d signatures · catalog %2$d",
     "wallet_picker_title": "Connect wallet"
   }

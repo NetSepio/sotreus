@@ -164,6 +164,12 @@
     <string name="route_recenter">Recenter</string>
     <string name="route_mark_heard">%1$s · this phone was here</string>
     <string name="route_camera_cluster">%1$d mapped cameras here · zooming in</string>
+    <string name="route_view_close">Close view</string>
+    <string name="route_view_whole">Whole path</string>
+    <string name="route_here">This phone · latest fix</string>
+    <string name="route_start">Start of this path</string>
+    <string name="route_scale_m">%1$d m</string>
+    <string name="route_scale_km">%1$s km</string>
     <string name="heat_weak">Weak</string>
     <string name="heat_strong">Strong</string>
     <string name="export_format_atak">ATAK data package</string>

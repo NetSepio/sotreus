@@ -14,6 +14,17 @@ enum class AircraftMode { OFF, COARSE_AREA, EXACT_AREA }
 /** How precisely the phone's location is rounded before an air-quality request (architecture handoff §14.5). */
 enum class AirQualityMode { OFF, COARSE, FINE }
 
+/**
+ * What path and signal maps draw under the path. [NONE] and [OFFLINE] make no network requests while a map is
+ * open; [OFFLINE] draws only a street area the user downloaded. [ONLINE] loads street tiles as the map moves.
+ */
+enum class MapBackground { NONE, OFFLINE, ONLINE }
+
+/** The street style. Downloads and maps must use the same address, or a downloaded area is never found. */
+object MapStyles {
+    const val STREETS = "https://tiles.openfreemap.org/styles/dark"
+}
+
 /** CelesTrak groups Sotreus can predict. [celestrakGroup] is the CelesTrak GROUP name. */
 enum class SatelliteGroup(val celestrakGroup: String) {
     EARTH_OBSERVATION("resource"),
@@ -76,14 +87,17 @@ data class SotreusSettings(
     val gnssSpoofChecks: Boolean = false,
     val gnssSensitivity: String = "MEDIUM",
     val livePath: Boolean = false,
-    val onlineRouteMaps: Boolean = false,
+    val mapBackground: MapBackground = MapBackground.NONE,
     /** Draw saved plate readers on path maps. The list is downloaded separately; nothing is sent about you. */
     val cameraPlates: Boolean = false,
     /** Draw saved speed, red-light, gunshot and other cameras on path maps. */
     val cameraOthers: Boolean = false,
     val languageTag: String = "en",
 
-)
+) {
+    /** Street tiles load from the network while a map is open. */
+    val onlineRouteMaps: Boolean get() = mapBackground == MapBackground.ONLINE
+}
 
 /** Spatial exports use the same explicit privacy choices as JSON. */
 enum class ExportFormat { JSON, GEOJSON, ATAK }
