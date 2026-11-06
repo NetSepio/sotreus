@@ -121,6 +121,7 @@ class ProximityViewModel @Inject constructor(
     init {
         offlineMaps.refresh()
         controller.setBoost(true)
+        controller.setWatch(entityId) // V2: with an Edge as the sensor, it watches this radio at up to 4 Hz
         viewModelScope.launch {
             val entity = entities.get(entityId)
             while (isActive) {
@@ -166,6 +167,7 @@ class ProximityViewModel @Inject constructor(
 
     override fun onCleared() {
         controller.setBoost(false)
+        controller.setWatch(null)
         tone?.release()
     }
 

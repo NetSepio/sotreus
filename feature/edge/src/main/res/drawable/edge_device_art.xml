@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sotreus Edge, front view: a flat drawing of the printed case (after the pitch-deck model). Product colours, not theme colours. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="220dp"
+    android:height="160dp"
+    android:viewportWidth="220"
+    android:viewportHeight="160">
+    <!-- Case depth -->
+    <group android:translateY="5">
+        <path android:fillColor="#C9C4B8"
+            android:pathData="M20,6 H200 A14,14 0 0 1 214,20 V114 A14,14 0 0 1 200,128 H186 A8,8 0 0 0 178,136 V138 A12,12 0 0 1 166,150 H20 A14,14 0 0 1 6,136 V20 A14,14 0 0 1 20,6 Z" />
+    </group>
+    <!-- Case front -->
+    <path android:fillColor="#F2F0EA"
+        android:pathData="M20,6 H200 A14,14 0 0 1 214,20 V114 A14,14 0 0 1 200,128 H186 A8,8 0 0 0 178,136 V138 A12,12 0 0 1 166,150 H20 A14,14 0 0 1 6,136 V20 A14,14 0 0 1 20,6 Z" />
+    <!-- USB-C -->
+    <path android:fillColor="#3A3A40" android:pathData="M5,57 A2,2 0 0 1 7,59 V69 A2,2 0 0 1 5,71 A2,2 0 0 1 3,69 V59 A2,2 0 0 1 5,57 Z" />
+    <!-- PRG and RST buttons -->
+    <path android:fillColor="#2F86EA" android:pathData="M18,40 H30 A7,7 0 0 1 30,54 H18 A7,7 0 0 1 18,40 Z" />
+    <path android:strokeColor="#7FB8F5" android:strokeWidth="1.5" android:strokeLineCap="round" android:pathData="M19,45 H29" />
+    <path android:fillColor="#2F86EA" android:pathData="M18,76 A6,6 0 1 1 30,76 A6,6 0 1 1 18,76 Z" />
+    <!-- LEDs -->
+    <path android:strokeColor="#8A8A90" android:strokeWidth="2.4" android:strokeLineCap="round" android:pathData="M37,72 H42 M37,79 H42" />
+    <!-- Display -->
+    <path android:fillColor="#0A0A0D" android:pathData="M68,38 H118 A4,4 0 0 1 122,42 V76 A4,4 0 0 1 118,80 H68 A4,4 0 0 1 64,76 V42 A4,4 0 0 1 68,38 Z" />
+    <path android:fillColor="#0E1A22" android:pathData="M70,44 H116 V74 H70 Z" />
+    <path android:strokeColor="#30D8FF" android:strokeWidth="2.5" android:strokeLineCap="round" android:pathData="M75,52 H100" />
+    <path android:strokeColor="#30D8FF" android:strokeAlpha="0.55" android:strokeWidth="1.6" android:strokeLineCap="round" android:pathData="M75,59 H92 M75,65 H104" />
+    <!-- Speaker slots -->
+    <path android:strokeColor="#3A3A40" android:strokeWidth="3" android:strokeLineCap="round" android:pathData="M152,62 L166,69 M148,70 L166,79 M152,79 L162,84" />
+    <!-- Reset pinhole and vents -->
+    <path android:fillColor="#3A3A40" android:pathData="M116.2,140 A1.8,1.8 0 1 1 119.8,140 A1.8,1.8 0 1 1 116.2,140 Z" />
+    <path android:strokeColor="#C9C4B8" android:strokeWidth="1.6" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M136,146 L142,142 L148,146 M146,146 L152,142 L158,146" />
+</vector>

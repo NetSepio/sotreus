@@ -32,6 +32,13 @@ data class LiveRadio(
     val needsAttention: Boolean,
     val simulated: Boolean,
     val decodedStatus: String? = null,
+    /** Offline vendor-prefix (OUI) name, for category guesses. */
+    val vendor: String? = null,
+    /** Wi-Fi only (V2): an access point, or a client asking for networks. */
+    val wifiRole: app.sotreus.core.model.WifiRole? = null,
+    val guessConfidence: app.sotreus.core.model.Confidence = app.sotreus.core.model.Confidence.LOW,
+    /** Carries an ASTM F3411 Remote ID element or service data. */
+    val hasRemoteId: Boolean = false,
 )
 
 data class AttentionSummary(val eventId: Long, val count: Int, val headlineName: String)

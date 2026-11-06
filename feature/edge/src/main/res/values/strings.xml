@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="edge_title">Sotreus Edge</string>
+    <string name="edge_photo_a11y">Sotreus Edge</string>
+    <string name="edge_name">Edge %1$s</string>
+    <string name="edge_firmware">Firmware %1$s</string>
+
+    <!-- Pairing -->
+    <string name="edge_intro">Turn on your Edge, then tap Pair. If it was paired with another phone, hold PRG for 3 seconds first.</string>
+    <string name="edge_pair">Pair</string>
+    <string name="edge_scan_title">Choose your Edge</string>
+    <string name="edge_scan_searching">Searching…</string>
+    <string name="edge_scan_none">No Edge found.</string>
+    <string name="edge_scan_signal">%1$d dBm</string>
+    <string name="edge_code_title">Pairing…</string>
+    <string name="edge_code_body">When Android asks, type the 6-digit code from the Edge\'s PAIR screen. You have 30 seconds.</string>
+    <string name="edge_try_again">Try again</string>
+    <string name="edge_travel">Travel</string>
+    <string name="edge_stationary">Stationary</string>
+    <string name="edge_tagging">Use this phone\'s location</string>
+    <string name="edge_done">Done</string>
+
+    <!-- Device -->
+    <string name="edge_chip_connected">Connected</string>
+    <string name="edge_chip_connecting">Connecting</string>
+    <string name="edge_chip_out_of_reach">Out of reach</string>
+    <string name="edge_chip_mesh">Mesh mode</string>
+    <string name="edge_chip_battery">Battery %1$d%%</string>
+    <string name="edge_kv_link">Link</string>
+    <string name="edge_kv_link_value">%1$d dBm · %2$s</string>
+    <string name="edge_together">with this phone</string>
+    <string name="edge_apart">apart</string>
+    <string name="edge_kv_last_sync">Last sync</string>
+    <string name="edge_kv_syncing">Syncing %1$s of %2$s</string>
+    <string name="edge_kv_records">Records on the Edge</string>
+    <string name="edge_kv_untimed">Unknown time</string>
+    <string name="edge_never">Never</string>
+    <string name="edge_position">Position</string>
+    <string name="edge_position_value">±%1$s m · %2$s</string>
+    <string name="edge_position_none">Not set</string>
+    <string name="edge_position_set">Set from this phone</string>
+    <string name="edge_position_averaging">±%1$s m from %2$d fixes</string>
+    <string name="edge_position_save">Save position (±%1$s m)</string>
+    <string name="edge_position_save_anyway">Save anyway (±%1$s m)</string>
+    <string name="edge_position_wide">Wider than the %1$d m limit in Field tools</string>
+    <string name="edge_position_waiting">Waiting for a location fix</string>
+    <string name="edge_position_no_permission">Location permission is off for Sotreus</string>
+    <string name="edge_position_allow">Allow location</string>
+    <string name="edge_position_location_off">Location is off on this phone</string>
+    <string name="edge_position_no_fixes">No location fix in 30 s</string>
+    <string name="edge_position_try_again">Try again</string>
+    <string name="edge_position_saving">Saving to the Edge</string>
+    <string name="edge_position_saved">Position set · ±%1$s m · %2$s</string>
+    <string name="edge_position_map">Pick on map</string>
+    <string name="edge_position_type">Type coordinates</string>
+    <string name="edge_position_type_hint">52.37021, 4.89517</string>
+    <string name="edge_position_typed_invalid">Type a latitude and a longitude, like 52.37021, 4.89517</string>
+    <string name="edge_source_phone">phone</string>
+    <string name="edge_source_map">map</string>
+    <string name="edge_save">Save</string>
+    <string name="edge_map_title">Edge position</string>
+    <string name="edge_map_lead">Move the map so the pin sits on your Edge.</string>
+    <string name="edge_map_a11y">Map. The pin marks where the Edge will be set.</string>
+    <string name="edge_map_coords">%1$s, %2$s · ±%3$s m</string>
+    <string name="edge_map_center">Centre on my location</string>
+    <string name="edge_map_attribution">Map data © OpenStreetMap contributors · OpenFreeMap</string>
+    <string name="edge_map_note">Map tiles load from OpenFreeMap, which can see the area shown. Nothing else is sent.</string>
+    <string name="edge_moved">Your Edge may have moved since %1$s.</string>
+    <string name="edge_moved_still">Still there</string>
+    <string name="edge_moved_moved">It moved</string>
+    <string name="edge_sync_now">Sync now</string>
+    <string name="edge_hand_off">New records go straight to this phone</string>
+    <string name="edge_pairing_lost">This phone lost its pairing with the Edge. Open PAIR on the Edge, then pair again.</string>
+    <string name="edge_pair_again">Pair again</string>
+    <string name="edge_chip_not_paired">Not paired</string>
+    <string name="edge_use">Use this Edge</string>
+    <string name="edge_use_phone">Use this phone\'s radios</string>
+    <string name="edge_forget">Forget this Edge</string>
+    <string name="edge_forget_body">Sightings already on this phone stay.</string>
+    <string name="edge_cancel">Cancel</string>
+</resources>

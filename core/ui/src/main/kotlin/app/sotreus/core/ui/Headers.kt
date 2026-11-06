@@ -52,6 +52,8 @@ fun MonoLabel(text: String, modifier: Modifier = Modifier, small: Boolean = fals
 fun BackTopBar(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Optional compact title on the same row as the back button. */
+    title: String? = null,
     trailing: @Composable () -> Unit = {},
 ) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -64,6 +66,14 @@ fun BackTopBar(
                 contentDescription = stringResource(R.string.core_ui_back),
                 tint = SotreusTheme.colors.text,
                 modifier = Modifier.size(SotreusTheme.sizes.iconSize),
+            )
+        }
+        if (title != null) {
+            Text(
+                text = title,
+                style = SotreusTheme.typography.titleS.copy(fontSize = SotreusTheme.typography.titleS.fontSize * 0.8f),
+                color = SotreusTheme.colors.text,
+                modifier = Modifier.offset(x = (-6).dp).semantics { heading() },
             )
         }
         Spacer(Modifier.weight(1f))

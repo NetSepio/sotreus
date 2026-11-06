@@ -30,7 +30,24 @@ import javax.inject.Inject
  * was read, so an old fix is never shown as current.
  */
 class LocationSource @Inject constructor(@ApplicationContext private val context: Context) {
-    data class Fix(val atMs: Long, val lat: Double, val lon: Double, val accuracyM: Float?, val mock: Boolean = false, val speedMps: Float? = null, val gps: Boolean = true)
+    data class Fix(
+        val atMs: Long,
+        val lat: Double,
+        val lon: Double,
+        val accuracyM: Float?,
+        val mock: Boolean = false,
+        val speedMps: Float? = null,
+        val gps: Boolean = true,
+        /** WGS84 ellipsoid altitude and its accuracy, when the provider gives them. */
+        val altitudeM: Double? = null,
+        val verticalAccuracyM: Float? = null,
+        /** Mean-sea-level altitude (Android 14+), when the provider gives it. */
+        val mslAltitudeM: Double? = null,
+        val speedAccuracyMps: Float? = null,
+        val provider: String? = null,
+        /** Satellites used in the fix (GPS provider extras), when reported. */
+        val satellitesUsed: Int? = null,
+    )
 
     private val manager: LocationManager? get() = context.getSystemService(LocationManager::class.java)
 
@@ -130,7 +147,15 @@ class LocationSource @Inject constructor(@ApplicationContext private val context
             time
         }
         @Suppress("DEPRECATION") val mock = isFromMockProvider
-        return Fix(atMs, latitude, longitude, if (hasAccuracy()) accuracy else null, mock, if (hasSpeed()) speed else null, provider == LocationManager.GPS_PROVIDER)
+        return Fix(
+            atMs, latitude, longitude, if (hasAccuracy()) accuracy else null, mock, if (hasSpeed()) speed else null, provider == LocationManager.GPS_PROVIDER,
+            altitudeM = if (hasAltitude()) altitude else null,
+            verticalAccuracyM = if (Build.VERSION.SDK_INT >= 26 && hasVerticalAccuracy()) verticalAccuracyMeters else null,
+            mslAltitudeM = if (Build.VERSION.SDK_INT >= 34 && hasMslAltitude()) mslAltitudeMeters else null,
+            speedAccuracyMps = if (Build.VERSION.SDK_INT >= 26 && hasSpeedAccuracy()) speedAccuracyMetersPerSecond else null,
+            provider = provider,
+            satellitesUsed = extras?.getInt("satellites", -1)?.takeIf { it >= 0 },
+        )
     }
 
     private companion object {

@@ -50,6 +50,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -69,7 +70,14 @@ class SensorsViewModel @Inject constructor(
     private val exports: ExportService,
     private val build: AppBuildInfo,
     deviceInfo: DeviceInfoSource,
+    private val edge: app.sotreus.core.data.edge.EdgeRepository,
 ) : ViewModel() {
+    val edgePaired = edge.devices.map { it.isNotEmpty() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /** V2: the owner switches the sensing source; it is never switched silently. */
+    fun usePhoneRadios() = viewModelScope.launch { edge.usePhoneRadios() }
+    fun useEdge() = viewModelScope.launch { edge.useEdge() }
+
     private val device = deviceInfo.current()
     val state: StateFlow<SensorsUiState> = combine(pipeline.snapshot, settings.settings) { snap, s -> SensorsUiState(snap, s, device, build) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SensorsUiState(device = device, build = build))
@@ -125,6 +133,21 @@ internal fun SensorsScreen(onBack: () -> Unit, vm: SensorsViewModel = hiltViewMo
     ScreenColumn(top = SotreusTheme.spacing.screenH) {
         BackTopBar(onBack = onBack)
         ScreenTitle(stringResource(R.string.sensors_title))
+        val edgePaired by vm.edgePaired.collectAsStateWithLifecycle()
+        if (edgePaired) {
+            val onEdge = state.settings.sensingSource == app.sotreus.core.model.SensingSource.EDGE
+            app.sotreus.core.ui.SotreusCard {
+                app.sotreus.core.ui.MonoLabel(stringResource(R.string.sensing_source_kicker), small = true)
+                androidx.compose.material3.Text(
+                    stringResource(if (onEdge) R.string.sensing_source_edge else R.string.sensing_source_phone),
+                    style = SotreusTheme.typography.bodyS, color = SotreusTheme.colors.text,
+                )
+                app.sotreus.core.ui.GhostButton(
+                    stringResource(if (onEdge) R.string.sensing_use_phone else R.string.sensing_use_edge),
+                    { if (onEdge) vm.usePhoneRadios() else vm.useEdge() },
+                )
+            }
+        }
 
         val bleGranted = access?.granted?.contains(PermissionGroup.NEARBY_DEVICES) == true
         SensorCard(

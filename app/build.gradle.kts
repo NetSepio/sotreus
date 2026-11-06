@@ -153,6 +153,7 @@ dependencies {
     implementation(project(":feature:place"))
     implementation(project(":feature:journey"))
     implementation(project(":feature:settings"))
+    implementation(project(":feature:edge"))
     implementation(project(":feature:friends"))
     implementation(project(":feature:proofs"))
     implementation(project(":feature:context"))

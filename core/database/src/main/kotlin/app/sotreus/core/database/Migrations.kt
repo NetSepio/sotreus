@@ -79,5 +79,51 @@ object Migrations {
         }
     }
 
-    val ALL = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+    /**
+     * v8 (V2, Sotreus Edge): paired Edges, boot anchors, untimed records, Edge sighting windows,
+     * the phone fixes used to tag them, and origin / location provenance on observations,
+     * encounters and entities. New columns on existing tables are nullable: null means "this
+     * phone", as before V2. Statements generated from the exported schema 8.json.
+     */
+    val MIGRATION_7_8 = object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE entities ADD COLUMN wifi_role TEXT")
+            db.execSQL("ALTER TABLE entities ADD COLUMN last_located_ms INTEGER")
+            db.execSQL("ALTER TABLE entities ADD COLUMN last_lat REAL")
+            db.execSQL("ALTER TABLE entities ADD COLUMN last_lon REAL")
+            db.execSQL("ALTER TABLE entities ADD COLUMN last_loc_accuracy_m REAL")
+            db.execSQL("ALTER TABLE entities ADD COLUMN last_loc_source TEXT")
+            db.execSQL("ALTER TABLE observations ADD COLUMN origin TEXT")
+            db.execSQL("ALTER TABLE observations ADD COLUMN loc_source TEXT")
+            db.execSQL("ALTER TABLE observations ADD COLUMN loc_accuracy_m REAL")
+            db.execSQL("ALTER TABLE encounters ADD COLUMN first_lat REAL")
+            db.execSQL("ALTER TABLE encounters ADD COLUMN first_lon REAL")
+            db.execSQL("ALTER TABLE encounters ADD COLUMN last_lat REAL")
+            db.execSQL("ALTER TABLE encounters ADD COLUMN last_lon REAL")
+            db.execSQL("ALTER TABLE encounters ADD COLUMN loc_accuracy_m REAL")
+            db.execSQL("ALTER TABLE encounters ADD COLUMN loc_source TEXT")
+            db.execSQL("ALTER TABLE encounters ADD COLUMN origin TEXT")
+            db.execSQL("CREATE TABLE IF NOT EXISTS `edge_devices` (`device_id` TEXT NOT NULL, `name` TEXT NOT NULL, `suffix` TEXT NOT NULL, `hardware` TEXT NOT NULL, `firmware` TEXT NOT NULL, `protocol` INTEGER NOT NULL, `caps_json` TEXT NOT NULL, `probe_salt` TEXT NOT NULL, `bt_address` TEXT NOT NULL, `paired_at_ms` INTEGER NOT NULL, `last_connected_ms` INTEGER, `last_sync_ms` INTEGER, `sync_cursor` INTEGER NOT NULL, `records_lost` INTEGER NOT NULL, `data_link` TEXT NOT NULL, `deployment` TEXT NOT NULL, `place_lat` REAL, `place_lon` REAL, `place_accuracy_m` REAL, `place_set_ms` INTEGER, `place_source` TEXT, `linked_place_id` INTEGER, `wifi_baseline` TEXT, `baseline_from_ms` INTEGER, `placement_held_since_ms` INTEGER, `phone_tagging` INTEGER NOT NULL, PRIMARY KEY(`device_id`))")
+            db.execSQL("CREATE TABLE IF NOT EXISTS `edge_boot_anchors` (`device_id` TEXT NOT NULL, `boot` INTEGER NOT NULL, `unix_at_boot_ms` INTEGER NOT NULL, PRIMARY KEY(`device_id`, `boot`))")
+            db.execSQL("CREATE TABLE IF NOT EXISTS `edge_untimed_records` (`device_id` TEXT NOT NULL, `seq` INTEGER NOT NULL, `boot` INTEGER NOT NULL, `type` INTEGER NOT NULL, `first_uptime_ms` INTEGER NOT NULL, `last_uptime_ms` INTEGER NOT NULL, `record_hex` TEXT NOT NULL, `received_at_ms` INTEGER NOT NULL, PRIMARY KEY(`device_id`, `seq`))")
+            db.execSQL("CREATE TABLE IF NOT EXISTS `edge_sightings` (`device_id` TEXT NOT NULL, `seq` INTEGER NOT NULL, `entity_id` TEXT NOT NULL, `type` INTEGER NOT NULL, `first_ms` INTEGER NOT NULL, `last_ms` INTEGER NOT NULL, `rssi_last` INTEGER NOT NULL, `rssi_max` INTEGER NOT NULL, `rssi_min` INTEGER NOT NULL, `frames` INTEGER NOT NULL, `continues` INTEGER NOT NULL, `covered_live` INTEGER NOT NULL, `loc_kind` TEXT NOT NULL, `loc_source` TEXT, `lat` REAL, `lon` REAL, `radius_m` REAL, `end_lat` REAL, `end_lon` REAL, `path_m` REAL, `coverage` REAL, `altitude_m` REAL, `vertical_accuracy_m` REAL, PRIMARY KEY(`device_id`, `seq`))")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_edge_sightings_entity_id` ON `edge_sightings` (`entity_id`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_edge_sightings_last_ms` ON `edge_sightings` (`last_ms`)")
+            db.execSQL("CREATE TABLE IF NOT EXISTS `location_fixes` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `at_ms` INTEGER NOT NULL, `lat` REAL NOT NULL, `lon` REAL NOT NULL, `accuracy_m` REAL NOT NULL, `altitude_m` REAL, `vertical_accuracy_m` REAL, `msl_altitude_m` REAL, `speed_mps` REAL, `speed_accuracy_mps` REAL, `provider` TEXT, `satellites_used` INTEGER, `satellites_in_view` INTEGER, `pressure_hpa` REAL)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_location_fixes_at_ms` ON `location_fixes` (`at_ms`)")
+        }
+    }
+
+    /**
+     * v9 (V2, delete after sync): raw copies of Edge records nothing else reads yet, so every
+     * received record is stored before the phone confirms it. Generated from schema 9.json.
+     */
+    val MIGRATION_8_9 = object : Migration(8, 9) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("CREATE TABLE IF NOT EXISTS `edge_kept_records` (`device_id` TEXT NOT NULL, `seq` INTEGER NOT NULL, `type` INTEGER NOT NULL, `boot` INTEGER NOT NULL, `flags` INTEGER NOT NULL, `first_ms` INTEGER NOT NULL, `last_ms` INTEGER NOT NULL, `record_hex` TEXT NOT NULL, `received_at_ms` INTEGER NOT NULL, PRIMARY KEY(`device_id`, `seq`))")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_edge_kept_records_received_at_ms` ON `edge_kept_records` (`received_at_ms`)")
+        }
+    }
+
+    val ALL = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
 }

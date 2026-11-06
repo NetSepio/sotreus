@@ -57,6 +57,13 @@ data class SotreusSettings(
     val nearbyPresence: Boolean = false,
     val tickSound: Boolean = true,
     val simulatedRadios: Boolean = false,
+    /** V2: which radios sense. Pairing an Edge sets EDGE; the owner can switch back (Settings › Sensors). */
+    val sensingSource: SensingSource = SensingSource.PHONE,
+    /** V2 quality limits for tagging Edge sightings with this phone's location (HANDOFF_V2_EDGE.md §4.4). */
+    val edgeMaxAccuracyM: Int = SotreusDefaults.EDGE_MAX_ACCURACY_M,
+    val edgeTogetherMinDbm: Int = SotreusDefaults.EDGE_TOGETHER_MIN_DBM,
+    /** V2: a stationary Edge's averaged position is accepted at or below this (Field tools). */
+    val edgeStationaryLimitM: Int = SotreusDefaults.EDGE_STATIONARY_LIMIT_M,
     val forceSolanaUi: Boolean = false,
     /** Now › List shows each radio's address, to spot your own devices. */
     val showAddresses: Boolean = false,

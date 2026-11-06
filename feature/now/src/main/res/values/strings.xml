@@ -14,6 +14,40 @@
     <string name="now_place_picker_a11y">Choose place. Current: %1$s</string>
     <string name="now_view_bands">Bands</string>
     <string name="now_view_list">List</string>
+    <string name="now_view_sweep">Sweep</string>
+    <string name="fresh_edge">Edge %1$s</string>
+    <string name="fresh_edge_updated">updated %1$s</string>
+    <string name="fresh_edge_channels">13 channels</string>
+    <string name="fresh_edge_one_channel">one channel</string>
+    <string name="edge_tag_phone">Location · this phone · ±%1$s m</string>
+    <string name="edge_tag_waiting">Location · waiting for a fix</string>
+    <string name="edge_tag_apart">Location · not with this phone</string>
+    <string name="edge_tag_fixed">Location · fixed · ±%1$s m</string>
+    <string name="edge_tag_gnss">Location · Edge GNSS</string>
+    <string name="edge_tag_none">Location · off</string>
+    <string name="edge_banner_lost">Edge out of reach since %1$s.</string>
+    <string name="edge_banner_failed">Edge not connected: %1$s</string>
+    <string name="edge_banner_connecting">Connecting to your Edge…</string>
+    <string name="edge_banner_pairing_lost">This phone lost its pairing with your Edge.</string>
+    <string name="edge_pair_again">Pair again</string>
+    <string name="edge_pill_not_paired">Edge · not paired</string>
+    <string name="edge_banner_mesh">Edge is in Mesh mode.</string>
+    <string name="edge_use_phone">Use this phone\'s radios</string>
+    <string name="edge_pill_live">Edge · live</string>
+    <string name="edge_pill_connecting">Edge · connecting</string>
+    <string name="edge_pill_out_of_reach">Edge · out of reach</string>
+    <string name="edge_pill_mesh">Edge · Mesh mode</string>
+    <string name="band_edge">Edge</string>
+    <string name="filter_by_category">By category</string>
+    <string name="category_likely">%1$s · %2$s</string>
+    <string name="category_basis_signature">signature</string>
+    <string name="category_basis_advertisement">advertisement</string>
+    <string name="category_basis_network">network</string>
+    <string name="category_basis_vendor">%1$s</string>
+    <string name="category_private">Private address</string>
+    <string name="category_asking">Asking for networks</string>
+    <string name="category_group_asking">Asking for networks</string>
+    <string name="category_group_none">No category</string>
 
     <string name="fresh_ble">BLE</string>
     <string name="fresh_wifi">Wi-Fi</string>
@@ -25,7 +59,7 @@
     </plurals>
     <string name="fresh_learning">Baseline · learning</string>
 
-    <string name="bands_disclaimer">Rings group radios by signal strength. Where a dot sits around a ring is not its direction.</string>
+    <string name="bands_disclaimer">Rings group radios by signal strength.</string>
     <string name="bands_a11y">Proximity bands: %1$d radios grouped by signal strength. %2$d near, %3$d mid, %4$d far. %5$d new here. Positions around a ring are not directions. The List view shows the same radios.</string>
     <string name="bands_zoom_hint">Pinch to zoom</string>
     <string name="bands_zoom_reset">Double-tap to reset</string>

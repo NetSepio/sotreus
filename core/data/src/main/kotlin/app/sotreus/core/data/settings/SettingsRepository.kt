@@ -64,6 +64,10 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val presence = booleanPreferencesKey("nearby_presence")
         val tick = booleanPreferencesKey("tick_sound")
         val simulated = booleanPreferencesKey("simulated_radios")
+        val sensingSource = stringPreferencesKey("sensing_source")
+        val edgeMaxAccuracy = intPreferencesKey("edge_max_accuracy_m")
+        val edgeTogetherDbm = intPreferencesKey("edge_together_min_dbm")
+        val edgeStationaryLimit = intPreferencesKey("edge_stationary_limit_m")
         val forceSolana = booleanPreferencesKey("force_solana_ui")
         val showAddresses = booleanPreferencesKey("show_addresses")
         val contextEnabled = booleanPreferencesKey("context_enabled")
@@ -123,6 +127,10 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
             nearbyPresence = p[Keys.presence] ?: d.nearbyPresence,
             tickSound = p[Keys.tick] ?: d.tickSound,
             simulatedRadios = p[Keys.simulated] ?: d.simulatedRadios,
+            sensingSource = p[Keys.sensingSource].enumOr(d.sensingSource),
+            edgeMaxAccuracyM = (p[Keys.edgeMaxAccuracy] ?: d.edgeMaxAccuracyM).coerceIn(5, 100),
+            edgeTogetherMinDbm = (p[Keys.edgeTogetherDbm] ?: d.edgeTogetherMinDbm).coerceIn(-90, -40),
+            edgeStationaryLimitM = (p[Keys.edgeStationaryLimit] ?: d.edgeStationaryLimitM).coerceIn(5, 100),
             forceSolanaUi = p[Keys.forceSolana] ?: d.forceSolanaUi,
             showAddresses = p[Keys.showAddresses] ?: d.showAddresses,
             contextEnabled = p[Keys.contextEnabled] ?: d.contextEnabled,
@@ -148,6 +156,11 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
     suspend fun setGnssSensitivity(level: String) { require(level in setOf("LOW", "MEDIUM", "HIGH")); store.edit { it[Keys.gnssSensitivity] = level } }
     suspend fun setGnssMonitoring(on: Boolean) { store.edit { it[Keys.gnssMonitoring] = on } }
     suspend fun setLivePath(on: Boolean) { store.edit { it[Keys.livePath] = on } }
+    suspend fun setSensingSource(v: app.sotreus.core.model.SensingSource) { store.edit { it[Keys.sensingSource] = v.name } }
+    suspend fun setEdgeQuality(maxAccuracyM: Int, togetherMinDbm: Int) {
+        store.edit { it[Keys.edgeMaxAccuracy] = maxAccuracyM.coerceIn(5, 100); it[Keys.edgeTogetherDbm] = togetherMinDbm.coerceIn(-90, -40) }
+    }
+    suspend fun setEdgeStationaryLimit(meters: Int) { store.edit { it[Keys.edgeStationaryLimit] = meters.coerceIn(5, 100) } }
     suspend fun setMapBackground(v: MapBackground) { store.edit { it[Keys.mapBackground] = v.name; it.remove(Keys.onlineRouteMaps) } }
     suspend fun setCameraPlates(on: Boolean) { store.edit { it[Keys.cameraPlates] = on } }
     suspend fun setCameraOthers(on: Boolean) { store.edit { it[Keys.cameraOthers] = on } }

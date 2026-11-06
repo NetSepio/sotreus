@@ -54,6 +54,7 @@ class FieldToolsViewModel @Inject constructor(
     fun sensitivity(level: String) = viewModelScope.launch { preferences.setGnssSensitivity(level) }
     fun path(on: Boolean) = viewModelScope.launch { preferences.setLivePath(on) }
     fun maps(v: MapBackground) = viewModelScope.launch { preferences.setMapBackground(v) }
+    fun edgeLimit(meters: Int) = viewModelScope.launch { preferences.setEdgeStationaryLimit(meters) }
     fun cameraLayer(list: CameraList, on: Boolean) = viewModelScope.launch {
         if (list == CameraList.PLATES) preferences.setCameraPlates(on) else preferences.setCameraOthers(on)
     }
@@ -79,6 +80,13 @@ internal fun FieldToolsScreen(onBack: () -> Unit, onMap: () -> Unit, vm: FieldTo
         SwitchRow(stringResource(R.string.field_live_path), settings.livePath, vm::path, subtitle = stringResource(R.string.field_live_path_sub))
         GhostButton(stringResource(R.string.field_open_path), onMap)
         MapBackgroundRows(settings.mapBackground, vm::maps)
+        MonoLabel(stringResource(R.string.field_edge_limit_title))
+        RadioGroupRows(
+            app.sotreus.core.model.SotreusDefaults.EDGE_STATIONARY_LIMITS_M.map { RadioOption(it, stringResource(R.string.field_edge_limit_value, it)) },
+            settings.edgeStationaryLimitM,
+            vm::edgeLimit,
+        )
+        Text(stringResource(R.string.field_edge_limit_sub), style = SotreusTheme.typography.bodyS, color = SotreusTheme.colors.textMuted)
         val area by vm.offlineArea.collectAsStateWithLifecycle()
         OfflineAreaRows(area, vm::estimate, vm::downloadArea, vm::cancelArea, vm::deleteArea)
         MonoLabel(stringResource(R.string.field_cameras_title))

@@ -38,6 +38,8 @@ class PhoneLocation @Inject constructor(
     val locating: StateFlow<Boolean> = _locating.asStateFlow()
 
     fun canLocate(): Boolean = source.hasPermission() && source.isEnabled()
+    fun hasPermission(): Boolean = source.hasPermission()
+    fun isEnabled(): Boolean = source.isEnabled()
 
     /** The latest fix if it was taken at most [maxAgeMs] before [now]. An older fix is never passed off as current. */
     fun fresh(now: Long, maxAgeMs: Long = FRESH_MS): LocationSource.Fix? = _latest.value?.takeIf { !it.mock && now - it.atMs in 0..maxAgeMs }

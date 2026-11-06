@@ -5,6 +5,18 @@ package app.sotreus.core.model
  * Kept here, not in the design system, so Android-free modules can use them.
  */
 object SotreusDefaults {
+    /** V2: a phone fix tags an Edge sighting only at or below this horizontal accuracy (m). */
+    const val EDGE_MAX_ACCURACY_M = 25
+
+    /** V2: phone and Edge are together when the Bluetooth link averages at or above this. */
+    const val EDGE_TOGETHER_MIN_DBM = -75
+
+    /** V2: "Set from this phone" accepts a stationary Edge's averaged position at or below this (m). */
+    const val EDGE_STATIONARY_LIMIT_M = 30
+
+    /** Field tools choices for [EDGE_STATIONARY_LIMIT_M]. */
+    val EDGE_STATIONARY_LIMITS_M = listOf(15, 30, 50)
+
     /** Proximity Bands: NEAR is at or above this 30 s average. */
     const val NEAR_MIN_DBM = -60
 

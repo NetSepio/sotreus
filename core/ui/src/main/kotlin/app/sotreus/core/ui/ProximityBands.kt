@@ -71,6 +71,11 @@ fun ProximityBands(
     zoomHint: String? = null,
     resetLabel: String? = null,
     fullViewLimit: Int = 120,
+    /**
+     * V2 Sweep view: the hand's angle in degrees (0 = up, clockwise), turning once per update
+     * from the Edge. Null draws no hand. It marks update timing only, never a bearing.
+     */
+    sweepDegrees: Float? = null,
 ) {
     val c = SotreusTheme.colors
     val measurer = rememberTextMeasurer()
@@ -143,6 +148,20 @@ fun ProximityBands(
             drawCircle(c.line, geo.rMid, geo.center, style = Stroke(1.dp.toPx()))
             drawCircle(c.accent.copy(alpha = 0.03f), geo.rNear, geo.center)
             drawCircle(c.lineStrong, geo.rNear, geo.center, style = Stroke(1.dp.toPx()))
+            sweepDegrees?.let { deg ->
+                // A fading trail behind the hand, then the hand itself, from the centre to the outer ring.
+                val trail = 60f
+                val start = deg - 90f - trail
+                drawArc(
+                    brush = androidx.compose.ui.graphics.Brush.sweepGradient(
+                        0f to c.accent.copy(alpha = 0f), 1f to c.accent.copy(alpha = 0.18f), center = geo.center,
+                    ),
+                    startAngle = start, sweepAngle = trail, useCenter = true,
+                    topLeft = Offset(geo.center.x - geo.rFar, geo.center.y - geo.rFar), size = Size(geo.rFar * 2, geo.rFar * 2),
+                )
+                val rad = Math.toRadians((deg - 90f).toDouble())
+                drawLine(c.accent.copy(alpha = 0.8f), geo.center, Offset(geo.center.x + geo.rFar * cos(rad).toFloat(), geo.center.y + geo.rFar * sin(rad).toFloat()), 1.dp.toPx())
+            }
             listOf(labels.far to geo.rFar, labels.mid to geo.rMid, labels.near to geo.rNear).forEachIndexed { i, (text, r) ->
                 val layout = measurer.measure(text.uppercase(), mono.copy(color = if (i == 2) c.textMuted else c.textDim))
                 val tl = Offset(geo.center.x - layout.size.width / 2f, geo.center.y - r - layout.size.height / 2f)

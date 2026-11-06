@@ -26,6 +26,15 @@
     <string name="group_awareness">Awareness</string>
     <string name="row_places">Places</string>
     <string name="row_sensors">Sensors</string>
+    <string name="row_edge">Sotreus Edge</string>
+    <string name="row_edge_not_paired">Not paired</string>
+    <string name="row_edge_connected">Connected</string>
+    <string name="row_edge_out_of_reach">Out of reach</string>
+    <string name="sensing_source_kicker">Sensing</string>
+    <string name="sensing_source_edge">Sotreus Edge. This phone\'s Bluetooth and Wi-Fi scanning is off.</string>
+    <string name="sensing_source_phone">This phone\'s radios.</string>
+    <string name="sensing_use_phone">Use this phone\'s radios</string>
+    <string name="sensing_use_edge">Use the Sotreus Edge</string>
     <string name="row_sensors_limited">Wi-Fi limited</string>
     <string name="row_sensors_ok">Observing</string>
     <string name="row_sensors_paused">Paused</string>
@@ -229,6 +238,9 @@
     <string name="field_online_maps">Online street maps</string>
     <string name="field_online_maps_sub">Load OpenFreeMap tiles when a route map or signal map is open. The map provider sees your IP address and requested map area.</string>
     <string name="field_map_title">Map background</string>
+    <string name="field_edge_limit_title">Stationary Edge position</string>
+    <string name="field_edge_limit_value">Within %1$d m</string>
+    <string name="field_edge_limit_sub">Set from this phone saves at once within this. A wider estimate can still be saved with its real accuracy.</string>
     <string name="field_map_none">None</string>
     <string name="field_map_none_sub">Path and signal maps draw a plain grid. No map data is loaded.</string>
     <string name="field_map_offline">Downloaded area only</string>

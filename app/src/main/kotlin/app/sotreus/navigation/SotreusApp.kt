@@ -48,6 +48,7 @@ import app.sotreus.feature.onboarding.onboardingGraph
 import app.sotreus.feature.place.placeGraph
 import app.sotreus.feature.proofs.proofsGraph
 import app.sotreus.feature.settings.settingsGraph
+import app.sotreus.feature.edge.edgeGraph
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.reflect.KClass
 
@@ -125,6 +126,7 @@ fun SotreusApp(settings: SettingsRepository, pendingInvite: MutableStateFlow<Str
             historyGraph(navigator)
             journeyGraph(navigator)
             settingsGraph(navigator)
+            edgeGraph(navigator)
             entityGraph(navigator)
             attentionGraph(navigator)
             placeGraph(navigator)

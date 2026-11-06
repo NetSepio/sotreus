@@ -38,6 +38,10 @@ data class NowUiState(
     val sort: NowSort = NowSort.STRONGEST,
     val openAttention: List<AttentionListItem> = emptyList(),
     val places: List<PlaceSummary> = emptyList(),
+    /** V2: the Edge's state while it is the sensor; null when this phone's radios sense. */
+    val edge: app.sotreus.core.data.edge.EdgeLive? = null,
+    /** V2: accuracy of the last phone fix that tagged an Edge sighting. */
+    val edgeFixAccuracyM: Float? = null,
     /** Plus code of where the phone is, shown when no saved place matches. Null without a recent fix. */
     val hereCode: String? = null,
     /** Town, state and country for an unsaved place, looked up on the phone. Null without a fix or outside listed areas. */
@@ -53,7 +57,7 @@ data class NowUiState(
     /** No baseline yet for a saved place (first visit). Unsaved places compare with history. */
     val learning: Boolean get() = snapshot.placeId != null && snapshot.baselineVisits == 0
 
-    val needsPermissions: Boolean get() = !settings.simulatedRadios && snapshot.access?.canScan == false
+    val needsPermissions: Boolean get() = !settings.simulatedRadios && edge == null && snapshot.access?.canScan == false
 
     val wifiAgeMs: Long? get() = snapshot.status.wifiLastFreshMs.takeIf { it > 0 }?.let { snapshot.atMs - it }
 
@@ -90,6 +94,7 @@ class NowViewModel @Inject constructor(
     private val location: app.sotreus.sensing.LocationSource,
     phone: app.sotreus.core.data.pipeline.PhoneLocation,
     areas: app.sotreus.context.environment.AreaNameRepository,
+    private val edgeRepo: app.sotreus.core.data.edge.EdgeRepository,
 ) : ViewModel() {
     /** The area for the latest fix, looked up again only when the phone has moved about a kilometre. */
     private val hereArea = phone.latest
@@ -105,21 +110,26 @@ class NowViewModel @Inject constructor(
 
     val state: StateFlow<NowUiState> = combine(
         pipeline.snapshot,
-        settings.settings,
+        combine(settings.settings, edgeRepo.live, edgeRepo.lastFix) { s, e, fix -> Triple(s, e, fix) },
         combine(filter, sort) { f, s -> f to s },
         attention.observeOpen(),
         combine(placeRepository.observePlaces(), phone.latest, hereArea) { p, fix, area -> Triple(p, fix, area) },
-    ) { snap, s, (f, so), att, (places, fix, area) ->
+    ) { snap, (s, edgeLive, edgeFix), (f, so), att, (places, fix, area) ->
         // Only a recent, real fix labels the unsaved place; an old one would name somewhere the phone has left.
         val here = fix?.takeIf { !it.mock && snap.atMs - it.atMs in 0..HERE_MAX_AGE_MS }
             ?.let { app.sotreus.intelligence.PlusCode.areaLabel(it.lat, it.lon, s.maskCoordinates) }
         NowUiState(
             snapshot = snap, settings = s, view = s.nowView, filter = f, sort = so, openAttention = att, places = places,
             hereCode = here, hereArea = area.takeIf { here != null },
+            edge = edgeLive.takeIf { s.sensingSource == app.sotreus.core.model.SensingSource.EDGE && !s.simulatedRadios },
+            edgeFixAccuracyM = edgeFix?.accuracyM,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NowUiState())
 
     fun hideBurst() { insights.hideBurst() }
+
+    /** The owner's explicit switch back to this phone's radios. */
+    fun usePhoneRadios() = viewModelScope.launch { edgeRepo.usePhoneRadios() }
 
     fun setView(v: NowView) = viewModelScope.launch { settings.setNowView(v) }
     fun setShowAddresses(on: Boolean) = viewModelScope.launch { settings.setShowAddresses(on) }

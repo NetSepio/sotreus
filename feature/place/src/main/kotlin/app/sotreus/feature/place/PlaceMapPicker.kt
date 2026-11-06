@@ -80,7 +80,7 @@ internal fun PlaceMapPickerScreen(onBack: () -> Unit, vm: PlaceMapPickerViewMode
         Box(Modifier.weight(1f).fillMaxWidth()) {
             val start = state.start
             if (state.ready && start != null) {
-                PlaceMap(
+                app.sotreus.core.ui.PinMap(
                     start.first, start.second, state.zoom, stringResource(R.string.map_a11y, state.name), Modifier.fillMaxSize(),
                     onCenterChanged = { lat, lon -> center = lat to lon },
                     onReady = { map = it; center = start },

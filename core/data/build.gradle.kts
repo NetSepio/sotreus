@@ -14,6 +14,7 @@ dependencies {
     api(project(":core:database"))
     api(project(":intelligence:core"))
     api(project(":sensing:android"))
+    api(project(":edge:android"))
     implementation(project(":core:crypto"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.datastore.preferences)

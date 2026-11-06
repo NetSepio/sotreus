@@ -22,6 +22,9 @@ import app.sotreus.core.database.entity.SessionEntityEntity
 import app.sotreus.core.database.entity.SessionEventEntity
 import app.sotreus.core.database.entity.VisitEntityEntity
 import app.sotreus.core.model.Confidence
+import app.sotreus.core.model.LocationSource
+import app.sotreus.core.model.ObservationOrigin
+import app.sotreus.core.model.WifiRole
 import app.sotreus.core.model.PresenceState
 import app.sotreus.core.model.RadioKind
 import app.sotreus.core.model.SessionEventKind
@@ -70,6 +73,7 @@ class ObservationPipeline @Inject constructor(
     private val places: PlaceDao,
     private val sessions: SessionDao,
     private val attention: AttentionDao,
+    private val edgeDao: app.sotreus.core.database.dao.EdgeDao,
     private val classifier: SignatureClassifier,
     private val insights: app.sotreus.core.data.field.FieldInsights,
     private val gnss: app.sotreus.core.data.field.GnssHealthRepository,
@@ -114,6 +118,14 @@ class ObservationPipeline @Inject constructor(
     private var lastWifiDelayEvent = 0L
     private var wifiRejected = false
     private var boundSessionId: Long? = null
+
+    /** V2: set while the Edge is the sensor. Supplies origin and the Edge's location for live samples. */
+    @Volatile var edgeLocator: EdgeLiveLocator? = null
+
+    /** Wi-Fi keys the Edge reported as clients asking for networks (probe requests). */
+    private val wifiClients = HashSet<String>()
+
+    fun markWifiClient(key: String) = synchronized(lock) { wifiClients += key }
 
     private val _snapshot = MutableStateFlow(LiveSnapshot())
     val snapshot: StateFlow<LiveSnapshot> = _snapshot.asStateFlow()
@@ -255,8 +267,11 @@ class ObservationPipeline @Inject constructor(
             PlaceGeofence.Area(p.id, lat, lon, p.radiusM ?: PlaceGeofence.DEFAULT_RADIUS_M)
         } } }
 
+        val edge = edgeLocator
+        val located = ArrayList<Pair<String, TaggedLocation>>()
         for (s in batch) {
             val fix = location.at(s.lastSeen)
+            val tagged = edge?.locate(s.lastSeen)?.also { located += s.key to it }
             val observedPlaceId = MeasurementPlace.resolve(placeId, placeByLocation, placeChangedAtMs, s.lastSeen, area,
                 fix?.let { PlaceGeofence.Fix(it.atMs, it.lat, it.lon, it.accuracyM) })
             observedPlaces[s.key] = observedPlaceId
@@ -278,10 +293,13 @@ class ObservationPipeline @Inject constructor(
                     radio = kind,
                     placeId = observedPlaceId,
                     sessionId = session?.id,
-                    lat = fix?.lat.takeIf { session?.geotag == true },
-                    lon = fix?.lon.takeIf { session?.geotag == true },
-                    plusCode = if (tagPlusCodes) fix?.let { PlusCode.encode(it.lat, it.lon) } else null,
+                    lat = tagged?.lat ?: fix?.lat.takeIf { session?.geotag == true },
+                    lon = tagged?.lon ?: fix?.lon.takeIf { session?.geotag == true },
+                    plusCode = if (tagPlusCodes) (tagged?.let { PlusCode.encode(it.lat, it.lon) } ?: fix?.let { PlusCode.encode(it.lat, it.lon) }) else null,
                     rawHex = s.rawHex.take(RAW_HEX_LIMIT).ifBlank { null },
+                    origin = if (edge != null) ObservationOrigin.EDGE else null,
+                    locSource = tagged?.source ?: LocationSource.PHONE.takeIf { session?.geotag == true && fix != null },
+                    locAccuracyM = tagged?.accuracyM ?: fix?.accuracyM.takeIf { session?.geotag == true },
                 )
             }
         }
@@ -290,12 +308,20 @@ class ObservationPipeline @Inject constructor(
         if (evidence.isNotEmpty()) {
             observations.insert(evidence)
         }
+        if (edge != null) {
+            val clients = synchronized(lock) { batch.map { it.key }.filter { it in wifiClients } }
+            if (clients.isNotEmpty()) edgeDao.setWifiRole(clients, WifiRole.CLIENT)
+            val aps = batch.filter { it.kind == FwKind.WIFI && it.key !in clients }.map { it.key }
+            if (aps.isNotEmpty()) edgeDao.setWifiRole(aps, WifiRole.AP)
+            located.forEach { (key, t) -> edgeDao.setEntityLocated(key, t.atMs, t.lat, t.lon, t.accuracyM, t.source) }
+        }
 
         if (stopHistoryEnabled) batch.forEach { row ->
             insights.stop(row, location.at(row.lastSeen), session?.id, labels[row.key]?.userState ?: UserEntityState.UNCLASSIFIED,
                 enabled = stopHistoryEnabled, simulated = row.key in simulatedIds)
         }
-        batch.forEach { recordEncounter(it, observedPlaces[it.key], session?.id) }
+        val locatedByKey = located.toMap()
+        batch.forEach { recordEncounter(it, observedPlaces[it.key], session?.id, locatedByKey[it.key], edge != null) }
         accumulatePresence(batch, now)
         if (visitId != null) {
             places.upsertVisitEntities(
@@ -350,21 +376,79 @@ class ObservationPipeline @Inject constructor(
         serviceData, connectable, txPower, security, frequencyMhz, channel, wifiStandard, lastSeenMs, lastRssi, observationCount,
     )
 
-    private suspend fun recordEncounter(s: Sighting, placeId: Long?, sessionId: Long?) {
+    private suspend fun recordEncounter(s: Sighting, placeId: Long?, sessionId: Long?, tagged: TaggedLocation? = null, fromEdge: Boolean = false) {
         val open = openEncounters[s.key]
         if (open != null && open.placeId == placeId && open.sessionId == sessionId && s.lastSeen - open.lastMs < ENCOUNTER_GAP_MS) {
             open.lastMs = s.lastSeen
             open.maxRssi = maxOf(open.maxRssi, s.rssi)
             if (s.lastSeen - open.persistedEndMs >= ENCOUNTER_PERSIST_MS) {
                 encounters.extend(open.id, s.lastSeen, open.maxRssi)
+                if (tagged != null) edgeDao.setEncounterLocated(open.id, tagged.lat, tagged.lon, tagged.accuracyM, tagged.source)
                 open.persistedEndMs = s.lastSeen
             }
             return
         }
         val id = encounters.insert(
-            EncounterEntity(entityId = s.key, placeId = placeId, sessionId = sessionId, startedAtMs = s.lastSeen, endedAtMs = s.lastSeen, maxRssi = s.rssi),
+            EncounterEntity(
+                entityId = s.key, placeId = placeId, sessionId = sessionId, startedAtMs = s.lastSeen, endedAtMs = s.lastSeen, maxRssi = s.rssi,
+                firstLat = tagged?.lat, firstLon = tagged?.lon, lastLat = tagged?.lat, lastLon = tagged?.lon,
+                locAccuracyM = tagged?.accuracyM, locSource = tagged?.source, origin = if (fromEdge) ObservationOrigin.EDGE else null,
+            ),
         )
         openEncounters[s.key] = OpenEncounter(id, placeId, sessionId, s.lastSeen, s.lastSeen, s.rssi)
+    }
+
+    /**
+     * V2: sighting windows the Edge heard while this phone was not receiving it live (synced
+     * records). Classified like live radios; written as an entity update, one encounter and one
+     * observation each, with the window's own times and location. Never touches the live state.
+     */
+    suspend fun recordPast(items: List<PastSighting>, now: Long) = mutex.withLock {
+        if (items.isEmpty()) return@withLock
+        val tmp = LiveSightings()
+        val sightings = items.map { p ->
+            tmp.upsert(p.key, p.observation).copy(firstSeen = p.firstMs, lastSeen = p.lastMs, rssi = p.rssiMax, rssiMax = p.rssiMax)
+        }
+        val cls = classifier.classify(sightings, now)
+        val existing = entities.getAll(items.map { it.key }.distinct()).associateBy { it.id }.toMutableMap()
+        val fresh = ArrayList<EntityEntity>()
+        val updates = ArrayList<EntitySystemFields>()
+        val evidence = ArrayList<ObservationEntity>()
+        sightings.forEachIndexed { i, s ->
+            val p = items[i]
+            val kind = if (s.kind == FwKind.WIFI) RadioKind.WIFI else RadioKind.BLE
+            val prev = existing[s.key]
+            var row = toEntity(s, kind, cls[s.key], prev, (prev?.observationCount ?: 0) + 1).copy(
+                firstSeenMs = minOf(prev?.firstSeenMs ?: p.firstMs, p.firstMs),
+            )
+            if (prev != null && prev.lastSeenMs > p.lastMs) row = row.copy(lastSeenMs = prev.lastSeenMs, lastRssi = prev.lastRssi)
+            if (prev == null) fresh += row else updates += row.systemFields()
+            existing[s.key] = row
+            synchronized(lock) { if (rows.containsKey(s.key)) rows[s.key] = row }
+            val loc = p.location
+            evidence += ObservationEntity(
+                entityId = s.key, observedAtMs = p.lastMs, rssi = p.rssiMax, radio = kind,
+                placeId = p.placeId, sessionId = null,
+                lat = loc?.lat, lon = loc?.lon,
+                rawHex = s.rawHex.take(RAW_HEX_LIMIT).ifBlank { null },
+                origin = ObservationOrigin.EDGE, locSource = loc?.source, locAccuracyM = loc?.accuracyM,
+            )
+        }
+        if (fresh.isNotEmpty()) entities.insertIgnore(fresh)
+        if (updates.isNotEmpty()) entities.updateSystem(updates)
+        observations.insert(evidence)
+        items.forEach { p ->
+            p.wifiRole?.let { edgeDao.setWifiRole(listOf(p.key), it) }
+            val loc = p.location
+            encounters.insert(
+                EncounterEntity(
+                    entityId = p.key, placeId = p.placeId, sessionId = null, startedAtMs = p.firstMs, endedAtMs = p.lastMs, maxRssi = p.rssiMax,
+                    firstLat = loc?.lat, firstLon = loc?.lon, lastLat = loc?.endLat ?: loc?.lat, lastLon = loc?.endLon ?: loc?.lon,
+                    locAccuracyM = loc?.accuracyM, locSource = loc?.source, origin = ObservationOrigin.EDGE,
+                ),
+            )
+            if (loc != null) edgeDao.setEntityLocated(p.key, p.lastMs, loc.endLat ?: loc.lat, loc.endLon ?: loc.lon, loc.accuracyM, loc.source)
+        }
     }
 
     private fun accumulatePresence(batch: List<Sighting>, now: Long) {
@@ -562,6 +646,10 @@ class ObservationPipeline @Inject constructor(
                 needsAttention = s.key in attentionIds && s.key !in insights.quiet,
                 simulated = s.key in simulatedIds,
                 decodedStatus = s.liveDecode.joinToString(" · ") { it.reportLabel() }.ifBlank { null },
+                vendor = s.vendor,
+                wifiRole = if (kind == RadioKind.WIFI) (if (synchronized(lock) { s.key in wifiClients }) WifiRole.CLIENT else WifiRole.AP) else null,
+                guessConfidence = c?.guessConfidence ?: Confidence.LOW,
+                hasRemoteId = s.facts.vendorIes.any { it.oui == "FA:0B:BC" } || s.serviceUuids.any { it.contains("FFFA", ignoreCase = true) },
             )
         }
         val confirmedPlace = currentPlace?.takeIf { !placeByLocation || location.fresh(now) != null }
