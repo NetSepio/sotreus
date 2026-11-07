@@ -26,8 +26,7 @@
     <string name="edge_chip_out_of_reach">Out of reach</string>
     <string name="edge_chip_mesh">Mesh mode</string>
     <string name="edge_chip_battery">Battery %1$d%%</string>
-    <string name="edge_kv_link">Link</string>
-    <string name="edge_kv_link_value">%1$d dBm · %2$s</string>
+    <string name="edge_link_line">Link %1$d dBm · %2$s</string>
     <string name="edge_together">with this phone</string>
     <string name="edge_apart">apart</string>
     <string name="edge_kv_last_sync">Last sync</string>
@@ -38,6 +37,7 @@
     <string name="edge_position">Position</string>
     <string name="edge_position_value">±%1$s m · %2$s</string>
     <string name="edge_position_none">Not set</string>
+    <string name="edge_position_pending">%1$s · sent when the Edge connects</string>
     <string name="edge_position_set">Set from this phone</string>
     <string name="edge_position_averaging">±%1$s m from %2$d fixes</string>
     <string name="edge_position_save">Save position (±%1$s m)</string>

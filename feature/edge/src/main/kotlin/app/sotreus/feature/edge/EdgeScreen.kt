@@ -174,6 +174,12 @@ internal fun EdgeDeviceContent(
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.s)) {
                 Text(stringResource(R.string.edge_name, device.suffix), style = SotreusTheme.typography.rowTitle, color = c.text)
                 Text(stringResource(R.string.edge_firmware, live.info?.firmware ?: device.firmware), style = SotreusTheme.typography.caption, color = c.textMuted)
+                live.linkRssi?.takeIf { live.connected }?.let { dbm ->
+                    Text(
+                        stringResource(R.string.edge_link_line, dbm, stringResource(if (live.together) R.string.edge_together else R.string.edge_apart)).replace("-", "−"),
+                        style = SotreusTheme.typography.caption, color = c.textMuted,
+                    )
+                }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.s), verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.xs)) {
                     when {
                         live.pairingLost -> StateChip(stringResource(R.string.edge_chip_not_paired), ChipTone.NEUTRAL)
@@ -182,7 +188,8 @@ internal fun EdgeDeviceContent(
                         live.link == EdgeLinkState.Connecting || live.link == EdgeLinkState.Bonding -> StateChip(stringResource(R.string.edge_chip_connecting), ChipTone.NEUTRAL)
                         else -> StateChip(stringResource(R.string.edge_chip_out_of_reach), ChipTone.NEUTRAL)
                     }
-                    st?.battery?.percentApprox?.takeIf { st.battery?.present == true }?.let { StateChip(stringResource(R.string.edge_chip_battery, it), ChipTone.NEUTRAL) }
+                    // Only a battery that is certainly there: on USB power alone the Edge reads like a full cell.
+                    st?.battery?.takeIf { it.certain }?.percentApprox?.let { StateChip(stringResource(R.string.edge_chip_battery, it), ChipTone.NEUTRAL) }
                 }
             }
         }
@@ -193,7 +200,6 @@ internal fun EdgeDeviceContent(
         }
         KeyValueTable(
             listOfNotNull(
-                live.linkRssi?.let { stringResource(R.string.edge_kv_link) to stringResource(R.string.edge_kv_link_value, it, stringResource(if (live.together) R.string.edge_together else R.string.edge_apart)).replace("-", "−") },
                 stringResource(R.string.edge_kv_last_sync) to when {
                     live.syncing -> stringResource(R.string.edge_kv_syncing, "%,d".format(live.syncCursor), "%,d".format(live.syncHead))
                     device.lastSyncMs != null -> ageShort(state.nowMs - device.lastSyncMs!!)
@@ -201,7 +207,10 @@ internal fun EdgeDeviceContent(
                 },
                 st?.log?.let { stringResource(R.string.edge_kv_records) to "%,d".format(it.count) },
                 (stringResource(R.string.edge_kv_untimed) to state.untimed.toString()).takeIf { state.untimed > 0 },
-                (stringResource(R.string.edge_position) to (device.placeAccuracyM?.let { stringResource(R.string.edge_position_value, "%.0f".format(it), placeSourceLabel(device.placeSource)) } ?: stringResource(R.string.edge_position_none)))
+                (stringResource(R.string.edge_position) to (device.placeAccuracyM?.let {
+                    val value = stringResource(R.string.edge_position_value, "%.0f".format(it), placeSourceLabel(device.placeSource))
+                    if (device.placementPending) stringResource(R.string.edge_position_pending, value) else value
+                } ?: stringResource(R.string.edge_position_none)))
                     .takeIf { device.deployment == EdgeDeployment.STATIONARY },
             ),
         )
@@ -277,10 +286,10 @@ private fun EdgeStationaryPreview() {
     SotreusTheme {
         EdgeDeviceContent(
             EdgeUiState(
-                device = FakeSotreusData.edgeStationaryDevice, live = FakeSotreusData.edgeLive.copy(handOff = true), source = SensingSource.EDGE,
+                device = FakeSotreusData.edgeStationaryDevice.copy(placementPending = true), live = FakeSotreusData.edgeLive.copy(handOff = true), source = SensingSource.EDGE,
                 position = PositionUi(PositionStep.Estimated(FakeSotreusData.edgeWideEstimate)), nowMs = FakeSotreusData.NOW,
             ),
-            FakeSotreusData.edgeStationaryDevice, {},
+            FakeSotreusData.edgeStationaryDevice.copy(placementPending = true), {},
         )
     }
 }

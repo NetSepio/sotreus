@@ -131,6 +131,9 @@ class NowViewModel @Inject constructor(
     /** The owner's explicit switch back to this phone's radios. */
     fun usePhoneRadios() = viewModelScope.launch { edgeRepo.usePhoneRadios() }
 
+    /** The Edge's live table is polled only while Now is on screen. */
+    fun edgeLiveVisible(visible: Boolean) = edgeRepo.liveVisible(visible)
+
     fun setView(v: NowView) = viewModelScope.launch { settings.setNowView(v) }
     fun setShowAddresses(on: Boolean) = viewModelScope.launch { settings.setShowAddresses(on) }
     fun setFilter(f: NowFilter) { filter.value = f }

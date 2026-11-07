@@ -88,7 +88,7 @@ class ObservationController @Inject constructor(
         return app.sotreus.sensing.RadioStatus(
             running = e.connected,
             bleRunning = e.listening,
-            bleLastResultMs = e.lastLiveMs,
+            bleLastResultMs = maxOf(e.lastLiveMs, e.lastHeardMs),
             wifiLastFreshMs = 0,
             wifiScanIntervalMs = 30_000,
         )

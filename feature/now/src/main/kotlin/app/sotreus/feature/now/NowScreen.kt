@@ -89,6 +89,10 @@ internal fun NowScreen(navigate: (Any) -> Unit, vm: NowViewModel = hiltViewModel
     val state by vm.state.collectAsStateWithLifecycle()
     val locationFailed by vm.locationFailed.collectAsStateWithLifecycle()
     var picker by remember { mutableStateOf(false) }
+    androidx.lifecycle.compose.LifecycleStartEffect(Unit) {
+        vm.edgeLiveVisible(true)
+        onStopOrDispose { vm.edgeLiveVisible(false) }
+    }
     if (locationFailed) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { vm.locationFailed.value = false },

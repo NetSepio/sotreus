@@ -60,12 +60,13 @@ class EdgeRepository @Inject constructor(
     val live: StateFlow<EdgeLive> = hub.state
     val lastFix: StateFlow<GeoFix?> = tagger.lastFix
 
-    private val _positionSaved = kotlinx.coroutines.flow.MutableStateFlow<EdgePlacement?>(null)
+    /** The position the Edge reported keeping after the app last sent one, in this run of the app. */
+    val positionSaved: StateFlow<EdgePlacement?> = hub.placementConfirmed
 
-    /** The placement the Edge reported keeping after the last save in this run of the app. */
-    val positionSaved: StateFlow<EdgePlacement?> = _positionSaved
+    fun clearPositionSaved() = hub.clearPlacementConfirmed()
 
-    fun clearPositionSaved() { _positionSaved.value = null }
+    /** Polls the Edge's live table while a live screen is visible (see [EdgeHub.liveVisible]). */
+    fun liveVisible(visible: Boolean) = hub.liveVisible(visible)
 
     fun untimedCount(deviceId: String): Flow<Int> = dao.observeUntimedCount(deviceId)
     fun sightingCount(deviceId: String): Flow<Int> = dao.observeSightingCount(deviceId)
@@ -152,11 +153,13 @@ class EdgeRepository @Inject constructor(
         val link = pending
         pending = null
         val mode = if (deployment == EdgeDeployment.STATIONARY) DeploymentMode.STATIONARY else DeploymentMode.TRAVEL
-        runCatching { link?.setConfig(placementJson(EdgePlacement(mode))) }
+        // Not sent (the link dropped)? It stays pending and goes on the next connect.
+        val sent = link != null && runCatching { link.setConfig(placementJson(EdgePlacement(mode))) }.isSuccess
         dao.upsertDevice(
             d.copy(
                 deployment = deployment, phoneTagging = phoneTagging,
                 syncCursor = if (importOlder) SyncPlanner.importAll(oldest) else d.syncCursor,
+                placementPending = !sent,
             ),
         )
         runCatching { link?.close() }
@@ -171,26 +174,28 @@ class EdgeRepository @Inject constructor(
         pending = null
     }
 
-    suspend fun setDeployment(deployment: EdgeDeployment) = onEdge { l, d ->
-        val mode = if (deployment == EdgeDeployment.STATIONARY) DeploymentMode.STATIONARY else DeploymentMode.TRAVEL
-        l.setConfig(placementJson(EdgePlacement(mode)))
-        save(d.copy(deployment = deployment))
+    /** Travel or stationary. Saved on this phone at once and sent to the Edge now or on its next connect. */
+    suspend fun setDeployment(deployment: EdgeDeployment): Result<EdgePlacement?> = keepAndSend { d ->
+        d.copy(deployment = deployment)
     }
 
-    /** A stationary Edge's position, from averaged phone fixes or a map pick. Resets the moved check. */
     /**
-     * Stores a stationary position on the Edge, then reads `config.placement` back: the result is
-     * what the Edge actually keeps, and that is what the device row mirrors.
+     * A stationary Edge's position (averaged phone fixes, a map pick or typed coordinates). Saved on
+     * this phone at once, so it never waits on the link; sent to the Edge now if it is connected,
+     * otherwise on its next connect, and read back from `config.placement` then. Resets the moved
+     * check. The result is what the Edge kept, or null while the position is still pending.
      */
-    suspend fun setPosition(lat: Double, lon: Double, accuracyM: Float, source: String): Result<EdgePlacement> = onEdge { l, d ->
-        val now = System.currentTimeMillis()
-        val p = EdgePlacement(DeploymentMode.STATIONARY, lat, lon, accuracyM, now, source)
-        l.setConfig(placementJson(p))
-        val kept = l.config().placement?.takeIf { it.positioned && it.mode == DeploymentMode.STATIONARY }
-            ?: throw EdgeRequestException("The Edge did not keep the position. Try again.")
-        save(d.withPlacement(kept).copy(wifiBaseline = null, baselineFromMs = null, placementHeldSinceMs = null))
-        _positionSaved.value = kept
-        kept
+    suspend fun setPosition(lat: Double, lon: Double, accuracyM: Float, source: String): Result<EdgePlacement?> = keepAndSend { d ->
+        val p = EdgePlacement(DeploymentMode.STATIONARY, lat, lon, accuracyM, System.currentTimeMillis(), source)
+        d.withPlacement(p).copy(wifiBaseline = null, baselineFromMs = null, placementHeldSinceMs = null)
+    }
+
+    private suspend fun keepAndSend(change: (EdgeDeviceEntity) -> EdgeDeviceEntity): Result<EdgePlacement?> = runCatching {
+        val d = dao.current() ?: throw EdgeRequestException("No Edge is paired")
+        save(change(d).copy(placementPending = true))
+        hub.clearPlacementConfirmed()
+        // A link that drops mid-send leaves the placement pending; the next connect sends it.
+        runCatching { hub.withLink { hub.pushPlacement(it, d.deviceId) } }.getOrNull()
     }
 
     /** Whether "Set from this phone" can run: permission, then location services. */
@@ -290,11 +295,6 @@ class EdgeRepository @Inject constructor(
         return runCatching { hub.withLink { block(it, d) } ?: throw EdgeRequestException("Connect to your Edge to change this") }
     }
 
-    private fun placementJson(p: EdgePlacement): JsonObject {
-        // Mode only keeps any stored position; a position is sent whole.
-        val body = if (p.positioned) p.toJson() else JsonObject(mapOf("mode" to JsonPrimitive(p.mode.wire)))
-        return JsonObject(mapOf("placement" to body))
-    }
 
     private fun capsJson(info: EdgeInfo): String =
         EdgeJson.encodeToString(JsonObject.serializer(), JsonObject(info.caps.raw.mapValues { JsonPrimitive(it.value) }))

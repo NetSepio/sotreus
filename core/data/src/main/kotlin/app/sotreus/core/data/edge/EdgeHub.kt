@@ -18,6 +18,7 @@ import app.sotreus.edge.link.config
 import app.sotreus.edge.link.info
 import app.sotreus.edge.link.liveAll
 import app.sotreus.edge.link.setTime
+import app.sotreus.edge.link.setConfig
 import app.sotreus.edge.link.status
 import app.sotreus.edge.link.unwatch
 import app.sotreus.edge.link.access
@@ -50,6 +51,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
@@ -70,8 +73,10 @@ data class EdgeLive(
     val status: EdgeStatus? = null,
     val statusAtMs: Long = 0,
     val config: EdgeConfig? = null,
-    /** Last successful `live` poll. */
+    /** Last successful `live` poll (only while a live screen is open). */
     val lastLiveMs: Long = 0,
+    /** Last evidence the Edge is listening: a poll, a `seen` or `rssi` event, or a handed-off record. */
+    val lastHeardMs: Long = 0,
     val openSightings: Int = 0,
     val syncing: Boolean = false,
     val syncCursor: Long = 0,
@@ -129,6 +134,33 @@ class EdgeHub @Inject constructor(
     }
 
     val running: Boolean get() = session?.isActive == true
+
+    private val _placementConfirmed = MutableStateFlow<app.sotreus.edge.protocol.EdgePlacement?>(null)
+
+    /** The position the Edge reported keeping after the app last sent one, in this run of the app. */
+    val placementConfirmed: StateFlow<app.sotreus.edge.protocol.EdgePlacement?> = _placementConfirmed.asStateFlow()
+
+    fun clearPlacementConfirmed() { _placementConfirmed.value = null }
+
+    /**
+     * Sends the placement this phone holds when it is marked pending, reads `config.placement` back,
+     * and clears the mark only if the Edge kept it. A newer change made during the round trip stays
+     * pending for the next connect. Returns what the Edge kept, or null.
+     */
+    suspend fun pushPlacement(l: EdgeLink, deviceId: String): app.sotreus.edge.protocol.EdgePlacement? {
+        val d = dao.device(deviceId)?.takeIf { it.placementPending } ?: return null
+        val sent = d.placement()
+        l.setConfig(placementJson(sent))
+        val kept = l.config().placement?.takeIf { it.keeps(sent) } ?: return null
+        val now = dao.device(deviceId) ?: return null
+        if (now.placement() != sent) return null
+        val mirrored = now.withPlacement(kept).copy(placementPending = false)
+        dao.upsertDevice(mirrored)
+        tagger.bind(mirrored, _state.value.info?.caps ?: EdgeCapabilities())
+        _state.update { it.copy(device = mirrored, config = it.config?.copy(placement = kept)) }
+        if (kept.positioned) _placementConfirmed.value = kept
+        return kept
+    }
 
     /** Starts the link to the newest paired Edge. Safe to call repeatedly. */
     fun start() {
@@ -256,9 +288,12 @@ class EdgeHub @Inject constructor(
         dao.upsertAnchor(EdgeBootAnchorEntity(deviceId, EdgeTime.bootKey(info.boot), EdgeTime.anchor(st.uptimeMs, mid)))
         val offset = st.unixMs?.let { EdgeTime.clockOffset(it, sent, received) }
         l.setTime(System.currentTimeMillis(), tzOffsetMinutes())
+        // A placement set on this phone while the Edge was away goes first.
+        runCatching { pushPlacement(l, deviceId) }.onFailure { Log.w(TAG, "placement not sent; it stays pending", it) }
         val cfg = runCatching { l.config() }.getOrNull()
         val stored = dao.device(deviceId)
-        val updated = stored?.let { d -> cfg?.placement?.let { p -> d.withPlacement(p) } ?: d }
+        // The Edge's placement is the source of truth, except while this phone still has one to send.
+        val updated = stored?.let { d -> if (d.placementPending) d else cfg?.placement?.let { p -> d.withPlacement(p) } ?: d }
         if (updated != null && updated != stored) dao.upsertDevice(updated)
         tagger.bind(updated ?: stored, info.caps)
         _state.update {
@@ -331,6 +366,7 @@ class EdgeHub @Inject constructor(
             store = { batch -> sync.storeLive(deviceId, batch) },
             onCommitted = { through ->
                 val now = System.currentTimeMillis()
+                heard()
                 if (caughtUp.get()) {
                     dao.raiseCursor(deviceId, through + 1, now)
                     _state.update { it.copy(syncCursor = maxOf(it.syncCursor, through + 1), syncHead = maxOf(it.syncHead, through)) }
@@ -395,6 +431,7 @@ class EdgeHub @Inject constructor(
                     val http = app.sotreus.edge.android.HttpEdgeLink(app.sotreus.edge.android.EdgeWifi.lanUrl(dev.suffix), wifi.clientFor(host, found.address), pin, app.sotreus.edge.link.LinkKind.SHARED_NETWORK)
                     if (!http.connect(tzOffsetMinutes())) return@runCatching
                     try {
+                        runCatching { pushPlacement(http, deviceId) }.onFailure { Log.w(TAG, "placement not sent over the network", it) }
                         lock.withLock {
                             val log = http.status().log ?: return@withLock
                             _state.update { it.copy(syncing = true) }
@@ -410,22 +447,36 @@ class EdgeHub @Inject constructor(
         }
     }
 
-    private suspend fun liveLoop(l: EdgeLink) = coroutineScope {
-        while (isActive) {
-            if (_state.value.status?.mode != EdgeMode.MESH) {
-                runCatching { l.liveAll() }.onSuccess { (rows, _) ->
-                    val now = System.currentTimeMillis()
-                    rows.forEach { row ->
-                        val key = EdgeObservations.key(row.kind, row.address)
-                        val body = synchronized(bodies) { bodies[key] } ?: EdgeObservations.bare(row.kind, row.address, row.rssiLast, row.rssiMax)
-                        _observations.tryEmit(EdgeObservations.of(body, now - row.agoMs, row.rssiLast))
+    /**
+     * The `live` table (about 100 rows of JSON) is the heaviest traffic on the link, and with 27-byte
+     * link packets it crowds out the hand-off. So it is polled only while a live screen is open,
+     * every [LIVE_MS]; otherwise `seen` events and handed-off records carry the sightings.
+     */
+    private suspend fun liveLoop(l: EdgeLink) {
+        liveViewers.map { it > 0 }.distinctUntilChanged().collectLatest { visible ->
+            while (visible) {
+                if (_state.value.status?.mode != EdgeMode.MESH) {
+                    runCatching { l.liveAll() }.onSuccess { (rows, _) ->
+                        val now = System.currentTimeMillis()
+                        rows.forEach { row ->
+                            val key = EdgeObservations.key(row.kind, row.address)
+                            val body = synchronized(bodies) { bodies[key] } ?: EdgeObservations.bare(row.kind, row.address, row.rssiLast, row.rssiMax)
+                            _observations.tryEmit(EdgeObservations.of(body, now - row.agoMs, row.rssiLast))
+                        }
+                        _state.update { it.copy(lastLiveMs = now, lastHeardMs = now, openSightings = rows.size) }
                     }
-                    _state.update { it.copy(lastLiveMs = now, openSightings = rows.size) }
                 }
+                delay(LIVE_MS)
             }
-            delay(LIVE_MS)
         }
     }
+
+    private val liveViewers = MutableStateFlow(0)
+
+    /** A live screen (Now, with the Edge as the sensor) became visible or hidden. */
+    fun liveVisible(visible: Boolean) = liveViewers.update { (it + if (visible) 1 else -1).coerceAtLeast(0) }
+
+    private fun heard() = _state.update { it.copy(lastHeardMs = System.currentTimeMillis()) }
 
     private suspend fun linkLoop(l: EdgeLink) = coroutineScope {
         while (isActive) {
@@ -459,6 +510,7 @@ class EdgeHub @Inject constructor(
                     ?: EdgeObservations.bare(ev.kind, ev.address, ev.rssi, ev.rssi)
                 synchronized(bodies) { bodies[EdgeObservations.key(ev.kind, ev.address)] = body }
                 _observations.tryEmit(EdgeObservations.of(body, System.currentTimeMillis(), ev.rssi))
+                heard()
             }
             is EdgeEvent.Obs -> requestSync()
             is EdgeEvent.Rssi -> {
@@ -467,6 +519,7 @@ class EdgeHub @Inject constructor(
                 val key = EdgeObservations.key(kind, ev.address)
                 val body = synchronized(bodies) { bodies[key] } ?: EdgeObservations.bare(kind, ev.address, ev.rssi, ev.rssi)
                 _observations.tryEmit(EdgeObservations.of(body, System.currentTimeMillis(), ev.rssi))
+                heard()
             }
             is EdgeEvent.Status -> _state.update { it.copy(status = ev.status, statusAtMs = System.currentTimeMillis()) }
             is EdgeEvent.Mode -> _state.update { s -> s.copy(status = s.status?.copy(mode = ev.mode)) }
@@ -478,7 +531,7 @@ class EdgeHub @Inject constructor(
 
     companion object {
         private const val TAG = "SotreusEdge"
-        const val LIVE_MS = 4_000L
+        const val LIVE_MS = 20_000L
         private const val LINK_RSSI_MS = 5_000L
         private const val CLOCK_CHECK_MS = 10 * 60_000L
         private const val SYNC_DEBOUNCE_MS = 2_000L

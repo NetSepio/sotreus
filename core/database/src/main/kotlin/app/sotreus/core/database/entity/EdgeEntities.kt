@@ -47,6 +47,8 @@ data class EdgeDeviceEntity(
     @ColumnInfo(name = "placement_held_since_ms") val placementHeldSinceMs: Long? = null,
     /** Travel mode: tag sightings with this phone's location while together. */
     @ColumnInfo(name = "phone_tagging") val phoneTagging: Boolean = true,
+    /** The placement above (mode and position) was set on this phone and is not on the Edge yet. */
+    @ColumnInfo(name = "placement_pending", defaultValue = "0") val placementPending: Boolean = false,
 )
 
 /** Unix ms at which an Edge boot started, seen by this phone while connected. */

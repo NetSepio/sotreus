@@ -121,7 +121,7 @@ class MigrationNineTest(unittest.TestCase):
         _insert_minimal(db, before, 'edge_devices', device_id='9f3c00aa11bb22cc', name='Sotreus Edge', suffix='96FF', sync_cursor=4_813,
                         data_link='BLUETOOTH', deployment='TRAVEL', phone_tagging=1)
         _insert_minimal(db, before, 'edge_sightings', device_id='9f3c00aa11bb22cc', seq=7, entity_id='ble:keep', loc_kind='NOT_KNOWN')
-        sql = _migration_sql('MIGRATION_8_9', 'val ALL')
+        sql = _migration_sql('MIGRATION_8_9', 'val MIGRATION_9_10')
         self.assertEqual(2, len(sql))
         for statement in sql:
             db.execute(statement)
@@ -132,6 +132,26 @@ class MigrationNineTest(unittest.TestCase):
         with self.assertRaises(sqlite3.IntegrityError):
             db.execute("INSERT INTO edge_kept_records VALUES ('9f3c00aa11bb22cc',8,5,1,1,10,20,'00',31)")
         _assert_matches(self, db, 9)
+        db.close()
+
+
+
+class MigrationTenTest(unittest.TestCase):
+    """v10: a placement set on this phone while the Edge was away."""
+
+    def test_upgrade_marks_nothing_pending_and_matches_room_schema(self):
+        db, before = _create(9)
+        _insert_minimal(db, before, 'edge_devices', device_id='9f3c00aa11bb22cc', name='Sotreus Edge', suffix='96FF', sync_cursor=4_813,
+                        data_link='BLUETOOTH', deployment='STATIONARY', phone_tagging=1, place_lat=12.97, place_lon=77.59, place_accuracy_m=9.0)
+        sql = _migration_sql('MIGRATION_9_10', 'val ALL')
+        self.assertEqual(1, len(sql))
+        for statement in sql:
+            db.execute(statement)
+        self.assertEqual((4_813, 12.97, 0), db.execute('SELECT sync_cursor,place_lat,placement_pending FROM edge_devices').fetchone())
+        _assert_matches(self, db, 10)
+        after = json.loads((SCHEMAS / '10.json').read_text())['database']
+        field = next(f for t in after['entities'] if t['tableName'] == 'edge_devices' for f in t['fields'] if f['columnName'] == 'placement_pending')
+        self.assertEqual('0', field.get('defaultValue'))
         db.close()
 
 

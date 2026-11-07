@@ -97,7 +97,18 @@ enum class EdgeLinkMode { AUTO, AP, STA, OFF, UNKNOWN;
     companion object { fun of(s: String?) = entries.firstOrNull { it.wire == s } ?: UNKNOWN }
 }
 
-data class EdgeBattery(val present: Boolean, val source: String, val millivolts: Int?, val percentApprox: Int?)
+data class EdgeBattery(val present: Boolean, val source: String, val millivolts: Int?, val percentApprox: Int?) {
+    /**
+     * A cell is certainly connected. The Edge cannot tell a full cell on USB from USB with no cell
+     * (both read about 4.2 V), so only a reading clearly below the charger's level counts.
+     */
+    val certain: Boolean
+        get() = present && source == "battery" && percentApprox != null && millivolts != null && millivolts < CERTAIN_BELOW_MV
+
+    companion object {
+        const val CERTAIN_BELOW_MV = 4_100
+    }
+}
 
 data class EdgeWifiLinkStatus(
     val mode: EdgeLinkMode,

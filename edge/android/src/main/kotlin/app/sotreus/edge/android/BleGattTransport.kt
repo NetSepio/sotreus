@@ -152,22 +152,18 @@ class BleGattTransport(
     @Volatile private var attempts = 0
 
     /**
-     * After a drop: a direct connect first, while the Edge advertises fast (100–150 ms for 30 s after
-     * a disconnect), then a background auto-connect, opened afresh every [REARM_MS]. Some stacks
-     * (Android 9 on a Mate 9) never complete a pending auto-connect by themselves.
+     * After a drop: a fresh auto-connect at once, while the Edge advertises fast (100–150 ms for 30 s
+     * after a disconnect), then again every [REARM_MS]. Some stacks (Android 9 on a Mate 9) never
+     * complete a pending auto-connect by themselves. No direct connect: the Edge uses a rotating
+     * private address, which only auto-connect resolves through the bond, so a direct connect goes to
+     * an address the Edge has already left (it fails with 133 after 30 s).
      */
     private fun rearm() {
         rearmJob?.cancel()
-        val n = attempts++
+        attempts++
         rearmJob = scope.launch {
-            if (n == 0) {
-                kotlinx.coroutines.delay(DIRECT_DELAY_MS)
-                if (closed || linkUp) return@launch
-                reopen(auto = false)
-                // A failed direct connect reports a disconnect, which calls rearm() again; this covers a stack that stays silent.
-                kotlinx.coroutines.delay(DIRECT_WINDOW_MS)
-                if (closed || linkUp) return@launch
-            }
+            kotlinx.coroutines.delay(REOPEN_DELAY_MS)
+            if (closed || linkUp) return@launch
             reopen(auto = true)
             while (!closed && !linkUp) {
                 kotlinx.coroutines.delay(REARM_MS)
@@ -212,7 +208,9 @@ class BleGattTransport(
         val events = svc.getCharacteristic(UUID.fromString(EdgeProtocol.EVENTS_UUID)) ?: throw EdgeRequestException("events characteristic missing")
         val records = svc.getCharacteristic(UUID.fromString(EdgeProtocol.RECORDS_UUID)) ?: throw EdgeRequestException("records characteristic missing")
         mtu = runCatching { op<Int> { g.requestMtu(EdgeProtocol.REQUESTED_MTU) } }.getOrDefault(23)
-        g.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
+        // No requestConnectionPriority: Android moves this link to 15 ms by itself about 0.5 s after
+        // connect, and an extra request collided with the Edge's own link procedures (status 35) and
+        // came just before links dropped on Android 9.
         // Bond on this LE link (Android shows its prompt for the code on the Edge's display). Calling
         // createBond() without a link can try classic Bluetooth on Android 9, which an LE-only Edge never answers.
         if (device.bondState != BluetoothDevice.BOND_BONDED) {
@@ -365,8 +363,7 @@ class BleGattTransport(
     private companion object {
         private const val REARM_MS = 60_000L
         const val PAIRING_LOST = "This phone lost its pairing with the Edge"
-        private const val DIRECT_DELAY_MS = 500L
-        private const val DIRECT_WINDOW_MS = 35_000L
+        private const val REOPEN_DELAY_MS = 500L
         const val TAG = "SotreusEdgeBle"
         const val OP_TIMEOUT_MS = 10_000L
         val CCCD: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")

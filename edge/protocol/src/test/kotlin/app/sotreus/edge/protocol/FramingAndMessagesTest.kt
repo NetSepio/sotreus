@@ -12,6 +12,17 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FramingAndMessagesTest {
+    @Test fun aBatteryIsShownOnlyWhenACellIsCertain() {
+        // USB power with no cell: the charger reads like a full cell.
+        assertFalse(EdgeBattery(true, "battery", 4_155, 96).certain)
+        assertFalse(EdgeBattery(true, "battery", 4_220, 100).certain)
+        assertFalse(EdgeBattery(false, "usb", 4_270, null).certain)
+        assertFalse(EdgeBattery(false, "unknown", null, null).certain)
+        // Below the charger's level only a cell can be the source.
+        assertTrue(EdgeBattery(true, "battery", 3_950, 82).certain)
+        assertFalse(EdgeBattery(true, "battery", null, 82).certain)
+    }
+
     @Test fun framerSplitsLinesAcrossChunksAndMultibyteCharacters() {
         val f = NdjsonFramer()
         val text = "{\"ev\":\"seen\",\"label\":\"Café\"}\n{\"ev\":\"obs\",\"seq\":5,\"type\":1}\n"

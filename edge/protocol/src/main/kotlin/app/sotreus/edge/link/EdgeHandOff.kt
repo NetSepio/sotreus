@@ -160,8 +160,9 @@ class EdgeHandOff(
         return Start.Started(storedHead)
     }
 
+    /** Cumulative, so a slow answer never needs waiting for: the next ack covers this one. */
     private suspend fun send(seq: Long) = acks.withLock {
-        runCatching { link.request { EdgeCommands.streamAck(it, seq) } }
+        runCatching { link.request(ACK_TIMEOUT_MS) { EdgeCommands.streamAck(it, seq) } }
     }
 
     /** Ends the hand-off on the phone side without calling `onStopped`; the Edge stores what was not acknowledged. */
@@ -201,5 +202,6 @@ class EdgeHandOff(
         const val BATCH_MAX = 16
         const val BATCH_WAIT_MS = 150L
         const val TICK_MS = 500L
+        const val ACK_TIMEOUT_MS = 4_000L
     }
 }
