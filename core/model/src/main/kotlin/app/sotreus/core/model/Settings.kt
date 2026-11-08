@@ -42,6 +42,15 @@ data class SotreusSettings(
     val placeByLocation: Boolean = true,
     /** Tag each observation with a ~14 m plus code of the phone's location while Sotreus is open. */
     val plusCodeTags: Boolean = false,
+    /**
+     * Automatic places (docs/plans/auto-places.md): file located sightings under places made where
+     * the listener settles. Null until the owner has been asked once; then their choice.
+     */
+    val autoPlaces: Boolean? = null,
+    /** Radius of a new automatic place, in metres. */
+    val autoPlaceRadiusM: Int = 50,
+    /** "Not now" on Now's ask to allow notifications for the Edge running in the background. */
+    val edgeNotifyAskDismissed: Boolean = false,
     val nowView: NowView = NowView.BANDS,
     val retention: RetentionPolicy = RetentionPolicy.KEEP_30_DAYS,
     val maskCoordinates: Boolean = true,
@@ -57,6 +66,13 @@ data class SotreusSettings(
     val nearbyPresence: Boolean = false,
     val tickSound: Boolean = true,
     val simulatedRadios: Boolean = false,
+    /** V2: which radios sense. Pairing an Edge sets EDGE; the owner can switch back (Settings › Sensors). */
+    val sensingSource: SensingSource = SensingSource.PHONE,
+    /** V2 quality limits for tagging Edge sightings with this phone's location (HANDOFF_V2_EDGE.md §4.4). */
+    val edgeMaxAccuracyM: Int = SotreusDefaults.EDGE_MAX_ACCURACY_M,
+    val edgeTogetherMinDbm: Int = SotreusDefaults.EDGE_TOGETHER_MIN_DBM,
+    /** V2: a stationary Edge's averaged position is accepted at or below this (Field tools). */
+    val edgeStationaryLimitM: Int = SotreusDefaults.EDGE_STATIONARY_LIMIT_M,
     val forceSolanaUi: Boolean = false,
     /** Now › List shows each radio's address, to spot your own devices. */
     val showAddresses: Boolean = false,

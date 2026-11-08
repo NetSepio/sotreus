@@ -89,6 +89,10 @@ internal fun NowScreen(navigate: (Any) -> Unit, vm: NowViewModel = hiltViewModel
     val state by vm.state.collectAsStateWithLifecycle()
     val locationFailed by vm.locationFailed.collectAsStateWithLifecycle()
     var picker by remember { mutableStateOf(false) }
+    androidx.lifecycle.compose.LifecycleStartEffect(Unit) {
+        vm.edgeLiveVisible(true)
+        onStopOrDispose { vm.edgeLiveVisible(false) }
+    }
     if (locationFailed) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { vm.locationFailed.value = false },
@@ -101,6 +105,8 @@ internal fun NowScreen(navigate: (Any) -> Unit, vm: NowViewModel = hiltViewModel
             },
         )
     }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val notify = app.sotreus.core.ui.rememberNotificationAccess(app.sotreus.core.data.service.Notifications.CHANNEL_OBSERVATION) { app.sotreus.core.data.service.EdgeLinkService.refresh(context) }
     NowContent(
         state = state,
         onView = vm::setView,
@@ -113,7 +119,21 @@ internal fun NowScreen(navigate: (Any) -> Unit, vm: NowViewModel = hiltViewModel
         onShowAddresses = vm::setShowAddresses,
         onRoute = { navigate(app.sotreus.core.navigation.RouteMapRoute()) },
         onHideBurst = vm::hideBurst,
+        onUsePhone = { vm.usePhoneRadios() },
+        onPairAgain = { navigate(app.sotreus.core.navigation.EdgeRoute) },
+        askNotifications = state.edge != null && state.settings.sensingSource == app.sotreus.core.model.SensingSource.EDGE &&
+            !notify.shown && !state.settings.edgeNotifyAskDismissed,
+        onAllowNotifications = notify.request,
+        onNotNowNotifications = vm::dismissNotifyAsk,
     )
+    // Automatic places: asked once (docs/plans/auto-places.md), switchable in Privacy & retention.
+    if (state.settings.onboardingDone && state.settings.autoPlaces == null) {
+        app.sotreus.core.ui.ConfirmDialog(
+            stringResource(R.string.auto_places_ask_title), stringResource(R.string.auto_places_ask_body),
+            stringResource(R.string.auto_places_ask_on), stringResource(R.string.auto_places_ask_not_now),
+            onConfirm = { vm.setAutoPlaces(true) }, onDismiss = { vm.setAutoPlaces(false) }, destructive = false,
+        )
+    }
     if (picker) {
         PlacePickerSheet(
             places = state.places,
@@ -140,25 +160,35 @@ internal fun NowContent(
     onShowAddresses: (Boolean) -> Unit = {},
     onRoute: () -> Unit = {},
     onHideBurst: () -> Unit = {},
+    onUsePhone: () -> Unit = {},
+    onPairAgain: () -> Unit = {},
+    /** The Edge runs in the background but Android hides Sotreus's notifications: ask once. */
+    askNotifications: Boolean = false,
+    onAllowNotifications: () -> Unit = {},
+    onNotNowNotifications: () -> Unit = {},
 ) {
     val snap = state.snapshot
+    val edge = state.edge
     ScreenColumn(top = SotreusTheme.spacing.screenH) {
         Header(state, onPlace, onRoute)
         snap.conditionNotes.forEach { note -> CaveatBox(stringResource(R.string.now_radio_conditions), note) }
         if (snap.conditionNotes.any { it.contains("flood", true) }) GhostButton(stringResource(R.string.now_hide_burst), onHideBurst)
         Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.xl)) {
-            FreshnessLine(freshness(state))
+            FreshnessLine(if (edge != null) edgeFreshness(state, edge) else freshness(state))
+            if (edge != null) EdgeTaggingLine(edge, state.edgeFixAccuracyM)
             SegmentedToggle(
-                listOf(NowView.BANDS to stringResource(R.string.now_view_bands), NowView.LIST to stringResource(R.string.now_view_list)),
+                listOf(NowView.BANDS to stringResource(if (edge != null) R.string.now_view_sweep else R.string.now_view_bands), NowView.LIST to stringResource(R.string.now_view_list)),
                 state.view,
                 onView,
             )
         }
         if (state.settings.simulatedRadios) WarningBanner(stringResource(R.string.now_simulated_banner))
+        if (edge != null) EdgeLinkBanner(edge, snap.atMs, onUsePhone, onPairAgain)
+        if (askNotifications) EdgeNotifyAsk(onAllowNotifications, onNotNowNotifications)
         when {
             state.needsPermissions -> PermissionPrompt(onPermissions)
             else -> {
-                snap.access?.radiosOff?.takeIf { it.isNotEmpty() && !state.settings.simulatedRadios }?.let { off ->
+                snap.access?.radiosOff?.takeIf { it.isNotEmpty() && !state.settings.simulatedRadios && edge == null }?.let { off ->
                     WarningBanner(stringResource(R.string.now_radios_off_body, off.map { radioName(it) }.joinToString(", ")))
                 }
                 if (state.view == NowView.BANDS) BandsView(state, onEntity, onAttention) else ListView(state, onFilter, onSort, onEntity, onShowAddresses)
@@ -203,6 +233,7 @@ private fun Header(state: NowUiState, onPlace: () -> Unit, onRoute: () -> Unit) 
                         areaText != null && animate -> R.string.now_place_kicker_unsaved
                         unsaved && state.hereCode != null && state.settings.maskCoordinates -> R.string.now_place_kicker_area
                         unsaved && state.hereCode != null -> R.string.now_place_kicker_code
+                        state.places.any { it.place.id == state.snapshot.placeId && it.place.auto } -> R.string.now_place_kicker_auto
                         state.snapshot.placeByLocation -> R.string.now_place_kicker_location
                         else -> R.string.now_place_kicker
                     },
@@ -220,6 +251,7 @@ private fun Header(state: NowUiState, onPlace: () -> Unit, onRoute: () -> Unit) 
             }
         }
         val pill = when {
+            state.edge != null -> edgePill(state.edge)
             state.snapshot.locating -> stringResource(R.string.now_locating)
             !state.snapshot.observing -> stringResource(R.string.now_paused)
             state.settings.simulatedRadios -> stringResource(R.string.now_simulated)
@@ -227,7 +259,7 @@ private fun Header(state: NowUiState, onPlace: () -> Unit, onRoute: () -> Unit) 
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.m)) {
             if (state.settings.livePath) LivePathButton(onRoute)
-            StatusPill(pill, live = state.snapshot.observing)
+            StatusPill(pill, live = if (state.edge != null) state.edge.connected else state.snapshot.observing)
         }
     }
 }
@@ -324,11 +356,15 @@ private fun BandsView(state: NowUiState, onEntity: (String) -> Unit, onAttention
     ProximityBands(
         allDots = dots,
         fullViewLimit = BandLayout.MAX_DOTS,
-        labels = BandLabels(stringResource(UiR.string.band_near), stringResource(UiR.string.band_mid), stringResource(UiR.string.band_far), stringResource(UiR.string.band_you)),
+        labels = BandLabels(
+            stringResource(UiR.string.band_near), stringResource(UiR.string.band_mid), stringResource(UiR.string.band_far),
+            if (state.edge != null) stringResource(R.string.band_edge) else stringResource(UiR.string.band_you),
+        ),
         contentDescription = stringResource(R.string.bands_a11y, live.size, near, mid, dots.size - near - mid, state.changed),
         onDotClick = onEntity,
         zoomHint = stringResource(R.string.bands_zoom_hint),
         resetLabel = stringResource(R.string.bands_zoom_reset),
+        sweepDegrees = state.edge?.let { rememberSweepDegrees(it.connected && it.listening) },
     )
     Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.s)) {
         GlyphLegend(
@@ -339,7 +375,7 @@ private fun BandsView(state: NowUiState, onEntity: (String) -> Unit, onAttention
                 GlyphSpec(GlyphShape.WIFI, GlyphTone.NEUTRAL) to stringResource(UiR.string.legend_wifi),
             ),
         )
-        // Required copy (HANDOFF_V1_UI.md §8). Never remove.
+        // Required copy (HANDOFF_V1_UI.md §8, trimmed by the owner on 2026-11-06).
         Text(stringResource(R.string.bands_disclaimer), style = SotreusTheme.typography.caption, color = SotreusTheme.colors.textDim)
     }
     StatTiles(
@@ -379,7 +415,7 @@ private fun ListView(state: NowUiState, onFilter: (NowFilter) -> Unit, onSort: (
             FilterOption(NowFilter.NEW, stringResource(R.string.filter_new, state.changed), accent = true),
             FilterOption(NowFilter.TAGGED, stringResource(R.string.filter_tagged, state.tagged)),
             FilterOption(NowFilter.FAMILIAR, stringResource(R.string.filter_familiar, state.familiar)),
-            FilterOption(NowFilter.BY_CLASS, stringResource(R.string.filter_by_class)),
+            FilterOption(NowFilter.BY_CLASS, stringResource(if (state.edge != null) R.string.filter_by_category else R.string.filter_by_class)),
         ),
         state.filter,
         onFilter,
@@ -396,12 +432,18 @@ private fun ListView(state: NowUiState, onFilter: (NowFilter) -> Unit, onSort: (
     }
     Column {
         RowDivider(strong = true)
-        if (state.filter == NowFilter.BY_CLASS) {
+        val edgeMode = state.edge != null
+        if (state.filter == NowFilter.BY_CLASS && edgeMode) {
+            // V2 (mock 20): grouped by category guess, each row saying what the guess rests on.
+            rows.map { it to it.category() }.groupBy { (_, g) -> g.family to (g.family == null && g.basis == app.sotreus.intelligence.CategoryBasis.ASKING_FOR_NETWORKS) }
+                .toList().sortedWith(compareBy({ it.first.first == null && !it.first.second }, { it.first.first == null }))
+                .forEach { (_, group) -> CategoryGroup(categoryGroupName(group.first().second), group, state.snapshot.atMs, onEntity, state.addressMode()) }
+        } else if (state.filter == NowFilter.BY_CLASS) {
             rows.groupBy { it.family }.toList().sortedBy { (f, _) -> f == null }.forEach { (family, group) ->
                 ClassGroup(family, group, state.snapshot.atMs, onEntity, state.addressMode())
             }
         } else {
-            rows.forEach { RadioRow(it, state.snapshot.atMs, onEntity, state.addressMode()) }
+            rows.forEach { RadioRow(it, state.snapshot.atMs, onEntity, state.addressMode(), if (edgeMode) categoryCaption(it.category()) else null) }
         }
     }
 }
@@ -419,7 +461,19 @@ private fun ClassGroup(family: DeviceFamily?, rows: List<LiveRadio>, now: Long, 
 }
 
 @Composable
-private fun RadioRow(r: LiveRadio, now: Long, onEntity: (String) -> Unit, addresses: AddressMode = AddressMode.HIDDEN) {
+private fun CategoryGroup(name: String, rows: List<Pair<LiveRadio, app.sotreus.intelligence.CategoryGuess>>, now: Long, onEntity: (String) -> Unit, addresses: AddressMode) {
+    var expanded by remember { mutableStateOf(true) }
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = SotreusTheme.sizes.minTouch).clickable(role = Role.Button) { expanded = !expanded }.padding(top = SotreusTheme.spacing.m),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        MonoLabel("$name · ${rows.size} ${if (expanded) "▾" else "▸"}")
+    }
+    if (expanded) rows.forEach { (r, g) -> RadioRow(r, now, onEntity, addresses, categoryCaption(g)) }
+}
+
+@Composable
+private fun RadioRow(r: LiveRadio, now: Long, onEntity: (String) -> Unit, addresses: AddressMode = AddressMode.HIDDEN, category: String? = null) {
     val title = entityTitle(r.userName, r.advertisedName, r.kind, r.family)
     val detail = when {
         r.kind == RadioKind.WIFI -> stringResource(R.string.row_subtitle_wifi, securityShort(r.security), bandOf(r.frequencyMhz))
@@ -435,7 +489,7 @@ private fun RadioRow(r: LiveRadio, now: Long, onEntity: (String) -> Unit, addres
     }
     EntityRow(
         title = title,
-        subtitle = listOfNotNull(subtitle, r.decodedStatus).joinToString(" · "),
+        subtitle = listOfNotNull(subtitle, r.decodedStatus, category).joinToString(" · "),
         glyph = glyphFor(r.kind, r.userState, r.presence, r.stale, false),
         onClick = { onEntity(r.entityId) },
         trailingValue = if (r.stale) r.lastRssi.toString().replace("-", "−") else stringResource(R.string.row_rssi_age, r.avgRssi30.toInt(), ageShort(now - r.lastHeardMs)).replace("-", "−"),
@@ -519,6 +573,27 @@ private fun PermissionPrompt(onPermissions: () -> Unit) {
 @Composable
 private fun NowBandsPreview() {
     SotreusTheme { NowContent(NowUiState(snapshot = FakeSotreusData.snapshot), {}, {}, {}, {}, {}, {}, {}) }
+}
+
+@Preview(widthDp = 390, heightDp = 1000, showBackground = true, backgroundColor = 0xFF0B0E13)
+@Composable
+private fun NowEdgeSweepPreview() {
+    SotreusTheme { NowContent(NowUiState(snapshot = FakeSotreusData.snapshot, edge = FakeSotreusData.edgeLive, edgeFixAccuracyM = 6f), {}, {}, {}, {}, {}, {}, {}) }
+}
+
+@Preview(widthDp = 390, heightDp = 1200, showBackground = true, backgroundColor = 0xFF0B0E13)
+@Composable
+private fun NowEdgeListPreview() {
+    SotreusTheme {
+        NowContent(NowUiState(snapshot = FakeSotreusData.snapshot, view = NowView.LIST, filter = NowFilter.BY_CLASS, edge = FakeSotreusData.edgeLive), {}, {}, {}, {}, {}, {}, {})
+    }
+}
+
+@Preview(widthDp = 390, heightDp = 1000, showBackground = true, backgroundColor = 0xFF0B0E13)
+@Composable
+private fun NowEdgeOutOfReachPreview() {
+    val lost = FakeSotreusData.edgeLive.copy(link = app.sotreus.edge.link.EdgeLinkState.Lost(FakeSotreusData.NOW - 600_000, null), together = false)
+    SotreusTheme { NowContent(NowUiState(snapshot = FakeSotreusData.snapshot, edge = lost), {}, {}, {}, {}, {}, {}, {}) }
 }
 
 @Preview(widthDp = 390, heightDp = 1000, showBackground = true, backgroundColor = 0xFF0B0E13)

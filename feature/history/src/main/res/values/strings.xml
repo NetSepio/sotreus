@@ -33,6 +33,8 @@
     </plurals>
     <string name="place_row_sub">%1$s · created %2$s</string>
     <string name="places_empty_body">Places are user-defined. Create one from the place picker on Now.</string>
+    <string name="places_empty_body_auto">Places appear here once you stay somewhere a few minutes. You can also create one from the place picker on Now.</string>
+    <string name="place_chip_auto">Auto</string>
     <string name="att_row_sub">%1$s · %2$s · score %3$s</string>
     <string name="att_empty_body">Nothing needs attention. Attention events always come with their reasons.</string>
 </resources>

@@ -310,7 +310,7 @@ private fun LocationSection(state: PlaceUiState, onUseCurrent: () -> Unit, onPic
             )
             Text(stringResource(R.string.loc_radius_note), style = SotreusTheme.typography.caption, color = c.textMuted)
             if (mapShown) {
-                PlaceMap(lat, lon, 15.5, stringResource(R.string.map_a11y, place.name), Modifier.fillMaxWidth().height(200.dp))
+                app.sotreus.core.ui.PinMap(lat, lon, 15.5, stringResource(R.string.map_a11y, place.name), Modifier.fillMaxWidth().height(200.dp))
                 Text(stringResource(R.string.map_attribution), style = SotreusTheme.typography.monoLabelS, color = c.textDim)
             } else {
                 DashedPanel {

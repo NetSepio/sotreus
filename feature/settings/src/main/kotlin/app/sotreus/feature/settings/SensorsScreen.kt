@@ -50,6 +50,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -69,7 +70,16 @@ class SensorsViewModel @Inject constructor(
     private val exports: ExportService,
     private val build: AppBuildInfo,
     deviceInfo: DeviceInfoSource,
+    private val edge: app.sotreus.core.data.edge.EdgeRepository,
 ) : ViewModel() {
+    val edgePaired = edge.devices.map { it.isNotEmpty() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    val edgeDevice = edge.devices.map { it.firstOrNull() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    val edgeLive: StateFlow<app.sotreus.core.data.edge.EdgeLive> = edge.live
+
+    /** V2: the owner switches the sensing source; it is never switched silently. */
+    fun usePhoneRadios() = viewModelScope.launch { edge.usePhoneRadios() }
+    fun useEdge() = viewModelScope.launch { edge.useEdge() }
+
     private val device = deviceInfo.current()
     val state: StateFlow<SensorsUiState> = combine(pipeline.snapshot, settings.settings) { snap, s -> SensorsUiState(snap, s, device, build) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SensorsUiState(device = device, build = build))
@@ -125,9 +135,27 @@ internal fun SensorsScreen(onBack: () -> Unit, vm: SensorsViewModel = hiltViewMo
     ScreenColumn(top = SotreusTheme.spacing.screenH) {
         BackTopBar(onBack = onBack)
         ScreenTitle(stringResource(R.string.sensors_title))
+        val edgePaired by vm.edgePaired.collectAsStateWithLifecycle()
+        val onEdge = edgePaired && state.settings.sensingSource == app.sotreus.core.model.SensingSource.EDGE
+        if (edgePaired) {
+            app.sotreus.core.ui.SotreusCard {
+                app.sotreus.core.ui.MonoLabel(stringResource(R.string.sensing_source_kicker), small = true)
+                androidx.compose.material3.Text(
+                    stringResource(if (onEdge) R.string.sensing_source_edge else R.string.sensing_source_phone),
+                    style = SotreusTheme.typography.bodyS, color = SotreusTheme.colors.text,
+                )
+                app.sotreus.core.ui.GhostButton(
+                    stringResource(if (onEdge) R.string.sensing_use_phone else R.string.sensing_use_edge),
+                    { if (onEdge) vm.usePhoneRadios() else vm.useEdge() },
+                )
+            }
+        }
 
+        val edgeLive by vm.edgeLive.collectAsStateWithLifecycle()
+        val edgeDevice by vm.edgeDevice.collectAsStateWithLifecycle()
+        if (onEdge) EdgeSensorCards(edgeLive, st.bleLastResultMs, now, never)
         val bleGranted = access?.granted?.contains(PermissionGroup.NEARBY_DEVICES) == true
-        SensorCard(
+        if (!onEdge) SensorCard(
             title = stringResource(R.string.sensor_ble),
             status = when {
                 st.simulated && st.running -> stringResource(R.string.status_simulated)
@@ -146,7 +174,7 @@ internal fun SensorsScreen(onBack: () -> Unit, vm: SensorsViewModel = hiltViewMo
         val wifiAge = st.wifiLastFreshMs.takeIf { it > 0 }?.let { now - it }
         val limited = st.running && (st.wifiLastRequestRejected || (wifiAge ?: 0) > st.wifiScanIntervalMs)
         val wifiGranted = access?.granted?.contains(PermissionGroup.NEARBY_WIFI) == true
-        SensorCard(
+        if (!onEdge) SensorCard(
             title = stringResource(R.string.sensor_wifi),
             status = when {
                 limited -> stringResource(R.string.status_os_limiting)
@@ -173,14 +201,25 @@ internal fun SensorsScreen(onBack: () -> Unit, vm: SensorsViewModel = hiltViewMo
             statusTone = ChipTone.NEUTRAL,
             attention = false,
             rows = listOf(
-                stringResource(R.string.kv_used_for) to stringResource(
-                    when {
-                        state.settings.placeByLocation && state.settings.plusCodeTags -> R.string.kv_used_for_places_codes
-                        state.settings.placeByLocation -> R.string.kv_used_for_places
-                        state.settings.plusCodeTags -> R.string.kv_used_for_codes
-                        else -> R.string.kv_scan_apis
-                    },
-                ),
+                stringResource(R.string.kv_used_for) to if (onEdge) {
+                    // With the Edge as the sensor this phone runs no scans, so its location serves only these.
+                    listOfNotNull(
+                        stringResource(R.string.used_places).takeIf { state.settings.placeByLocation },
+                        stringResource(R.string.used_codes).takeIf { state.settings.plusCodeTags },
+                        stringResource(R.string.used_edge_tagging).takeIf {
+                            edgeDevice?.let { d -> d.deployment == app.sotreus.core.model.EdgeDeployment.TRAVEL && d.phoneTagging } == true
+                        },
+                    ).joinToString(" · ").ifEmpty { stringResource(R.string.used_nothing) }
+                } else {
+                    stringResource(
+                        when {
+                            state.settings.placeByLocation && state.settings.plusCodeTags -> R.string.kv_used_for_places_codes
+                            state.settings.placeByLocation -> R.string.kv_used_for_places
+                            state.settings.plusCodeTags -> R.string.kv_used_for_codes
+                            else -> R.string.kv_scan_apis
+                        },
+                    )
+                },
                 stringResource(R.string.kv_last_fix) to when {
                     snap.locating -> stringResource(R.string.kv_locating)
                     else -> snap.lastFixMs?.let { stringResource(R.string.kv_ago, ageShort((now - it).coerceAtLeast(0))) } ?: never
@@ -195,16 +234,19 @@ internal fun SensorsScreen(onBack: () -> Unit, vm: SensorsViewModel = hiltViewMo
             ),
         )
         Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.m)) {
-            MonoLabel(stringResource(R.string.scan_intensity))
-            SegmentedToggle(
-                listOf(
-                    ScanIntensity.SAVER to stringResource(R.string.intensity_saver),
-                    ScanIntensity.BALANCED to stringResource(R.string.intensity_balanced),
-                    ScanIntensity.PERFORMANCE to stringResource(R.string.intensity_performance),
-                ),
-                state.settings.scanIntensity,
-                vm::setIntensity,
-            )
+            // Scan intensity paces this phone's own scans, which are off while the Edge is the sensor.
+            if (!onEdge) {
+                MonoLabel(stringResource(R.string.scan_intensity))
+                SegmentedToggle(
+                    listOf(
+                        ScanIntensity.SAVER to stringResource(R.string.intensity_saver),
+                        ScanIntensity.BALANCED to stringResource(R.string.intensity_balanced),
+                        ScanIntensity.PERFORMANCE to stringResource(R.string.intensity_performance),
+                    ),
+                    state.settings.scanIntensity,
+                    vm::setIntensity,
+                )
+            }
             Text(stringResource(R.string.stale_after, state.settings.staleHoldSeconds), style = SotreusTheme.typography.bodyS, color = SotreusTheme.colors.textMuted)
         }
         DashedPanel {
@@ -217,6 +259,68 @@ internal fun SensorsScreen(onBack: () -> Unit, vm: SensorsViewModel = hiltViewMo
             GhostButton(stringResource(R.string.export_diagnostics), { vm.exportDiagnostics { shareFile(context, it, shareTitle) } }, Modifier.padding(top = 8.dp, bottom = 10.dp), minHeight = 44.dp)
         }
     }
+}
+
+/**
+ * The Edge as the sensor: what its radios hear, from its own status. Counts show only while it is
+ * connected, so nothing old reads as current.
+ */
+@Composable
+private fun EdgeSensorCards(live: app.sotreus.core.data.edge.EdgeLive, lastResultMs: Long, now: Long, never: String) {
+    val listening = live.listening
+    val heard = live.status?.awareness?.takeIf { listening }
+    val cfg = live.config?.awareness?.takeIf { listening }
+    val wifi = live.status?.link?.takeIf { listening }
+    val lastResult = lastResultMs.takeIf { it > 0 }?.let { stringResource(R.string.kv_ago, ageShort((now - it).coerceAtLeast(0))) } ?: never
+    SensorCard(
+        title = stringResource(R.string.sensor_ble),
+        status = stringResource(if (listening) R.string.status_edge_listening else R.string.status_edge_away),
+        statusTone = if (listening) ChipTone.ACCENT_FILLED else ChipTone.NEUTRAL,
+        attention = false,
+        rows = listOfNotNull(
+            stringResource(R.string.kv_last_result) to lastResult,
+            heard?.let { stringResource(R.string.kv_heard_now) to "%,d".format(it.openBle) },
+        ),
+    )
+    val sniffing = wifi?.sniffing == true
+    val oneChannel = sniffing && wifi?.hopping == false
+    SensorCard(
+        title = stringResource(R.string.sensor_wifi),
+        status = stringResource(
+            when {
+                !listening -> R.string.status_edge_away
+                !sniffing -> R.string.status_off
+                oneChannel -> R.string.status_edge_one_channel
+                else -> R.string.status_edge_channels
+            },
+        ),
+        statusTone = when {
+            !listening || !sniffing -> ChipTone.NEUTRAL
+            oneChannel -> ChipTone.ACCENT
+            else -> ChipTone.ACCENT_FILLED
+        },
+        attention = oneChannel,
+        rows = if (!sniffing) emptyList() else listOfNotNull(
+            stringResource(R.string.kv_channels) to
+                if (oneChannel) stringResource(R.string.kv_channel_only, wifi!!.channel) else stringResource(R.string.kv_channels_all),
+            cfg?.let { stringResource(R.string.kv_access_points) to stringResource(if (it.wifiAps) R.string.kv_on else R.string.kv_off) },
+            cfg?.let {
+                stringResource(R.string.kv_probe_requests) to stringResource(
+                    when {
+                        !it.wifiProbes -> R.string.kv_off
+                        it.probeNames -> R.string.kv_on_names_kept
+                        else -> R.string.kv_on_names_hashed
+                    },
+                )
+            },
+            heard?.let { stringResource(R.string.kv_heard_now) to stringResource(R.string.kv_heard_wifi, "%,d".format(it.openAp), "%,d".format(it.openProbe)) },
+        ),
+        note = when {
+            oneChannel -> stringResource(R.string.wifi_note_edge_one_channel)
+            sniffing -> stringResource(R.string.wifi_note_edge)
+            else -> null
+        },
+    )
 }
 
 @Composable

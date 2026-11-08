@@ -46,6 +46,9 @@ object FakeSotreusData {
     val cafe = PlaceEntity(id = 3, name = "Café", createdAtMs = NOW - 20 * DAY, updatedAtMs = NOW - 4 * DAY)
     val places = listOf(office, home, cafe)
 
+    /** An automatic place (docs/plans/auto-places.md): named by its plus code until the owner renames it. */
+    val autoPlace = PlaceEntity(id = 4, name = "7J4VWP3R+2X", createdAtMs = NOW - 2 * DAY, updatedAtMs = NOW - 3 * MIN, lat = 12.93276, lon = 77.74468, radiusM = 50, auto = true)
+
     val greyTag = entity("ble:C3:91:44:0B:62:1A", RadioKind.BLE, "Tile", DeviceFamily.FINDER_TAG, "Tile Trackers", "Most likely a finder tag", -58, UserEntityState.TAGGED, userName = "Grey tag", first = NOW - 8 * DAY)
     val camera = entity("ble:5A:77:21:0C:33:01", RadioKind.BLE, null, DeviceFamily.CAMERA, "eufy Security", "Probably a camera", -67, notable = true, first = NOW - 2 * MIN)
     val nsOffice = entity("wifi:00:0F:B3:11:22:33", RadioKind.WIFI, "NS-Office", DeviceFamily.ROUTER, null, "Wi-Fi access point", -49, UserEntityState.EXPECTED, security = "[WPA2-PSK-CCMP][RSN-SAE-CCMP][ESS]", first = NOW - 40 * DAY)
@@ -183,6 +186,57 @@ object FakeSotreusData {
         ),
         "Example Board",
     )
+
+    // ---- V2: Sotreus Edge (previews only) ----------------------------------------------------
+
+    private val edgeCaps = app.sotreus.edge.protocol.EdgeCapabilities(app.sotreus.edge.fake.FakeEdge.DEFAULT_CAPS)
+
+    val edgeInfo = app.sotreus.edge.protocol.EdgeInfo(
+        protocol = 1, deviceId = "9f3c00aa11bb22cc", name = "Sotreus Edge", suffix = "96FF", firmware = "0.2.0",
+        hardware = "heltec_wifi_lora_32_v3", boot = 12, mdnsHost = "sotreus-96ff.local", recordSize = 256, recordFormat = 1,
+        probeSalt = "0a0b0c0d", caps = edgeCaps,
+    )
+
+    val edgeDevice = app.sotreus.core.database.entity.EdgeDeviceEntity(
+        deviceId = edgeInfo.deviceId, name = edgeInfo.name, suffix = edgeInfo.suffix, hardware = edgeInfo.hardware, firmware = edgeInfo.firmware,
+        protocol = 1, capsJson = "{}", probeSalt = edgeInfo.probeSalt, btAddress = "C4:5B:BE:96:FF:01", pairedAtMs = NOW - 4 * DAY,
+        lastConnectedMs = NOW - 2_000, lastSyncMs = NOW - 12_000, syncCursor = 4_813,
+    )
+
+    val edgeStatus = app.sotreus.edge.protocol.EdgeStatus(
+        uptimeMs = 3_600_000, timeValid = true, timeSource = "phone", unixMs = NOW, mode = app.sotreus.edge.protocol.EdgeMode.AWARENESS,
+        battery = app.sotreus.edge.protocol.EdgeBattery(true, "battery", 3_950, 82),
+        link = app.sotreus.edge.protocol.EdgeWifiLinkStatus(app.sotreus.edge.protocol.EdgeLinkMode.OFF, "off", "", "", 0, 6, sniffing = true, hopping = true),
+        awareness = app.sotreus.edge.protocol.EdgeAwarenessStatus(true, 31, 9, 6, 2_400, 400, 4_812, 0),
+        log = app.sotreus.edge.protocol.EdgeLogStatus(head = 4_812, oldest = 1, count = 4_812, capacity = 14_000, erasing = false, writeFailures = 0),
+        eventsDropped = 0,
+    )
+
+    val edgeLive = app.sotreus.core.data.edge.EdgeLive(
+        device = edgeDevice, link = app.sotreus.edge.link.EdgeLinkState.Connected(517), info = edgeInfo, status = edgeStatus, statusAtMs = NOW,
+        config = app.sotreus.edge.protocol.EdgeConfig(
+            app.sotreus.edge.protocol.EdgeMode.AWARENESS, app.sotreus.edge.protocol.EdgeLinkMode.OFF,
+            app.sotreus.edge.protocol.EdgeAwarenessConfig(true, true, true, true, false, -100, 60, 300),
+            app.sotreus.edge.protocol.EdgePlacement(app.sotreus.edge.protocol.DeploymentMode.TRAVEL), kotlinx.serialization.json.JsonObject(emptyMap()),
+        ),
+        lastLiveMs = NOW - 2_000, openSightings = 46, clockOffsetMs = 200, linkRssi = -58, together = true,
+        locationSource = app.sotreus.edge.location.EdgeLocationSource.PHONE_WITH_EDGE,
+    )
+
+    val edgeFix = app.sotreus.edge.location.GeoFix(
+        NOW - 1_000, 12.9716, 77.5946, 6f, altitudeM = 920.0, verticalAccuracyM = 4f, mslAltitudeM = 212.0, satellitesUsed = 9, provider = "gps",
+    )
+
+    /** Stationary position: an estimate inside the 30 m limit, one outside it, and a saved placement. */
+    val edgeGoodEstimate = app.sotreus.edge.location.PlacementAverager.Estimate(12.97160, 77.59460, 9f, 24, accepted = true, limitM = 30f)
+    val edgeWideEstimate = app.sotreus.edge.location.PlacementAverager.Estimate(12.97160, 77.59460, 42f, 18, accepted = false, limitM = 30f)
+    val edgeStationaryPlacement = app.sotreus.edge.protocol.EdgePlacement(app.sotreus.edge.protocol.DeploymentMode.STATIONARY, 12.97160, 77.59460, 42f, NOW, "phone")
+    val edgeStationaryDevice = edgeDevice.copy(
+        deployment = app.sotreus.core.model.EdgeDeployment.STATIONARY,
+        placeLat = 12.97160, placeLon = 77.59460, placeAccuracyM = 42f, placeSetMs = NOW, placeSource = "phone",
+    )
+
+    val edgePaired = app.sotreus.core.data.edge.EdgeRepository.PairResult.Paired(edgeInfo, oldest = 1, head = 4_812, waiting = 4_812, firstMs = null, lastMs = null)
 
     private fun entity(
         id: String, kind: RadioKind, name: String?, family: DeviceFamily?, signature: String?, guess: String?, rssi: Int,

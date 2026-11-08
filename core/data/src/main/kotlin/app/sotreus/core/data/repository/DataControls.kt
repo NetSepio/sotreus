@@ -31,6 +31,7 @@ class DataControls @Inject constructor(
     private val vendorLookups: VendorLookupRepository,
     private val trackerStops: app.sotreus.core.database.dao.TrackerStopDao,
     private val insights: app.sotreus.core.data.field.FieldInsights,
+    private val edge: app.sotreus.core.database.dao.EdgeDao,
 ) {
     /** A session's observations, encounters, timeline, locations, context and attention events. */
     suspend fun deleteSession(sessionId: Long) {
@@ -74,6 +75,11 @@ class DataControls @Inject constructor(
         sessions.deleteAllEntities()
         sessions.deleteSensedEvents()
         sessions.deleteAllLocations()
+        // V2: Edge sighting windows, untimed records and the phone fixes used to tag them.
+        edge.deleteAllSightings()
+        edge.deleteAllUntimed()
+        edge.deleteAllFixes()
+        edge.deleteAllKept()
         settings.clearPlaceAnchor()
         entities.deleteOrphans()
         pipeline.forgetAll()
@@ -102,6 +108,9 @@ class DataControls @Inject constructor(
         val removed = observations.deleteOlderThan(cutoff, keepTagged = policy == RetentionPolicy.KEEP_TAGGED_EXPIRE_REST)
         encounters.deleteOlderThan(cutoff)
         context.deleteOlderThan(cutoff)
+        edge.deleteSightingsOlderThan(cutoff)
+        edge.deleteFixesOlderThan(cutoff)
+        edge.deleteKeptOlderThan(cutoff)
         entities.deleteOrphans()
         return removed
     }

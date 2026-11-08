@@ -40,4 +40,5 @@ object DatabaseModule {
     @Provides fun trackingDao(db: SotreusDatabase) = db.trackingDao()
     @Provides fun vendorLookupDao(db: SotreusDatabase) = db.vendorLookupDao()
     @Provides fun trackerStopDao(db: SotreusDatabase): app.sotreus.core.database.dao.TrackerStopDao = db.trackerStopDao()
+    @Provides fun edgeDao(db: SotreusDatabase): app.sotreus.core.database.dao.EdgeDao = db.edgeDao()
 }

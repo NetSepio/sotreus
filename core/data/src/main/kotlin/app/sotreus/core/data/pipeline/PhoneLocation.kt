@@ -25,6 +25,7 @@ class PhoneLocation @Inject constructor(
     private val source: LocationSource,
     private val settings: SettingsRepository,
     private val places: PlaceDao,
+    private val autoPlaces: AutoPlaceTracker,
 ) {
     private val mutex = Mutex()
     private val history = ArrayDeque<LocationSource.Fix>()
@@ -38,6 +39,8 @@ class PhoneLocation @Inject constructor(
     val locating: StateFlow<Boolean> = _locating.asStateFlow()
 
     fun canLocate(): Boolean = source.hasPermission() && source.isEnabled()
+    fun hasPermission(): Boolean = source.hasPermission()
+    fun isEnabled(): Boolean = source.isEnabled()
 
     /** The latest fix if it was taken at most [maxAgeMs] before [now]. An older fix is never passed off as current. */
     fun fresh(now: Long, maxAgeMs: Long = FRESH_MS): LocationSource.Fix? = _latest.value?.takeIf { !it.mock && now - it.atMs in 0..maxAgeMs }
@@ -99,6 +102,11 @@ class PhoneLocation @Inject constructor(
     private suspend fun resolve() = mutex.withLock {
         val now = System.currentTimeMillis()
         val fix = fresh(now, RESOLVE_MAX_AGE_MS) ?: return@withLock
+        // Automatic places pick (and make) places by their own rules: docs/plans/auto-places.md.
+        if (autoPlaces.enabled()) {
+            autoPlaces.onFix(fix, now)
+            return@withLock
+        }
         if (!settings.current().placeByLocation) return@withLock
         val selection = settings.placeSelection()
         val areas = places.located().mapNotNull { p ->

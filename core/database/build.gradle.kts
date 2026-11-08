@@ -19,4 +19,6 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
     implementation(libs.kotlinx.coroutines.core)
+    testImplementation(libs.sqlite.jdbc)
+    testImplementation(libs.kotlinx.serialization.json)
 }

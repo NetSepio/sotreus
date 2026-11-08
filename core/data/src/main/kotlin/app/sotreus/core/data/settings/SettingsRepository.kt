@@ -51,6 +51,11 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val placeAnchorLon = doublePreferencesKey("current_place_anchor_lon")
         val placeByLocation = booleanPreferencesKey("place_by_location")
         val plusCodeTags = booleanPreferencesKey("plus_code_tags")
+        val autoPlaces = booleanPreferencesKey("auto_places")
+        val edgeNotifyAskDismissed = booleanPreferencesKey("edge_notify_ask_dismissed")
+        val autoPlacesSortedObs = androidx.datastore.preferences.core.longPreferencesKey("auto_places_sorted_obs_id")
+        val autoPlacesSortedEnc = androidx.datastore.preferences.core.longPreferencesKey("auto_places_sorted_enc_id")
+        val autoPlaceRadius = intPreferencesKey("auto_place_radius_m")
         val nowView = stringPreferencesKey("now_view")
         val retention = stringPreferencesKey("retention")
         val mask = booleanPreferencesKey("mask_coordinates")
@@ -64,6 +69,10 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val presence = booleanPreferencesKey("nearby_presence")
         val tick = booleanPreferencesKey("tick_sound")
         val simulated = booleanPreferencesKey("simulated_radios")
+        val sensingSource = stringPreferencesKey("sensing_source")
+        val edgeMaxAccuracy = intPreferencesKey("edge_max_accuracy_m")
+        val edgeTogetherDbm = intPreferencesKey("edge_together_min_dbm")
+        val edgeStationaryLimit = intPreferencesKey("edge_stationary_limit_m")
         val forceSolana = booleanPreferencesKey("force_solana_ui")
         val showAddresses = booleanPreferencesKey("show_addresses")
         val contextEnabled = booleanPreferencesKey("context_enabled")
@@ -110,6 +119,9 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
             currentPlaceByLocation = p[Keys.currentPlaceAuto] ?: d.currentPlaceByLocation,
             placeByLocation = p[Keys.placeByLocation] ?: d.placeByLocation,
             plusCodeTags = p[Keys.plusCodeTags] ?: d.plusCodeTags,
+            autoPlaces = p[Keys.autoPlaces] ?: d.autoPlaces,
+            edgeNotifyAskDismissed = p[Keys.edgeNotifyAskDismissed] ?: d.edgeNotifyAskDismissed,
+            autoPlaceRadiusM = p[Keys.autoPlaceRadius]?.takeIf { it in app.sotreus.core.model.SotreusDefaults.AUTO_PLACE_RADII_M } ?: d.autoPlaceRadiusM,
             nowView = p[Keys.nowView].enumOr(d.nowView),
             retention = p[Keys.retention].enumOr(d.retention),
             maskCoordinates = p[Keys.mask] ?: d.maskCoordinates,
@@ -123,6 +135,10 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
             nearbyPresence = p[Keys.presence] ?: d.nearbyPresence,
             tickSound = p[Keys.tick] ?: d.tickSound,
             simulatedRadios = p[Keys.simulated] ?: d.simulatedRadios,
+            sensingSource = p[Keys.sensingSource].enumOr(d.sensingSource),
+            edgeMaxAccuracyM = (p[Keys.edgeMaxAccuracy] ?: d.edgeMaxAccuracyM).coerceIn(5, 100),
+            edgeTogetherMinDbm = (p[Keys.edgeTogetherDbm] ?: d.edgeTogetherMinDbm).coerceIn(-90, -40),
+            edgeStationaryLimitM = (p[Keys.edgeStationaryLimit] ?: d.edgeStationaryLimitM).coerceIn(5, 100),
             forceSolanaUi = p[Keys.forceSolana] ?: d.forceSolanaUi,
             showAddresses = p[Keys.showAddresses] ?: d.showAddresses,
             contextEnabled = p[Keys.contextEnabled] ?: d.contextEnabled,
@@ -148,6 +164,11 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
     suspend fun setGnssSensitivity(level: String) { require(level in setOf("LOW", "MEDIUM", "HIGH")); store.edit { it[Keys.gnssSensitivity] = level } }
     suspend fun setGnssMonitoring(on: Boolean) { store.edit { it[Keys.gnssMonitoring] = on } }
     suspend fun setLivePath(on: Boolean) { store.edit { it[Keys.livePath] = on } }
+    suspend fun setSensingSource(v: app.sotreus.core.model.SensingSource) { store.edit { it[Keys.sensingSource] = v.name } }
+    suspend fun setEdgeQuality(maxAccuracyM: Int, togetherMinDbm: Int) {
+        store.edit { it[Keys.edgeMaxAccuracy] = maxAccuracyM.coerceIn(5, 100); it[Keys.edgeTogetherDbm] = togetherMinDbm.coerceIn(-90, -40) }
+    }
+    suspend fun setEdgeStationaryLimit(meters: Int) { store.edit { it[Keys.edgeStationaryLimit] = meters.coerceIn(5, 100) } }
     suspend fun setMapBackground(v: MapBackground) { store.edit { it[Keys.mapBackground] = v.name; it.remove(Keys.onlineRouteMaps) } }
     suspend fun setCameraPlates(on: Boolean) { store.edit { it[Keys.cameraPlates] = on } }
     suspend fun setCameraOthers(on: Boolean) { store.edit { it[Keys.cameraOthers] = on } }
@@ -218,6 +239,16 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
 
     suspend fun setPlaceByLocation(v: Boolean) { store.edit { it[Keys.placeByLocation] = v } }
     suspend fun setPlusCodeTags(v: Boolean) { store.edit { it[Keys.plusCodeTags] = v } }
+    suspend fun setAutoPlaces(on: Boolean) { store.edit { it[Keys.autoPlaces] = on } }
+    suspend fun dismissEdgeNotifyAsk() { store.edit { it[Keys.edgeNotifyAskDismissed] = true } }
+
+    /** How far automatic places has sorted stored rows: the last observation and encounter ids. */
+    suspend fun autoPlacesSortedThrough(): Pair<Long, Long> = store.data.first().let { (it[Keys.autoPlacesSortedObs] ?: 0L) to (it[Keys.autoPlacesSortedEnc] ?: 0L) }
+
+    suspend fun setAutoPlacesSortedThrough(observationId: Long, encounterId: Long) {
+        store.edit { it[Keys.autoPlacesSortedObs] = observationId; it[Keys.autoPlacesSortedEnc] = encounterId }
+    }
+    suspend fun setAutoPlaceRadius(meters: Int) { if (meters in app.sotreus.core.model.SotreusDefaults.AUTO_PLACE_RADII_M) store.edit { it[Keys.autoPlaceRadius] = meters } }
     suspend fun setNowView(v: NowView) { store.edit { it[Keys.nowView] = v.name } }
     suspend fun setRetention(v: RetentionPolicy) { store.edit { it[Keys.retention] = v.name } }
     suspend fun setMaskCoordinates(v: Boolean) { store.edit { it[Keys.mask] = v } }

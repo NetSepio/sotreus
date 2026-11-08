@@ -7,7 +7,7 @@
     <string name="onb_local_first">Local-first</string>
     <string name="onb_local_first_body">No account. Everything stays on this phone.</string>
     <string name="onb_receive_only">Receive-only</string>
-    <string name="onb_receive_only_body">Listens only. Never pairs, joins or interferes.</string>
+    <string name="onb_receive_only_body">Listens only. Connects only to your own Sotreus Edge.</string>
     <string name="onb_memory">Memory</string>
     <string name="onb_memory_body">Recognises radios you have met before, wherever you meet them again.</string>
     <string name="onb_start">Start local-only</string>
@@ -18,9 +18,9 @@
     <string name="perm_title">Sotreus needs\nthe radios.</string>
     <string name="perm_lead">Android only hands scan results to apps with these permissions. Sotreus asks for what Now uses — nothing else yet.</string>
     <string name="perm_nearby">Nearby devices</string>
-    <string name="perm_nearby_body">Read Bluetooth LE advertisements. Sotreus never pairs or connects.</string>
+    <string name="perm_nearby_body">Read Bluetooth LE advertisements. Sotreus connects only to a Sotreus Edge you pair.</string>
     <string name="perm_wifi">Nearby Wi-Fi devices</string>
-    <string name="perm_wifi_body">Read visible access-point beacons. Sotreus never joins a network.</string>
+    <string name="perm_wifi_body">Read visible access-point beacons. Sotreus joins only your Edge\'s own network, when it syncs over Wi-Fi.</string>
     <string name="perm_location">Location</string>
     <string name="perm_location_suffix">· while in use</string>
     <string name="perm_location_body">Android withholds Wi-Fi and BLE results without it. Sotreus also uses it to pick saved places and assess shared movement during an active Journey, including with the screen off. Saving a route and plus-code tags are separate choices in Privacy.</string>

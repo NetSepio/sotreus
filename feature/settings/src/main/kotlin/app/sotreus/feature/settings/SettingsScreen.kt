@@ -81,6 +81,9 @@ data class SettingsUiState(
     val families: Int = 0,
     val wifiLimited: Boolean = false,
     val observing: Boolean = false,
+    /** V2: a Sotreus Edge is paired, and whether its link is up. */
+    val edgePaired: Boolean = false,
+    val edgeConnected: Boolean = false,
 )
 
 @HiltViewModel
@@ -94,6 +97,7 @@ class SettingsViewModel @Inject constructor(
     proofs: ProofRepository,
     pipeline: ObservationPipeline,
     classifier: SignatureClassifier,
+    edge: app.sotreus.core.data.edge.EdgeRepository,
 ) : ViewModel() {
     private val families = classifier.fleets.map { it.kind }.distinct().size
 
@@ -101,14 +105,15 @@ class SettingsViewModel @Inject constructor(
         combine(device.profile, profiles.profile, profiles.wallet) { d, p, w -> Triple(d, p, w) },
         settings.settings,
         combine(friends.all, places.observePlaces(), proofs.observeBatches()) { f, p, b -> Triple(f.size, p.size, b.count { it.state == ProofState.FINALIZED }) },
-        pipeline.snapshot,
-    ) { (d, p, w), s, (f, pl, st), snap ->
+        combine(pipeline.snapshot, edge.devices, edge.live) { snap, devices, live -> Triple(snap, devices.isNotEmpty(), live.connected) },
+    ) { (d, p, w), s, (f, pl, st), (snap, edgePaired, edgeConnected) ->
         val wifiAge = snap.status.wifiLastFreshMs.takeIf { it > 0 }?.let { snap.atMs - it } ?: 0
         SettingsUiState(
             build = build, solanaDevice = d.isSolanaMobile, profile = p, wallet = w, settings = s, friends = f, places = pl, stamped = st,
             families = families,
             wifiLimited = snap.status.running && (snap.status.wifiLastRequestRejected || wifiAge > snap.status.wifiScanIntervalMs),
             observing = snap.observing,
+            edgePaired = edgePaired, edgeConnected = edgeConnected,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 }
@@ -161,6 +166,17 @@ internal fun SettingsContent(state: SettingsUiState, navigate: (Any) -> Unit) {
                     },
                 ),
                 valueAccent = state.wifiLimited,
+            )
+            NavRow(
+                stringResource(R.string.row_edge),
+                { navigate(app.sotreus.core.navigation.EdgeRoute) },
+                value = stringResource(
+                    when {
+                        !state.edgePaired -> R.string.row_edge_not_paired
+                        state.edgeConnected -> R.string.row_edge_connected
+                        else -> R.string.row_edge_out_of_reach
+                    },
+                ),
             )
             NavRow(stringResource(R.string.row_signatures), { navigate(SignaturesRoute) }, value = stringResource(R.string.row_signatures_value, state.families))
             NavRow(

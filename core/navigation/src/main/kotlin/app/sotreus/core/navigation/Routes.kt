@@ -42,6 +42,10 @@ import kotlinx.serialization.Serializable
 @Serializable data object LanguagesRoute
 @Serializable data class RouteMapRoute(val sessionId: Long = -1)
 @Serializable data object SensorsRoute
+
+/** V2: Sotreus Edge: pairing when none is paired, otherwise the device screen. */
+@Serializable data object EdgeRoute
+@Serializable data object EdgeMapRoute
 @Serializable data object DiagnosticsRoute
 @Serializable data object SignaturesRoute
 @Serializable data object PrivacyRoute

@@ -9,6 +9,12 @@
     <string name="data_notification_session_text">Receiving Bluetooth LE and Wi-Fi broadcasts. Tap to open.</string>
     <string name="data_notification_session_geotag">Receiving broadcasts. Phone location is on for this session.</string>
     <string name="data_notification_presence">Nearby presence is on</string>
+    <string name="data_notification_edge_travel">Sotreus Edge · with you</string>
+    <string name="data_notification_edge">Sotreus Edge · listening</string>
+    <string name="data_notification_edge_text">New sightings from your Edge come straight to this phone. Tap to open.</string>
+    <string name="data_notification_edge_waiting">Sotreus Edge · waiting</string>
+    <string name="data_notification_edge_waiting_text">Reconnects when your Edge is back in range. Tap to open.</string>
+    <string name="data_notification_edge_travel_text">Saving where your Edge hears devices, using this phone\'s location while they are together. Tap to open.</string>
     <string name="data_notification_presence_text">This phone is broadcasting rotating tokens that only approved friends can recognise.</string>
     <string name="data_notification_session_movement">Observing shared movement with phone location. Route saving is off.</string>
 </resources>

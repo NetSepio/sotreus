@@ -91,6 +91,8 @@ data class HistoryUiState(
     val attention: List<AttentionListItem> = emptyList(),
     val retention: RetentionPolicy = RetentionPolicy.KEEP_30_DAYS,
     val now: Long = System.currentTimeMillis(),
+    /** Automatic places are on: the empty Places tab says places will appear. */
+    val autoPlaces: Boolean = false,
 )
 
 @HiltViewModel
@@ -111,7 +113,7 @@ class HistoryViewModel @Inject constructor(
     ) { u, ents, enc, (pl, att), s ->
         u.copy(
             entities = ents, encounters = enc, entityNames = ents.associate { it.entity.id to it.entity }, places = pl, attention = att,
-            retention = s.retention, now = System.currentTimeMillis(),
+            retention = s.retention, now = System.currentTimeMillis(), autoPlaces = s.autoPlaces == true,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
 
@@ -290,7 +292,7 @@ private fun EncountersTab(state: HistoryUiState, navigate: (Any) -> Unit) {
 @Composable
 private fun PlacesTab(state: HistoryUiState, navigate: (Any) -> Unit) {
     if (state.places.isEmpty()) {
-        CaveatBox(stringResource(R.string.h_empty_kicker), stringResource(R.string.places_empty_body))
+        CaveatBox(stringResource(R.string.h_empty_kicker), stringResource(if (state.autoPlaces) R.string.places_empty_body_auto else R.string.places_empty_body))
         return
     }
     Column {
@@ -299,6 +301,7 @@ private fun PlacesTab(state: HistoryUiState, navigate: (Any) -> Unit) {
                 title = p.place.name,
                 subtitle = stringResource(R.string.place_row_sub, pluralStringResource(R.plurals.place_visits, p.visits, p.visits), dateShort(p.place.createdAtMs)),
                 onClick = { navigate(PlaceRoute(p.place.id)) },
+                trailing = { if (p.place.auto) app.sotreus.core.ui.StateChip(stringResource(R.string.place_chip_auto), app.sotreus.core.ui.ChipTone.NEUTRAL) },
             )
         }
     }
@@ -332,4 +335,13 @@ private fun AttentionTab(state: HistoryUiState, navigate: (Any) -> Unit) {
 private fun HistoryPreview() {
     val ents = FakeSotreusData.entities.mapIndexed { i, e -> HistoryEntity(e, listOf(9, 3, 14, 5, 1, 3, 212)[i], listOf("Home", "Office", "Café").take(i % 3 + 1)) }
     SotreusTheme { HistoryContent(HistoryUiState(entities = ents, now = FakeSotreusData.NOW), {}, {}, {}, {}, {}) }
+}
+
+@Preview(widthDp = 390, heightDp = 600, showBackground = true, backgroundColor = 0xFF0B0E13)
+@Composable
+private fun HistoryPlacesPreview() {
+    val places = listOf(
+        PlaceSummary(FakeSotreusData.office, 14), PlaceSummary(FakeSotreusData.autoPlace, 2), PlaceSummary(FakeSotreusData.home, 31),
+    )
+    SotreusTheme { HistoryContent(HistoryUiState(tab = HistoryTab.PLACES, places = places, autoPlaces = true, now = FakeSotreusData.NOW), {}, {}, {}, {}, {}) }
 }

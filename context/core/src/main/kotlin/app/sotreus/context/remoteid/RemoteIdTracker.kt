@@ -65,6 +65,7 @@ data class LiveRemoteId(
 @Singleton
 class RemoteIdTracker @Inject constructor(
     private val radios: RadioHub,
+    private val edge: app.sotreus.core.data.edge.EdgeHub,
     private val settings: SettingsRepository,
     private val dao: ContextDao,
     private val sessions: SessionDao,
@@ -83,7 +84,8 @@ class RemoteIdTracker @Inject constructor(
         val activeSession = sessions.observeActive().map { it?.id }.stateIn(scope, SharingStarted.Eagerly, null)
         scope.launch {
             settings.settings.map { it.contextEnabled && it.remoteIdEnabled }.distinctUntilChanged()
-                .flatMapLatest { on -> if (on) radios.observations else emptyFlow<Observation>().also { clear() } }
+                // V2: with an Edge as the sensor, Remote ID comes from the Edge (BLE service data and Wi-Fi beacon elements).
+                .flatMapLatest { on -> if (on) kotlinx.coroutines.flow.merge(radios.observations, edge.observations) else emptyFlow<Observation>().also { clear() } }
                 .collect { obs -> onObservation(obs, activeSession.value) }
         }
         scope.launch {
@@ -169,6 +171,8 @@ class RemoteIdTracker @Inject constructor(
         provenance = Provenance.SENSED,
         source = when {
             simulated -> ContextDao.SOURCE_SIMULATED
+            edge.running && radio == RadioKind.WIFI -> SOURCE_EDGE_WIFI
+            edge.running -> SOURCE_EDGE_BLE
             radio == RadioKind.WIFI -> SOURCE_WIFI
             else -> SOURCE_BLE
         },
@@ -185,6 +189,8 @@ class RemoteIdTracker @Inject constructor(
     companion object {
         const val SOURCE_BLE = "Phone Bluetooth"
         const val SOURCE_WIFI = "Phone Wi-Fi"
+        const val SOURCE_EDGE_BLE = "Edge Bluetooth"
+        const val SOURCE_EDGE_WIFI = "Edge Wi-Fi"
         /** A broadcast not heard for this long leaves the live list. */
         const val STALE_MS = 60_000L
         /** At most one track point per aircraft per interval. */

@@ -208,7 +208,8 @@ class PlaceRepository @Inject constructor(
     }
 
     suspend fun rename(id: Long, name: String) {
-        places.get(id)?.let { places.update(it.copy(name = name.trim(), updatedAtMs = System.currentTimeMillis())) }
+        // Naming an automatic place makes it the owner's.
+        places.get(id)?.let { places.update(it.copy(name = name.trim(), updatedAtMs = System.currentTimeMillis(), auto = false)) }
     }
 
     /** Saves the place's location. Coordinates stay on this phone. */

@@ -52,6 +52,14 @@ data class EntityEntity(
     @ColumnInfo(name = "last_seen_ms") val lastSeenMs: Long,
     @ColumnInfo(name = "last_rssi") val lastRssi: Int,
     @ColumnInfo(name = "observation_count") val observationCount: Int,
+    /** Wi-Fi only (V2): access point, or a client asking for networks. Null for BLE and pre-V2 rows. */
+    @ColumnInfo(name = "wifi_role") val wifiRole: app.sotreus.core.model.WifiRole? = null,
+    /** "Last heard" location (V2): the listener's location then, never the radio's. */
+    @ColumnInfo(name = "last_located_ms") val lastLocatedMs: Long? = null,
+    @ColumnInfo(name = "last_lat") val lastLat: Double? = null,
+    @ColumnInfo(name = "last_lon") val lastLon: Double? = null,
+    @ColumnInfo(name = "last_loc_accuracy_m") val lastLocAccuracyM: Float? = null,
+    @ColumnInfo(name = "last_loc_source") val lastLocSource: app.sotreus.core.model.LocationSource? = null,
 )
 
 /** Raw evidence. Sampled (not every packet) and bounded by retention. */
@@ -74,6 +82,11 @@ data class ObservationEntity(
     @ColumnInfo(name = "raw_hex") val rawHex: String?,
     /** Phone location at time of observation as a ~14 m plus code; only when the user turned plus-code tags on. */
     @ColumnInfo(name = "plus_code") val plusCode: String? = null,
+    /** V2: who heard it. Null = this phone (rows written before V2). */
+    val origin: app.sotreus.core.model.ObservationOrigin? = null,
+    /** Where [lat]/[lon] came from and how good it is; null when there is no location. */
+    @ColumnInfo(name = "loc_source") val locSource: app.sotreus.core.model.LocationSource? = null,
+    @ColumnInfo(name = "loc_accuracy_m") val locAccuracyM: Float? = null,
 )
 
 /** A contiguous stretch of presence of one entity at one place/session. */
@@ -86,6 +99,14 @@ data class EncounterEntity(
     @ColumnInfo(name = "started_at_ms") val startedAtMs: Long,
     @ColumnInfo(name = "ended_at_ms") val endedAtMs: Long,
     @ColumnInfo(name = "max_rssi") val maxRssi: Int,
+    /** V2: the listener's location when the encounter started and when it was last extended. */
+    @ColumnInfo(name = "first_lat") val firstLat: Double? = null,
+    @ColumnInfo(name = "first_lon") val firstLon: Double? = null,
+    @ColumnInfo(name = "last_lat") val lastLat: Double? = null,
+    @ColumnInfo(name = "last_lon") val lastLon: Double? = null,
+    @ColumnInfo(name = "loc_accuracy_m") val locAccuracyM: Float? = null,
+    @ColumnInfo(name = "loc_source") val locSource: app.sotreus.core.model.LocationSource? = null,
+    val origin: app.sotreus.core.model.ObservationOrigin? = null,
 )
 
 @Entity(tableName = "places")
@@ -99,6 +120,8 @@ data class PlaceEntity(
     val lat: Double? = null,
     val lon: Double? = null,
     @ColumnInfo(name = "radius_m") val radiusM: Int? = null,
+    /** Made by automatic places (docs/plans/auto-places.md), not by the owner; renaming makes it the owner's. */
+    @ColumnInfo(name = "auto", defaultValue = "0") val auto: Boolean = false,
 )
 
 @Entity(tableName = "place_visits", indices = [Index("place_id")])

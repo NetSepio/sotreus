@@ -54,6 +54,9 @@ import app.sotreus.core.database.entity.VisitEntityEntity
         ProofLeafEntity::class, ContextEventEntity::class, LostReportEntity::class, FindSightingEntity::class,
         WitnessHeardEntity::class, WitnessAttestationEntity::class, WitnessSlotEntity::class,
         VendorLookupEntity::class, app.sotreus.core.database.entity.TrackerStopEntity::class, app.sotreus.core.database.entity.TrackerMemoryEntity::class,
+        app.sotreus.core.database.entity.EdgeDeviceEntity::class, app.sotreus.core.database.entity.EdgeBootAnchorEntity::class,
+        app.sotreus.core.database.entity.EdgeUntimedRecordEntity::class, app.sotreus.core.database.entity.EdgeSightingEntity::class,
+        app.sotreus.core.database.entity.LocationFixEntity::class, app.sotreus.core.database.entity.EdgeKeptRecordEntity::class,
     ],
     version = SotreusDatabase.SCHEMA_VERSION,
     exportSchema = true,
@@ -72,9 +75,10 @@ abstract class SotreusDatabase : RoomDatabase() {
     abstract fun trackingDao(): TrackingDao
     abstract fun vendorLookupDao(): VendorLookupDao
     abstract fun trackerStopDao(): app.sotreus.core.database.dao.TrackerStopDao
+    abstract fun edgeDao(): app.sotreus.core.database.dao.EdgeDao
 
     companion object {
-        const val SCHEMA_VERSION = 7
+        const val SCHEMA_VERSION = 11
         const val NAME = "sotreus.db"
     }
 }

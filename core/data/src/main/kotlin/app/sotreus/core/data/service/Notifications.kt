@@ -10,6 +10,7 @@ object Notifications {
     const val CHANNEL_PRESENCE = "presence"
     const val ID_SESSION = 1001
     const val ID_PRESENCE = 1002
+    const val ID_EDGE = 1003
 
     fun ensureChannels(context: Context) {
         val nm = context.getSystemService(NotificationManager::class.java) ?: return
