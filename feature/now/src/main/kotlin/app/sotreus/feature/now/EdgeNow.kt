@@ -1,5 +1,6 @@
 package app.sotreus.feature.now
 
+import androidx.compose.foundation.layout.padding
 import android.animation.ValueAnimator
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -88,6 +89,18 @@ internal fun EdgeLinkBanner(edge: EdgeLive, now: Long, onUsePhone: () -> Unit, o
     }
 }
 
+/** The Edge keeps listening while Sotreus is closed; its notification shows that only if Android lets it. */
+@Composable
+internal fun EdgeNotifyAsk(onAllow: () -> Unit, onNotNow: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.s)) {
+        WarningBanner(stringResource(R.string.edge_notify_banner))
+        androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.m)) {
+            GhostButton(stringResource(R.string.edge_notify_allow), onAllow, androidx.compose.ui.Modifier.weight(1f))
+            GhostButton(stringResource(R.string.edge_notify_not_now), onNotNow, androidx.compose.ui.Modifier.weight(1f))
+        }
+    }
+}
+
 @Composable
 internal fun edgePill(edge: EdgeLive): String = stringResource(
     when {
@@ -142,4 +155,10 @@ internal fun categoryGroupName(g: CategoryGuess): String = when {
     g.family != null -> familyName(g.family!!)
     g.basis == CategoryBasis.ASKING_FOR_NETWORKS -> stringResource(R.string.category_group_asking)
     else -> stringResource(R.string.category_group_none)
+}
+
+@androidx.compose.ui.tooling.preview.Preview(widthDp = 390, heightDp = 220, showBackground = true, backgroundColor = 0xFF0B0E13)
+@Composable
+private fun EdgeNotifyAskPreview() {
+    SotreusTheme { androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.padding(SotreusTheme.spacing.screenH)) { EdgeNotifyAsk({}, {}) } }
 }

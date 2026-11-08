@@ -120,6 +120,8 @@ data class PlaceEntity(
     val lat: Double? = null,
     val lon: Double? = null,
     @ColumnInfo(name = "radius_m") val radiusM: Int? = null,
+    /** Made by automatic places (docs/plans/auto-places.md), not by the owner; renaming makes it the owner's. */
+    @ColumnInfo(name = "auto", defaultValue = "0") val auto: Boolean = false,
 )
 
 @Entity(tableName = "place_visits", indices = [Index("place_id")])

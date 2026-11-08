@@ -78,7 +78,7 @@ abstract class SotreusDatabase : RoomDatabase() {
     abstract fun edgeDao(): app.sotreus.core.database.dao.EdgeDao
 
     companion object {
-        const val SCHEMA_VERSION = 10
+        const val SCHEMA_VERSION = 11
         const val NAME = "sotreus.db"
     }
 }

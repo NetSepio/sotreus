@@ -143,7 +143,7 @@ class MigrationTenTest(unittest.TestCase):
         db, before = _create(9)
         _insert_minimal(db, before, 'edge_devices', device_id='9f3c00aa11bb22cc', name='Sotreus Edge', suffix='96FF', sync_cursor=4_813,
                         data_link='BLUETOOTH', deployment='STATIONARY', phone_tagging=1, place_lat=12.97, place_lon=77.59, place_accuracy_m=9.0)
-        sql = _migration_sql('MIGRATION_9_10', 'val ALL')
+        sql = _migration_sql('MIGRATION_9_10', 'val MIGRATION_10_11')
         self.assertEqual(1, len(sql))
         for statement in sql:
             db.execute(statement)
@@ -154,6 +154,21 @@ class MigrationTenTest(unittest.TestCase):
         self.assertEqual('0', field.get('defaultValue'))
         db.close()
 
+
+
+class MigrationElevenTest(unittest.TestCase):
+    """v11: automatic places are marked; existing places stay the owner's."""
+
+    def test_upgrade_keeps_places_as_the_owners_and_matches_room_schema(self):
+        db, before = _create(10)
+        _insert_minimal(db, before, 'places', name='Home', created_at_ms=1, keep_learning=1, updated_at_ms=2, lat=12.97, lon=77.59, radius_m=150)
+        sql = _migration_sql('MIGRATION_10_11', 'val ALL')
+        self.assertEqual(1, len(sql))
+        for statement in sql:
+            db.execute(statement)
+        self.assertEqual(('Home', 150, 0), db.execute('SELECT name,radius_m,auto FROM places').fetchone())
+        _assert_matches(self, db, 11)
+        db.close()
 
 if __name__ == '__main__':
     unittest.main()

@@ -19,22 +19,25 @@ import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.onTimeout
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * [EdgeLink] over a [ByteTransport] carrying NDJSON (`control` / `events`) and back-to-back
  * 256-byte records (`records`), i.e. the Bluetooth link of protocol §1.
  */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class NdjsonEdgeLink(
     private val transport: ByteTransport,
     private val scope: CoroutineScope,
     override val kind: LinkKind = LinkKind.BLUETOOTH,
     /** A sync that goes quiet this long without records or `sync_done` has stalled. */
     private val syncIdleMs: Long = 15_000,
+    /** Diagnostic lines (seqs and routing only, nothing about the radios). */
+    private val trace: (String) -> Unit = {},
 ) : EdgeLink {
     private val framer = NdjsonFramer()
     private val assembler = RecordStreamAssembler()
@@ -61,6 +64,7 @@ class NdjsonEdgeLink(
         scope.launch { transport.eventChunks.collect { chunk -> framer.feed(chunk).forEach(::onLine) } }
         scope.launch {
             transport.recordChunks.collect { chunk ->
+                if (chunk.size % EdgeRecordCodec.SIZE != 0) trace("records chunk of ${chunk.size} bytes")
                 assembler.feed(chunk).forEach(::onRecord)
             }
         }
@@ -86,8 +90,8 @@ class NdjsonEdgeLink(
             ((bytes[2].toLong() and 0xFF) shl 16) or ((bytes[3].toLong() and 0xFF) shl 24)
         when {
             threshold != null && seq >= threshold -> live.trySend(EdgeRecordCodec.decode(bytes))
-            sink != null -> sink.trySend(bytes)
-            else -> Unit // late, after its fetch ended: the next sync fetches it again
+            sink != null -> sink.trySend(bytes).also { if (threshold != null) trace("record $seq to the sync (live from $threshold)") }
+            else -> trace("record $seq dropped (live from $threshold, no sync)") // late, after its fetch ended: the next sync fetches it again
         }
     }
 
@@ -140,14 +144,15 @@ class NdjsonEdgeLink(
                 if (f != null) {
                     // Records and sync_done travel on different characteristics: drain what is left.
                     if (received >= f.sent) break
-                    take(withTimeoutOrNull(DRAIN_MS) { sink.receive() } ?: break)
+                    // select with onTimeout, never a receive under withTimeout: a receive cancelled as a
+                    // record is handed over loses it (kotlinx.coroutines "undelivered elements").
+                    take(select<ByteArray?> { sink.onReceive { it }; onTimeout(DRAIN_MS) { null } } ?: break)
                     continue
                 }
-                val got = withTimeoutOrNull(syncIdleMs) {
-                    select<ByteArray?> {
-                        sink.onReceive { it }
-                        done.onAwait { finished = it; null }
-                    }
+                val got = select<ByteArray?> {
+                    sink.onReceive { it }
+                    done.onAwait { finished = it; null }
+                    onTimeout(syncIdleMs) { null }
                 }
                 if (got == null && finished == null) throw EdgeRequestException("sync stalled after $received records")
                 if (got != null) take(got)

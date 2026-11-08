@@ -50,6 +50,8 @@ class ObservationController @Inject constructor(
     private val edgeDao: app.sotreus.core.database.dao.EdgeDao,
     private val edge: app.sotreus.core.data.edge.EdgeHub,
     private val edgeTagger: app.sotreus.core.data.edge.EdgeLocationTagger,
+    private val autoPlaces: AutoPlaceTracker,
+    private val autoPlaceSorter: AutoPlaceSorter,
     @ApplicationScope private val scope: CoroutineScope,
 ) {
     /** What runs the sensing: the phone's radios, the Edge, or nothing. */
@@ -59,6 +61,8 @@ class ObservationController @Inject constructor(
 
     /** A travel-mode Edge with tagging on is paired; the travel service may keep it running in the background. */
     private val travelTagging = MutableStateFlow(false)
+    /** The Edge is paired and chosen as the sensor. */
+    private val edgeSource = MutableStateFlow(false)
 
     /** The proximity check's radio, watched on the Edge at up to 4 Hz while it is open. */
     fun setWatch(entityId: String?) = edge.setWatch(entityId)
@@ -115,28 +119,77 @@ class ObservationController @Inject constructor(
         }
         scope.launch { hub.freshWifiScans.collect { insights.wifiScan(it, hub.status.value.simulated) } }
         scope.launch { hub.observations.collect { pipeline.ingest(it, hub.status.value.simulated) } }
-        // V2 travel mode: start the travel service while the app is visible (Android restricts starting
-        // it from the background), stop it when the Edge is not the sensor or not in travel mode.
+        // V2: while the Edge is the sensor, a foreground service keeps its link running when the app is
+        // not visible (owner decision 2026-11-08). Started while the app is visible (Android restricts
+        // starting it from the background) or when the Edge is reported back in range; stopped when the
+        // Edge is no longer the sensor.
         scope.launch {
             combine(edgeDao.observeDevices(), settingsRepository.settings.map { it.sensingSource }) { devices, source ->
                 val d = devices.firstOrNull()
-                source == app.sotreus.core.model.SensingSource.EDGE && d != null && d.deployment == app.sotreus.core.model.EdgeDeployment.TRAVEL && d.phoneTagging
-            }.distinctUntilChanged().collect { travelTagging.value = it }
+                val onEdge = source == app.sotreus.core.model.SensingSource.EDGE && d != null
+                onEdge to (onEdge && d!!.deployment == app.sotreus.core.model.EdgeDeployment.TRAVEL && d.phoneTagging)
+            }.distinctUntilChanged().collect { (onEdge, travel) ->
+                edgeSource.value = onEdge
+                travelTagging.value = travel
+                app.sotreus.core.data.service.EdgeLinkService.travelTagging.value = travel
+            }
         }
         scope.launch {
-            combine(foreground, travelTagging, edge.state.map { it.connected }.distinctUntilChanged()) { fg, travel, connected -> Triple(fg, travel, connected) }
-                .collect { (fg, travel, connected) ->
-                    val svc = app.sotreus.core.data.service.EdgeTravelService
+            combine(foreground, edgeSource) { fg, onEdge -> fg to onEdge }
+                .collect { (fg, onEdge) ->
+                    val svc = app.sotreus.core.data.service.EdgeLinkService
                     when {
-                        !travel && svc.running.value -> svc.stop(context)
-                        travel && fg && connected && !svc.running.value -> runCatching { svc.start(context) }
+                        !onEdge && svc.running.value -> svc.stop(context)
+                        onEdge && fg && !svc.running.value -> runCatching { svc.start(context) }
                     }
                 }
         }
         scope.launch {
             app.sotreus.edge.android.EdgePresence.events.collect { e ->
-                if (e.present && travelTagging.value && !app.sotreus.core.data.service.EdgeTravelService.running.value) {
-                    runCatching { app.sotreus.core.data.service.EdgeTravelService.start(context) }
+                if (e.present && edgeSource.value && !app.sotreus.core.data.service.EdgeLinkService.running.value) {
+                    runCatching { app.sotreus.core.data.service.EdgeLinkService.start(context) }
+                }
+            }
+        }
+        // Automatic places (docs/plans/auto-places.md): a stationary Edge is filed under the place at
+        // its position, made there if none contains it; its sightings follow that place.
+        scope.launch {
+            combine(
+                edgeDao.observeDevices(),
+                settingsRepository.settings.map { (it.autoPlaces == true) to (it.sensingSource == app.sotreus.core.model.SensingSource.EDGE) }.distinctUntilChanged(),
+            ) { devices, flags -> Triple(devices.firstOrNull(), flags.first, flags.second) }
+                .collect { (d, on, edgeSensing) ->
+                    val stationary = d?.takeIf { it.deployment == app.sotreus.core.model.EdgeDeployment.STATIONARY }
+                    val lat = stationary?.placeLat
+                    val lon = stationary?.placeLon
+                    if (on && stationary != null && lat != null && lon != null) {
+                        val linked = stationary.linkedPlaceId?.let { places.get(it) }
+                        val holds = linked?.let { p ->
+                            val pl = p.lat
+                            val po = p.lon
+                            pl != null && po != null && app.sotreus.intelligence.PlaceGeofence.distanceM(pl, po, lat, lon) <= (p.radiusM ?: app.sotreus.intelligence.PlaceGeofence.DEFAULT_RADIUS_M)
+                        } == true
+                        if (!holds) {
+                            val id = runCatching { autoPlaces.placeAt(lat, lon) }.getOrNull()
+                            if (id != null && id != stationary.linkedPlaceId) edgeDao.upsertDevice(stationary.copy(linkedPlaceId = id))
+                        }
+                    }
+                    pipeline.edgeFixedPlaceId = stationary?.linkedPlaceId
+                    // With a stationary Edge as the sensor, Now's place is the Edge's place; a hand pick still wins.
+                    val pin = stationary?.linkedPlaceId?.takeIf { on && edgeSensing }
+                    autoPlaces.pinnedPlaceId = pin
+                    if (pin != null) {
+                        val selection = settingsRepository.placeSelection()
+                        if (selection.auto && selection.placeId != pin) settingsRepository.selectPlaceByLocation(pin, System.currentTimeMillis(), selection)
+                    }
+                }
+        }
+        // Past located rows: sorted once when automatic places come on, then every 10 minutes.
+        scope.launch {
+            settingsRepository.settings.map { it.autoPlaces == true }.distinctUntilChanged().collectLatest { on ->
+                while (on) {
+                    runCatching { autoPlaceSorter.sort() }
+                    kotlinx.coroutines.delay(AUTO_PLACE_SORT_MS)
                 }
             }
         }
@@ -154,7 +207,7 @@ class ObservationController @Inject constructor(
         }
         scope.launch {
             var wasSimulated = false
-            combine(settingsRepository.settings, combine(foreground, app.sotreus.core.data.service.ObservationService.running, app.sotreus.core.data.service.EdgeTravelService.running, travelTagging) { fg, service, _, _ -> fg to service }, sessions.observeActive(), permissions.access, boost) { s, visibility, session, access, boosted ->
+            combine(settingsRepository.settings, combine(foreground, app.sotreus.core.data.service.ObservationService.running, app.sotreus.core.data.service.EdgeLinkService.running, travelTagging) { fg, service, _, _ -> fg to service }, sessions.observeActive(), permissions.access, boost) { s, visibility, session, access, boosted ->
                 val (fg, service) = visibility
                 settings = s
                 sessionLocates = session != null && (session.geotag || (session.kind == SessionKind.JOURNEY && s.journeyMovement))
@@ -167,11 +220,10 @@ class ObservationController @Inject constructor(
                 val useEdge = s.sensingSource == app.sotreus.core.model.SensingSource.EDGE && !s.simulatedRadios
                 val canSense = when {
                     s.simulatedRadios -> true
-                    useEdge -> PermissionGroup.NEARBY_DEVICES in access.granted && access.bluetoothOn
+                    useEdge -> access.canConnectEdge && access.bluetoothOn
                     else -> access.canScan && access.locationOn
                 }
-                val travel = useEdge && travelTagging.value
-                val wanted = (fg || (session != null && service) || (travel && app.sotreus.core.data.service.EdgeTravelService.running.value)) && canSense
+                val wanted = (fg || (session != null && service) || (useEdge && app.sotreus.core.data.service.EdgeLinkService.running.value)) && canSense
                 Plan(wanted, s.simulatedRadios, if (boosted) app.sotreus.core.model.ScanIntensity.PERFORMANCE else s.scanIntensity, useEdge)
             }.distinctUntilChanged().collectLatest { (wanted, simulated, intensity, useEdge) ->
                 // Location first: the place must reflect where the phone is before anything is tagged.
@@ -244,3 +296,5 @@ class ObservationController @Inject constructor(
         }
     }
 }
+
+private const val AUTO_PLACE_SORT_MS = 10 * 60_000L

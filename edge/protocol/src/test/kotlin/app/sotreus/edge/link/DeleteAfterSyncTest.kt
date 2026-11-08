@@ -167,6 +167,28 @@ class DeleteAfterSyncTest {
         assertEquals(5, edge.records.size) // nothing handed off was stored on the Edge
     }
 
+    /** Records spaced exactly one batch wait apart: none may vanish between the link and the store. */
+    @Test fun liveRecordsAtTheBatchWaitAreNeverLost() = runTest {
+        val edge = FakeEdge()
+        val l = link(edge)
+        val stored = HashSet<Long>()
+        var ended: String? = null
+        val h = EdgeHandOff(l, backgroundScope, clock = { testScheduler.currentTime })
+        h.start(store = { batch -> val s = seqs(batch); stored += s; s }, onStopped = { ended = it })
+        val live = ArrayList<Long>()
+        backgroundScope.launch {
+            repeat(60) {
+                live += edge.fill(1)
+                kotlinx.coroutines.delay(150)
+            }
+        }
+        advanceTimeBy(60 * 150L + 3_000)
+        runCurrent()
+        assertNull(ended)
+        assertEquals(live.toSet(), stored)
+        assertEquals(live.last(), edge.acks.last())
+    }
+
     @Test fun aRecordNotSavedEndsTheHandOffAndStaysOnTheEdge() = runTest {
         val edge = FakeEdge()
         val l = link(edge)

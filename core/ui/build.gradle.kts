@@ -14,6 +14,8 @@ dependencies {
     api(project(":core:designsystem"))
     api(project(":core:model"))
     implementation(libs.maplibre.android)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
 
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

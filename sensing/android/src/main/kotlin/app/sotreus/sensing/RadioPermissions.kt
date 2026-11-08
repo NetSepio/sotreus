@@ -25,6 +25,11 @@ data class RadioAccess(
     val wifiOn: Boolean,
     val locationOn: Boolean,
     val bleSupported: Boolean,
+    /**
+     * The Edge link needs only Bluetooth connect (Android 12+), not this phone's scan permission:
+     * pairing asks for connect alone, so a phone set up straight for an Edge may never grant scan.
+     */
+    val canConnectEdge: Boolean = PermissionGroup.NEARBY_DEVICES in granted,
 ) {
     /** Everything Now needs to receive scan results. Notifications are optional. */
     val canScan: Boolean
@@ -107,6 +112,8 @@ class RadioPermissions @Inject constructor(@ApplicationContext private val conte
             wifiOn = runCatching { wifi?.isWifiEnabled == true || (wifi?.isScanAlwaysAvailable == true) }.getOrDefault(false),
             locationOn = loc != null && LocationManagerCompat.isLocationEnabled(loc),
             bleSupported = context.packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE),
+            canConnectEdge = Build.VERSION.SDK_INT < 31 ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED,
         )
     }
 }

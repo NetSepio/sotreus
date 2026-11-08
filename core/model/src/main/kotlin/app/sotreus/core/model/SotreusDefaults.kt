@@ -17,6 +17,9 @@ object SotreusDefaults {
     /** Field tools choices for [EDGE_STATIONARY_LIMIT_M]. */
     val EDGE_STATIONARY_LIMITS_M = listOf(15, 30, 50)
 
+    /** Automatic places (docs/plans/auto-places.md): radius choices for a new place, in metres; 50 is the default. */
+    val AUTO_PLACE_RADII_M = listOf(25, 50, 100, 200)
+
     /** Proximity Bands: NEAR is at or above this 30 s average. */
     const val NEAR_MIN_DBM = -60
 

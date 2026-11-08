@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
+import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.BluetoothStatusCodes
 import android.content.Context
@@ -80,8 +81,23 @@ class BleGattTransport(
         }
         if (autoConnect) watchBond()
         _state.value = EdgeLinkState.Connecting
-        gatt = device.connectGatt(context, autoConnect, callback, BluetoothDevice.TRANSPORT_LE)
+        gatt = device.connectGatt(context, autoConnect && !linkHeld(), callback, BluetoothDevice.TRANSPORT_LE)
             ?: run { _state.value = EdgeLinkState.Failed("Bluetooth is not available"); null }
+    }
+
+    /**
+     * Android already holds a radio link to the Edge, e.g. the pairing link this one replaces. A
+     * connect then joins that link directly. Auto-connect on a link that is already up leaves the
+     * Edge in the phone's accept list: seen on Android 16, the phone then opened and dropped a
+     * second link to the Edge every 300 ms. A later drop re-arms with auto-connect as usual.
+     */
+    private fun linkHeld(): Boolean {
+        val held = runCatching {
+            context.getSystemService(BluetoothManager::class.java)
+                ?.getConnectionState(device, BluetoothProfile.GATT) == BluetoothProfile.STATE_CONNECTED
+        }.getOrDefault(false)
+        if (held) Log.i(TAG, "joining the Edge link Android already holds")
+        return held
     }
 
     override suspend fun write(chunk: ByteArray) {
@@ -176,7 +192,7 @@ class BleGattTransport(
     private suspend fun reopen(auto: Boolean) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
         if (closed || linkUp || pairingLost) return@withContext
         gatt?.let { runCatching { it.close() } }
-        gatt = device.connectGatt(context, auto, callback, BluetoothDevice.TRANSPORT_LE)
+        gatt = device.connectGatt(context, auto && !linkHeld(), callback, BluetoothDevice.TRANSPORT_LE)
     }
 
     private suspend fun <T> op(timeoutMs: Long = OP_TIMEOUT_MS, start: () -> Boolean): T = ops.withLock {

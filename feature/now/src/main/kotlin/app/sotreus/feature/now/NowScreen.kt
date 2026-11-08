@@ -105,6 +105,8 @@ internal fun NowScreen(navigate: (Any) -> Unit, vm: NowViewModel = hiltViewModel
             },
         )
     }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val notify = app.sotreus.core.ui.rememberNotificationAccess(app.sotreus.core.data.service.Notifications.CHANNEL_OBSERVATION) { app.sotreus.core.data.service.EdgeLinkService.refresh(context) }
     NowContent(
         state = state,
         onView = vm::setView,
@@ -119,7 +121,19 @@ internal fun NowScreen(navigate: (Any) -> Unit, vm: NowViewModel = hiltViewModel
         onHideBurst = vm::hideBurst,
         onUsePhone = { vm.usePhoneRadios() },
         onPairAgain = { navigate(app.sotreus.core.navigation.EdgeRoute) },
+        askNotifications = state.edge != null && state.settings.sensingSource == app.sotreus.core.model.SensingSource.EDGE &&
+            !notify.shown && !state.settings.edgeNotifyAskDismissed,
+        onAllowNotifications = notify.request,
+        onNotNowNotifications = vm::dismissNotifyAsk,
     )
+    // Automatic places: asked once (docs/plans/auto-places.md), switchable in Privacy & retention.
+    if (state.settings.onboardingDone && state.settings.autoPlaces == null) {
+        app.sotreus.core.ui.ConfirmDialog(
+            stringResource(R.string.auto_places_ask_title), stringResource(R.string.auto_places_ask_body),
+            stringResource(R.string.auto_places_ask_on), stringResource(R.string.auto_places_ask_not_now),
+            onConfirm = { vm.setAutoPlaces(true) }, onDismiss = { vm.setAutoPlaces(false) }, destructive = false,
+        )
+    }
     if (picker) {
         PlacePickerSheet(
             places = state.places,
@@ -148,6 +162,10 @@ internal fun NowContent(
     onHideBurst: () -> Unit = {},
     onUsePhone: () -> Unit = {},
     onPairAgain: () -> Unit = {},
+    /** The Edge runs in the background but Android hides Sotreus's notifications: ask once. */
+    askNotifications: Boolean = false,
+    onAllowNotifications: () -> Unit = {},
+    onNotNowNotifications: () -> Unit = {},
 ) {
     val snap = state.snapshot
     val edge = state.edge
@@ -166,6 +184,7 @@ internal fun NowContent(
         }
         if (state.settings.simulatedRadios) WarningBanner(stringResource(R.string.now_simulated_banner))
         if (edge != null) EdgeLinkBanner(edge, snap.atMs, onUsePhone, onPairAgain)
+        if (askNotifications) EdgeNotifyAsk(onAllowNotifications, onNotNowNotifications)
         when {
             state.needsPermissions -> PermissionPrompt(onPermissions)
             else -> {
@@ -214,6 +233,7 @@ private fun Header(state: NowUiState, onPlace: () -> Unit, onRoute: () -> Unit) 
                         areaText != null && animate -> R.string.now_place_kicker_unsaved
                         unsaved && state.hereCode != null && state.settings.maskCoordinates -> R.string.now_place_kicker_area
                         unsaved && state.hereCode != null -> R.string.now_place_kicker_code
+                        state.places.any { it.place.id == state.snapshot.placeId && it.place.auto } -> R.string.now_place_kicker_auto
                         state.snapshot.placeByLocation -> R.string.now_place_kicker_location
                         else -> R.string.now_place_kicker
                     },

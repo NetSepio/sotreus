@@ -46,6 +46,9 @@ object FakeSotreusData {
     val cafe = PlaceEntity(id = 3, name = "Café", createdAtMs = NOW - 20 * DAY, updatedAtMs = NOW - 4 * DAY)
     val places = listOf(office, home, cafe)
 
+    /** An automatic place (docs/plans/auto-places.md): named by its plus code until the owner renames it. */
+    val autoPlace = PlaceEntity(id = 4, name = "7J4VWP3R+2X", createdAtMs = NOW - 2 * DAY, updatedAtMs = NOW - 3 * MIN, lat = 12.93276, lon = 77.74468, radiusM = 50, auto = true)
+
     val greyTag = entity("ble:C3:91:44:0B:62:1A", RadioKind.BLE, "Tile", DeviceFamily.FINDER_TAG, "Tile Trackers", "Most likely a finder tag", -58, UserEntityState.TAGGED, userName = "Grey tag", first = NOW - 8 * DAY)
     val camera = entity("ble:5A:77:21:0C:33:01", RadioKind.BLE, null, DeviceFamily.CAMERA, "eufy Security", "Probably a camera", -67, notable = true, first = NOW - 2 * MIN)
     val nsOffice = entity("wifi:00:0F:B3:11:22:33", RadioKind.WIFI, "NS-Office", DeviceFamily.ROUTER, null, "Wi-Fi access point", -49, UserEntityState.EXPECTED, security = "[WPA2-PSK-CCMP][RSN-SAE-CCMP][ESS]", first = NOW - 40 * DAY)

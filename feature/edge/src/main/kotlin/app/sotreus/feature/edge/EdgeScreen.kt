@@ -16,6 +16,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import app.sotreus.core.designsystem.icon.SotreusIcons
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,7 +47,7 @@ import app.sotreus.core.ui.ChipTone
 import app.sotreus.core.ui.ConfirmDialog
 import app.sotreus.core.ui.DestructiveTextButton
 import app.sotreus.core.ui.GhostButton
-import app.sotreus.core.ui.KeyValueTable
+import app.sotreus.core.ui.MonoLabel
 import app.sotreus.core.ui.NavRow
 import app.sotreus.core.ui.PrimaryButton
 import app.sotreus.core.ui.ScreenColumn
@@ -76,6 +80,7 @@ internal fun EdgeScreen(onBack: () -> Unit, onPickOnMap: () -> Unit = {}, vm: Ed
     if (device == null || state.pairing !is PairStep.Intro) {
         EdgePairContent(state, onBack, onPair, vm::pick, { d, t -> vm.finishSetup(d, t) })
     } else {
+        val notify = app.sotreus.core.ui.rememberNotificationAccess(app.sotreus.core.data.service.Notifications.CHANNEL_OBSERVATION) { activity?.let { app.sotreus.core.data.service.EdgeLinkService.refresh(it) } }
         EdgeDeviceContent(
             state, device, onBack, vm, onPair,
             PositionActions(
@@ -85,6 +90,7 @@ internal fun EdgeScreen(onBack: () -> Unit, onPickOnMap: () -> Unit = {}, vm: Ed
                 typed = vm::setTypedPosition,
                 allowLocation = { locationPermission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) },
             ),
+            notify,
         )
     }
 }
@@ -162,6 +168,8 @@ internal fun EdgeDeviceContent(
     vm: EdgeViewModel? = null,
     onPairAgain: () -> Unit = {},
     position: PositionActions = PositionActions(),
+    /** Null in previews. While the Edge is the sensor, asks until Sotreus's notifications can show. */
+    notify: app.sotreus.core.ui.NotificationAccess? = null,
 ) {
     val c = SotreusTheme.colors
     val live = state.live
@@ -169,51 +177,56 @@ internal fun EdgeDeviceContent(
     var confirmForget by remember { mutableStateOf(false) }
     ScreenColumn(top = SotreusTheme.spacing.screenH) {
         BackTopBar(onBack = onBack, title = stringResource(R.string.edge_title))
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.xl)) {
-            EdgeArt(Modifier.width(112.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.s)) {
+        // Name, firmware and link, with the state on the right.
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.m)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.xs)) {
                 Text(stringResource(R.string.edge_name, device.suffix), style = SotreusTheme.typography.rowTitle, color = c.text)
-                Text(stringResource(R.string.edge_firmware, live.info?.firmware ?: device.firmware), style = SotreusTheme.typography.caption, color = c.textMuted)
-                live.linkRssi?.takeIf { live.connected }?.let { dbm ->
-                    Text(
-                        stringResource(R.string.edge_link_line, dbm, stringResource(if (live.together) R.string.edge_together else R.string.edge_apart)).replace("-", "−"),
-                        style = SotreusTheme.typography.caption, color = c.textMuted,
-                    )
+                val linkLine = live.linkRssi?.takeIf { live.connected }?.let { dbm ->
+                    stringResource(R.string.edge_link_line, dbm, stringResource(if (live.together) R.string.edge_together else R.string.edge_apart)).replace("-", "−")
                 }
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.s), verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.xs)) {
+                Text(
+                    listOfNotNull(stringResource(R.string.edge_firmware, live.info?.firmware ?: device.firmware), linkLine).joinToString(" · "),
+                    style = SotreusTheme.typography.caption, color = c.textMuted,
+                )
+            }
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.xs)) {
+                when {
+                    live.pairingLost -> StateChip(stringResource(R.string.edge_chip_not_paired), ChipTone.NEUTRAL)
+                    st?.mode == EdgeMode.MESH -> StateChip(stringResource(R.string.edge_chip_mesh), ChipTone.NEUTRAL)
+                    live.link is EdgeLinkState.Connected -> StateChip(stringResource(R.string.edge_chip_connected), ChipTone.ACCENT)
+                    live.link == EdgeLinkState.Connecting || live.link == EdgeLinkState.Bonding -> StateChip(stringResource(R.string.edge_chip_connecting), ChipTone.NEUTRAL)
+                    else -> StateChip(stringResource(R.string.edge_chip_out_of_reach), ChipTone.NEUTRAL)
+                }
+                // Only a battery that is certainly there: on USB power alone the Edge reads like a full cell.
+                st?.battery?.takeIf { it.certain }?.percentApprox?.let { StateChip(stringResource(R.string.edge_chip_battery, it), ChipTone.NEUTRAL) }
+            }
+        }
+        // The drawing, with the Edge's data beside it.
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.xxl)) {
+            EdgeArt(Modifier.width(112.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.l)) {
+                EdgeFact(
+                    stringResource(R.string.edge_kv_last_sync),
                     when {
-                        live.pairingLost -> StateChip(stringResource(R.string.edge_chip_not_paired), ChipTone.NEUTRAL)
-                        st?.mode == EdgeMode.MESH -> StateChip(stringResource(R.string.edge_chip_mesh), ChipTone.NEUTRAL)
-                        live.link is EdgeLinkState.Connected -> StateChip(stringResource(R.string.edge_chip_connected), ChipTone.ACCENT)
-                        live.link == EdgeLinkState.Connecting || live.link == EdgeLinkState.Bonding -> StateChip(stringResource(R.string.edge_chip_connecting), ChipTone.NEUTRAL)
-                        else -> StateChip(stringResource(R.string.edge_chip_out_of_reach), ChipTone.NEUTRAL)
-                    }
-                    // Only a battery that is certainly there: on USB power alone the Edge reads like a full cell.
-                    st?.battery?.takeIf { it.certain }?.percentApprox?.let { StateChip(stringResource(R.string.edge_chip_battery, it), ChipTone.NEUTRAL) }
-                }
+                        live.syncing -> stringResource(R.string.edge_kv_syncing, "%,d".format(live.syncCursor), "%,d".format(live.syncHead))
+                        device.lastSyncMs != null -> stringResource(R.string.edge_ago, ageShort((state.nowMs - device.lastSyncMs!!).coerceAtLeast(0)))
+                        else -> stringResource(R.string.edge_never)
+                    },
+                )
+                st?.log?.let { EdgeFact(stringResource(R.string.edge_kv_records), "%,d".format(it.count)) }
+                if (state.untimed > 0) EdgeFact(stringResource(R.string.edge_kv_untimed), state.untimed.toString())
+                if (device.deployment == EdgeDeployment.STATIONARY) EdgePositionFact(device, position.pickOnMap)
             }
         }
         state.message?.let { WarningBanner(it) }
+        if (notify != null && !notify.shown && state.source == SensingSource.EDGE) {
+            WarningBanner(stringResource(R.string.edge_notify_banner))
+            GhostButton(stringResource(R.string.edge_notify_allow), notify.request)
+        }
         if (live.pairingLost) {
             WarningBanner(stringResource(R.string.edge_pairing_lost))
             PrimaryButton(stringResource(R.string.edge_pair_again), onPairAgain)
         }
-        KeyValueTable(
-            listOfNotNull(
-                stringResource(R.string.edge_kv_last_sync) to when {
-                    live.syncing -> stringResource(R.string.edge_kv_syncing, "%,d".format(live.syncCursor), "%,d".format(live.syncHead))
-                    device.lastSyncMs != null -> ageShort(state.nowMs - device.lastSyncMs!!)
-                    else -> stringResource(R.string.edge_never)
-                },
-                st?.log?.let { stringResource(R.string.edge_kv_records) to "%,d".format(it.count) },
-                (stringResource(R.string.edge_kv_untimed) to state.untimed.toString()).takeIf { state.untimed > 0 },
-                (stringResource(R.string.edge_position) to (device.placeAccuracyM?.let {
-                    val value = stringResource(R.string.edge_position_value, "%.0f".format(it), placeSourceLabel(device.placeSource))
-                    if (device.placementPending) stringResource(R.string.edge_position_pending, value) else value
-                } ?: stringResource(R.string.edge_position_none)))
-                    .takeIf { device.deployment == EdgeDeployment.STATIONARY },
-            ),
-        )
         SegmentedToggle(
             listOf(EdgeDeployment.TRAVEL to stringResource(R.string.edge_travel), EdgeDeployment.STATIONARY to stringResource(R.string.edge_stationary)),
             device.deployment,
@@ -243,6 +256,45 @@ internal fun EdgeDeviceContent(
             stringResource(R.string.edge_forget), stringResource(R.string.edge_cancel),
             onConfirm = { vm?.forget(); confirmForget = false }, onDismiss = { confirmForget = false },
         )
+    }
+}
+
+/** One of the Edge's data points beside its drawing: a mono label over its value. */
+@Composable
+private fun EdgeFact(label: String, value: String, detail: List<String> = emptyList(), trailing: @Composable () -> Unit = {}) {
+    val c = SotreusTheme.colors
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.xs)) {
+            MonoLabel(label, small = true)
+            Text(value, style = SotreusTheme.typography.monoValue, color = c.text)
+            detail.forEach { Text(it, style = SotreusTheme.typography.caption, color = c.textMuted) }
+        }
+        trailing()
+    }
+}
+
+/** A stationary Edge's position: accuracy and source, its coordinates, and a way to see it on the map. */
+@Composable
+private fun EdgePositionFact(device: EdgeDeviceEntity, onMap: () -> Unit) {
+    val lat = device.placeLat
+    val lon = device.placeLon
+    val accuracy = device.placeAccuracyM
+    if (lat == null || lon == null || accuracy == null) {
+        EdgeFact(stringResource(R.string.edge_position), stringResource(R.string.edge_position_none))
+        return
+    }
+    EdgeFact(
+        stringResource(R.string.edge_position),
+        stringResource(R.string.edge_position_value, "%.0f".format(accuracy), placeSourceLabel(device.placeSource)),
+        listOfNotNull(
+            // Root locale: a decimal comma would run into the separator.
+            "%.5f, %.5f".format(java.util.Locale.ROOT, lat, lon),
+            stringResource(R.string.edge_position_pending_short).takeIf { device.placementPending },
+        ),
+    ) {
+        IconButton(onClick = onMap, modifier = Modifier.size(SotreusTheme.sizes.minTouch)) {
+            Icon(SotreusIcons.Location, contentDescription = stringResource(R.string.edge_position_show_map), tint = SotreusTheme.colors.text, modifier = Modifier.size(SotreusTheme.sizes.iconSize))
+        }
     }
 }
 
@@ -276,6 +328,7 @@ private fun EdgeDevicePreview() {
         EdgeDeviceContent(
             EdgeUiState(device = FakeSotreusData.edgeDevice, live = FakeSotreusData.edgeLive, source = SensingSource.EDGE, nowMs = FakeSotreusData.NOW),
             FakeSotreusData.edgeDevice, {},
+            notify = app.sotreus.core.ui.NotificationAccess(shown = false) {},
         )
     }
 }

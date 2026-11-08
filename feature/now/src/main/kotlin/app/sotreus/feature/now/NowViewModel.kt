@@ -136,6 +136,8 @@ class NowViewModel @Inject constructor(
 
     fun setView(v: NowView) = viewModelScope.launch { settings.setNowView(v) }
     fun setShowAddresses(on: Boolean) = viewModelScope.launch { settings.setShowAddresses(on) }
+    fun setAutoPlaces(on: Boolean) = viewModelScope.launch { settings.setAutoPlaces(on) }
+    fun dismissNotifyAsk() = viewModelScope.launch { settings.dismissEdgeNotifyAsk() }
     fun setFilter(f: NowFilter) { filter.value = f }
     fun setSort(s: NowSort) { sort.value = s }
     fun selectPlace(id: Long?) = viewModelScope.launch { placeRepository.select(id) }

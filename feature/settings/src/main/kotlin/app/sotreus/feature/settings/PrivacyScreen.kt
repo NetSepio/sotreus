@@ -76,6 +76,8 @@ class PrivacyViewModel @Inject constructor(
     fun mask(on: Boolean) = viewModelScope.launch { settings.setMaskCoordinates(on) }
     fun placeByLocation(on: Boolean) = viewModelScope.launch { settings.setPlaceByLocation(on) }
     fun plusCodeTags(on: Boolean) = viewModelScope.launch { settings.setPlusCodeTags(on) }
+    fun autoPlaces(on: Boolean) = viewModelScope.launch { settings.setAutoPlaces(on) }
+    fun autoPlaceRadius(meters: Int) = viewModelScope.launch { settings.setAutoPlaceRadius(meters) }
     fun geotag(m: GeotagMode) = viewModelScope.launch { settings.setGeotagMode(m) }
     fun movement(on: Boolean) = viewModelScope.launch { settings.setJourneyMovement(on) }
     fun onlineLookup(on: Boolean) = viewModelScope.launch { settings.setOnlineVendorLookup(on) }
@@ -91,6 +93,7 @@ private sealed interface Pending {
     data object PickSession : Pending
     data object PickPlace : Pending
     data object GeotagChoice : Pending
+    data object AutoPlaceRadius : Pending
     data class Session(val item: SessionListItem) : Pending
     data class Place(val place: PlaceSummary) : Pending
     data object Presence : Pending
@@ -128,6 +131,17 @@ internal fun PrivacyScreen(onBack: () -> Unit, vm: PrivacyViewModel = hiltViewMo
                 stringResource(R.string.privacy_place_by_location), state.settings.placeByLocation, vm::placeByLocation,
                 subtitle = stringResource(R.string.privacy_place_by_location_sub), bordered = false,
             )
+            RowDivider()
+            SwitchRow(
+                stringResource(R.string.privacy_auto_places), state.settings.autoPlaces == true, vm::autoPlaces,
+                subtitle = stringResource(R.string.privacy_auto_places_sub), bordered = false,
+            )
+            if (state.settings.autoPlaces == true) {
+                NavRow(
+                    stringResource(R.string.privacy_auto_place_size), { pending = Pending.AutoPlaceRadius },
+                    value = stringResource(R.string.privacy_auto_place_size_value, state.settings.autoPlaceRadiusM), showDivider = false,
+                )
+            }
             RowDivider()
             SwitchRow(
                 stringResource(R.string.privacy_plus_codes), state.settings.plusCodeTags, vm::plusCodeTags,
@@ -171,6 +185,12 @@ internal fun PrivacyScreen(onBack: () -> Unit, vm: PrivacyViewModel = hiltViewMo
     when (val p = pending) {
         Pending.PickSession -> PickerDialog(stringResource(R.string.pick_session), state.sessions.map { it.session.name to { pending = Pending.Session(it) } }) { pending = null }
         Pending.PickPlace -> PickerDialog(stringResource(R.string.pick_place), state.places.map { it.place.name to { pending = Pending.Place(it) } }) { pending = null }
+        Pending.AutoPlaceRadius -> PickerDialog(
+            stringResource(R.string.privacy_auto_place_size),
+            app.sotreus.core.model.SotreusDefaults.AUTO_PLACE_RADII_M.map { m ->
+                stringResource(R.string.privacy_auto_place_size_value, m) to { vm.autoPlaceRadius(m); pending = null }
+            },
+        ) { pending = null }
         Pending.GeotagChoice -> PickerDialog(
             stringResource(R.string.geotag_dialog_title),
             listOf(GeotagMode.ASK_EACH_TIME, GeotagMode.ALWAYS, GeotagMode.NEVER).map { m -> geotagLabel(m) to { vm.geotag(m); pending = null } },

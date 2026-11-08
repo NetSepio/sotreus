@@ -6,7 +6,7 @@
     <string name="edge_firmware">Firmware %1$s</string>
 
     <!-- Pairing -->
-    <string name="edge_intro">Turn on your Edge, then tap Pair. If it was paired with another phone, hold PRG for 3 seconds first.</string>
+    <string name="edge_intro">Turn on your Edge. If it was paired with another phone, hold PRG until the Edge shows Pairing open (about 3 seconds), then let go and tap Pair. Holding PRG for 15 seconds erases the Edge.</string>
     <string name="edge_pair">Pair</string>
     <string name="edge_scan_title">Choose your Edge</string>
     <string name="edge_scan_searching">Searching…</string>
@@ -34,9 +34,12 @@
     <string name="edge_kv_records">Records on the Edge</string>
     <string name="edge_kv_untimed">Unknown time</string>
     <string name="edge_never">Never</string>
+    <string name="edge_ago">%1$s ago</string>
     <string name="edge_position">Position</string>
     <string name="edge_position_value">±%1$s m · %2$s</string>
     <string name="edge_position_none">Not set</string>
+    <string name="edge_position_pending_short">Sent when the Edge connects</string>
+    <string name="edge_position_show_map">Show the Edge\'s position on the map</string>
     <string name="edge_position_pending">%1$s · sent when the Edge connects</string>
     <string name="edge_position_set">Set from this phone</string>
     <string name="edge_position_averaging">±%1$s m from %2$d fixes</string>
@@ -70,8 +73,10 @@
     <string name="edge_moved_moved">It moved</string>
     <string name="edge_sync_now">Sync now</string>
     <string name="edge_hand_off">New records go straight to this phone</string>
-    <string name="edge_pairing_lost">This phone lost its pairing with the Edge. Open PAIR on the Edge, then pair again.</string>
+    <string name="edge_pairing_lost">This phone lost its pairing with the Edge. Hold PRG on the Edge until it shows Pairing open, then pair again.</string>
     <string name="edge_pair_again">Pair again</string>
+    <string name="edge_notify_banner">Your Edge keeps listening while Sotreus is closed. Allow notifications so a notice shows while it does.</string>
+    <string name="edge_notify_allow">Allow notifications</string>
     <string name="edge_chip_not_paired">Not paired</string>
     <string name="edge_use">Use this Edge</string>
     <string name="edge_use_phone">Use this phone\'s radios</string>

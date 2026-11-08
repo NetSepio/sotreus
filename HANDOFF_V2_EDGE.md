@@ -154,6 +154,10 @@ Explicit (chosen at pairing; on by default for travel, with the explanation on s
 only (`connectedDevice` + `location`), no background location permission, on-device only, covered
 by retention and erase, coarse in export by default.
 
+The Edge link itself keeps running while Sotreus is not on screen whenever the Edge is the sensor,
+in both modes, under the same visible foreground service (owner decision 2026-11-08). It adds the
+`location` type only while travel tagging is on.
+
 ## 5. Screens
 
 Mocks in `design/screens/`, same design system as V1:

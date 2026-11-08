@@ -79,6 +79,8 @@ class MigrationSchemaTest {
 
     @Test fun migration9To10MatchesExportedSchema10() = checkUpgrade(9, Migrations.MIGRATION_9_10)
 
+    @Test fun migration10To11MatchesExportedSchema11() = checkUpgrade(10, Migrations.MIGRATION_10_11)
+
     @Test fun migration7To8MatchesExportedSchema8() {
         checkUpgrade(7, Migrations.MIGRATION_7_8)
         DriverManager.getConnection("jdbc:sqlite::memory:").use { conn ->

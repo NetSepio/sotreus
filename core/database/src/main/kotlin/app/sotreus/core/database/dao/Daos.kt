@@ -152,8 +152,24 @@ interface EntityDao {
     suspend fun deleteSimulated()
 }
 
+/** A located row not yet filed under a place (automatic places sorting). */
+data class LocatedRow(
+    val id: Long,
+    @androidx.room.ColumnInfo(name = "at_ms") val atMs: Long,
+    val lat: Double,
+    val lon: Double,
+    @androidx.room.ColumnInfo(name = "accuracy_m") val accuracyM: Float?,
+    val source: app.sotreus.core.model.LocationSource?,
+)
+
 @Dao
 interface ObservationDao {
+    @Query("SELECT id, observed_at_ms AS at_ms, lat, lon, loc_accuracy_m AS accuracy_m, loc_source AS source FROM observations WHERE id > :afterId AND place_id IS NULL AND lat IS NOT NULL AND lon IS NOT NULL ORDER BY id LIMIT :limit")
+    suspend fun locatedUnplaced(afterId: Long, limit: Int): List<LocatedRow>
+
+    @Query("UPDATE observations SET place_id = :placeId WHERE id IN (:ids) AND place_id IS NULL")
+    suspend fun fileUnder(ids: List<Long>, placeId: Long)
+
     @Insert
     suspend fun insert(observations: List<ObservationEntity>)
 
@@ -201,6 +217,12 @@ interface ObservationDao {
 
 @Dao
 interface EncounterDao {
+    @Query("SELECT id, started_at_ms AS at_ms, first_lat AS lat, first_lon AS lon, loc_accuracy_m AS accuracy_m, loc_source AS source FROM encounters WHERE id > :afterId AND place_id IS NULL AND first_lat IS NOT NULL AND first_lon IS NOT NULL ORDER BY id LIMIT :limit")
+    suspend fun locatedUnplaced(afterId: Long, limit: Int): List<LocatedRow>
+
+    @Query("UPDATE encounters SET place_id = :placeId WHERE id IN (:ids) AND place_id IS NULL")
+    suspend fun fileUnder(ids: List<Long>, placeId: Long)
+
     @Insert
     suspend fun insert(encounter: EncounterEntity): Long
 

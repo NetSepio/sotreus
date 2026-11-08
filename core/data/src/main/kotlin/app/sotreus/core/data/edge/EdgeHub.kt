@@ -221,7 +221,7 @@ class EdgeHub @Inject constructor(
         val device = pairing.device(dev.btAddress) ?: run { _state.update { it.copy(lastError = "Bluetooth is not available") }; return@coroutineScope }
         pairing.observePresence(dev.btAddress)
         val transport = withContext(kotlinx.coroutines.Dispatchers.Main) { pairing.open(device, this@coroutineScope) }
-        val l = NdjsonEdgeLink(transport, this)
+        val l = NdjsonEdgeLink(transport, this, trace = { Log.i(TAG, "link $it") })
         link = l
         launch { l.events.collect { onEvent(it) } }
         launch { sharedNetworkLoop(dev.deviceId) }
@@ -252,7 +252,10 @@ class EdgeHub @Inject constructor(
     }
 
     private suspend fun runConnected(l: EdgeLink, deviceId: String) = coroutineScope {
-        val ok = runCatching { handshake(l, deviceId) }.onFailure {
+        val shakeStart = System.currentTimeMillis()
+        val ok = runCatching { handshake(l, deviceId) }.onSuccess {
+            Log.i(TAG, "handshake done in ${System.currentTimeMillis() - shakeStart} ms")
+        }.onFailure {
             Log.w(TAG, "handshake failed", it)
             _state.update { s -> s.copy(lastError = it.message) }
         }.getOrNull() ?: return@coroutineScope
@@ -308,7 +311,7 @@ class EdgeHub @Inject constructor(
      * so sync requests wait for it to end. A request during a sync runs one more sync after it.
      */
     private suspend fun syncLoop(l: EdgeLink, deviceId: String): Unit = coroutineScope {
-        val handOff = EdgeHandOff(l, this)
+        val handOff = EdgeHandOff(l, this, trace = { Log.i(TAG, "hand-off $it") })
         var handOffSupported = true
         var shortHandOffs = 0
         try {
@@ -323,7 +326,10 @@ class EdgeHub @Inject constructor(
                         if (dev != null && dev.dataLink == app.sotreus.core.model.EdgeDataLink.BLUETOOTH_WIFI_BURST && minOf(log.count, log.head - dev.syncCursor + 1) > BURST_MIN_RECORDS) {
                             runCatching { burstSync(l, dev, log.oldest, log.head, log.ringFull) }.onFailure { Log.w(TAG, "Wi-Fi burst failed; continuing over Bluetooth", it) }
                         }
-                        sync.run(l, deviceId, log.oldest, log.head, log.ringFull, progress = ::syncProgress)
+                        val syncStart = System.currentTimeMillis()
+                        Log.i(TAG, "sync: cursor=${dev?.syncCursor} oldest=${log.oldest} head=${log.head} count=${log.count}")
+                        val out = sync.run(l, deviceId, log.oldest, log.head, log.ringFull, progress = ::syncProgress)
+                        Log.i(TAG, "sync done in ${System.currentTimeMillis() - syncStart} ms: stored=${out.stored} cursor=${out.cursor}")
                         if (handOffSupported && l.kind == LinkKind.BLUETOOTH && shortHandOffs < MAX_SHORT_HAND_OFFS) {
                             handOffSupported = startHandOff(l, deviceId, handOff) { lastedMs ->
                                 shortHandOffs = if (lastedMs < SHORT_HAND_OFF_MS) shortHandOffs + 1 else 0
@@ -391,7 +397,9 @@ class EdgeHub @Inject constructor(
             }
             is EdgeHandOff.Start.Started -> {
                 _state.update { it.copy(handOff = true) }
+                val catchUpStart = System.currentTimeMillis()
                 val out = sync.run(l, deviceId, oldest = 0, head = started.storedHead, ringFull = false, progress = ::syncProgress)
+                Log.i(TAG, "catch-up to ${started.storedHead} done in ${System.currentTimeMillis() - catchUpStart} ms: cursor=${out.cursor}")
                 if (out.cursor > started.storedHead) {
                     caughtUp.set(true)
                     handOff.committedThrough?.let { dao.raiseCursor(deviceId, it + 1, System.currentTimeMillis()) }

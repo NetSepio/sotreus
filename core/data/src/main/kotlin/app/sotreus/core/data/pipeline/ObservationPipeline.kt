@@ -109,6 +109,11 @@ class ObservationPipeline @Inject constructor(
     @Volatile private var currentPlace: PlaceEntity? = null
     @Volatile private var baseline: PlaceTracker.Baseline? = null
     @Volatile private var tagPlusCodes = false
+    /** Automatic places on: phone sightings keep this phone's good fix (docs/plans/auto-places.md). */
+    @Volatile private var locateAll = false
+
+    /** A stationary Edge's place: its sightings are filed there, whatever place this phone is in. */
+    @Volatile var edgeFixedPlaceId: Long? = null
     @Volatile private var placeByLocation = false
     private var baselineLoadedAt = 0L
     private var windowStartMs = 0L
@@ -210,6 +215,7 @@ class ObservationPipeline @Inject constructor(
         mutex.withLock {
             tickCount++
             tagPlusCodes = settings.plusCodeTags
+            locateAll = settings.autoPlaces == true
             stopHistoryEnabled = settings.trackerStopHistory
             insights.tick(now, activeSession?.id, location.latest.value?.speedMps)
             placeByLocation = settings.currentPlaceByLocation
@@ -271,8 +277,10 @@ class ObservationPipeline @Inject constructor(
         val located = ArrayList<Pair<String, TaggedLocation>>()
         for (s in batch) {
             val fix = location.at(s.lastSeen)
-            val tagged = edge?.locate(s.lastSeen)?.also { located += s.key to it }
-            val observedPlaceId = MeasurementPlace.resolve(placeId, placeByLocation, placeChangedAtMs, s.lastSeen, area,
+            // The Edge's location for its sightings (its own rules); this phone's good fix for its own.
+            val tagged = (if (edge != null) edge.locate(s.lastSeen) else phoneTag(fix, s.lastSeen))?.also { located += s.key to it }
+            val fixedPlace = edgeFixedPlaceId?.takeIf { tagged?.source == LocationSource.EDGE_FIXED }
+            val observedPlaceId = fixedPlace ?: MeasurementPlace.resolve(placeId, placeByLocation, placeChangedAtMs, s.lastSeen, area,
                 fix?.let { PlaceGeofence.Fix(it.atMs, it.lat, it.lon, it.accuracyM) })
             observedPlaces[s.key] = observedPlaceId
             if (movementEnabled && s.key !in simulatedIds) movement.observe(s.key, s.lastSeen,
@@ -313,8 +321,8 @@ class ObservationPipeline @Inject constructor(
             if (clients.isNotEmpty()) edgeDao.setWifiRole(clients, WifiRole.CLIENT)
             val aps = batch.filter { it.kind == FwKind.WIFI && it.key !in clients }.map { it.key }
             if (aps.isNotEmpty()) edgeDao.setWifiRole(aps, WifiRole.AP)
-            located.forEach { (key, t) -> edgeDao.setEntityLocated(key, t.atMs, t.lat, t.lon, t.accuracyM, t.source) }
         }
+        located.forEach { (key, t) -> edgeDao.setEntityLocated(key, t.atMs, t.lat, t.lon, t.accuracyM, t.source) }
 
         if (stopHistoryEnabled) batch.forEach { row ->
             insights.stop(row, location.at(row.lastSeen), session?.id, labels[row.key]?.userState ?: UserEntityState.UNCLASSIFIED,
@@ -375,6 +383,17 @@ class ObservationPipeline @Inject constructor(
         id, addressType, linkConfidence, advertisedName, family, signatureName, guess, guessConfidence, notable, vendor, companyId, serviceUuids,
         serviceData, connectable, txPower, security, frequencyMhz, channel, wifiStandard, lastSeenMs, lastRssi, observationCount,
     )
+
+    /**
+     * With automatic places on, a sighting from this phone keeps this phone's location then: only a
+     * real fix of ±25 m or better taken within 10 s of the sighting, never an older or coarser one.
+     */
+    private fun phoneTag(fix: app.sotreus.sensing.LocationSource.Fix?, atMs: Long): TaggedLocation? {
+        if (!locateAll || fix == null || fix.mock) return null
+        val acc = fix.accuracyM ?: return null
+        if (acc > app.sotreus.intelligence.AutoPlaces.GOOD_ACCURACY_M || kotlin.math.abs(fix.atMs - atMs) > PHONE_TAG_MAX_GAP_MS) return null
+        return TaggedLocation(fix.atMs, fix.lat, fix.lon, acc, LocationSource.PHONE)
+    }
 
     private suspend fun recordEncounter(s: Sighting, placeId: Long?, sessionId: Long?, tagged: TaggedLocation? = null, fromEdge: Boolean = false) {
         val open = openEncounters[s.key]
@@ -699,6 +718,7 @@ class ObservationPipeline @Inject constructor(
     }
 
     companion object {
+        private const val PHONE_TAG_MAX_GAP_MS = 10_000L
         const val SIMULATED_PREFIX = "sim:"
         private const val TRAIL_STEP_MS = 250L
         private const val TRAIL_WINDOW_MS = 60_000L

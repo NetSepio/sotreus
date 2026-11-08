@@ -18,7 +18,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -37,7 +36,12 @@ class EdgeHandOff(
     private val scope: CoroutineScope,
     private val clock: () -> Long = System::currentTimeMillis,
     private val policy: StreamAckPolicy = StreamAckPolicy(),
+    /** Diagnostic lines (seqs and outcomes only, nothing about the radios). */
+    trace: (String) -> Unit = {},
 ) {
+    private val instance = instances.incrementAndGet()
+    private val trace: (String) -> Unit = { trace("#$instance $it") }
+
     sealed interface Start {
         /** Running; records up to [storedHead] were stored before and still need a sync. */
         data class Started(val storedHead: Long) : Start
@@ -92,6 +96,7 @@ class EdgeHandOff(
         // Older firmware omits it: then the first record above stored_head starts the run, since
         // every stored record is at or below stored_head.
         val firstSeq = r.body.long("first_seq")
+        trace("started: stored_head=$storedHead first_seq=$firstSeq pre-routed from $from")
         link.routeLiveFrom(firstSeq ?: (storedHead + 1))
         policy.reset()
         committedThrough = null
@@ -106,11 +111,17 @@ class EdgeHandOff(
                 while (isActive && active) {
                     val batch = ArrayList<EdgeRecordCodec.Result>()
                     batch += batches.receive()
-                    // Collect what arrives close together, up to one ack's worth.
-                    while (batch.size < BATCH_MAX) batch += withTimeoutOrNull(BATCH_WAIT_MS) { batches.receive() } ?: break
+                    // Collect what arrives close together, up to one ack's worth. Never a receive under a
+                    // timeout: one cancelled just as a record is handed over loses that record
+                    // (kotlinx.coroutines "undelivered elements"), seen as a rare one-record hole.
+                    delay(BATCH_WAIT_MS)
+                    while (batch.size < BATCH_MAX) batch += batches.tryReceive().getOrNull() ?: break
                     val floor = expected ?: (storedHead + 1)
                     val fresh = batch.filter { seqOf(it)?.let { s -> s >= floor } ?: true }
-                    if (fresh.isEmpty()) continue // repeats of records already handled
+                    if (fresh.isEmpty()) {
+                        trace("dropped ${batch.size} below $floor: ${batch.mapNotNull(::seqOf)}")
+                        continue // repeats of records already handled
+                    }
                     val committed = try {
                         store(fresh)
                     } catch (e: CancellationException) {
@@ -133,6 +144,7 @@ class EdgeHandOff(
                         policy.committed(seq!!, now)?.let { ack = it }
                         expected = seq + 1
                     }
+                    if (hole != null) trace("batch ${fresh.mapNotNull(::seqOf)} expected from $floor, committed ${committed.size}: $hole")
                     ack?.let { send(it) }
                     val through = expected?.minus(1)
                     if (through != null && through > (committedThrough ?: storedHead)) {
@@ -162,12 +174,15 @@ class EdgeHandOff(
 
     /** Cumulative, so a slow answer never needs waiting for: the next ack covers this one. */
     private suspend fun send(seq: Long) = acks.withLock {
-        runCatching { link.request(ACK_TIMEOUT_MS) { EdgeCommands.streamAck(it, seq) } }
+        val r = runCatching { link.request(ACK_TIMEOUT_MS) { EdgeCommands.streamAck(it, seq) } }
+        r.fold({ if (!it.ok) trace("ack $seq refused: ${it.error}") }, { trace("ack $seq failed: ${it.message}") })
+        r
     }
 
     /** Ends the hand-off on the phone side without calling `onStopped`; the Edge stores what was not acknowledged. */
     suspend fun stop() {
         if (!ended.compareAndSet(false, true)) return
+        trace("stopped by the app")
         finish(except = null)
         withContext(NonCancellable) { runCatching { link.request { EdgeCommands.streamStop(it) } } }
     }
@@ -175,11 +190,13 @@ class EdgeHandOff(
     /** The link went away: the Edge stores what was not acknowledged by itself. */
     fun linkDown() {
         if (!ended.compareAndSet(false, true)) return
+        trace("link down")
         finish(except = null)
     }
 
     private suspend fun end(reason: String?, sendStop: Boolean, self: Job?) {
         if (!ended.compareAndSet(false, true)) return
+        trace("ended: $reason${if (sendStop) " (stop sent)" else ""}")
         finish(except = self)
         if (sendStop) withContext(NonCancellable) { runCatching { link.request { EdgeCommands.streamStop(it) } } }
         onStopped(reason)
@@ -199,6 +216,7 @@ class EdgeHandOff(
     }
 
     private companion object {
+        val instances = java.util.concurrent.atomic.AtomicInteger()
         const val BATCH_MAX = 16
         const val BATCH_WAIT_MS = 150L
         const val TICK_MS = 500L

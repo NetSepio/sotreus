@@ -17,9 +17,10 @@
             android:exported="false"
             android:foregroundServiceType="connectedDevice|location" />
 
-        <!-- V2 travel mode: the Edge link and this phone's location for tagging; always shows a notification. -->
+        <!-- V2: the Edge link while the Edge is the sensor, plus this phone's location in travel mode
+             with tagging; always shows a notification. -->
         <service
-            android:name="app.sotreus.core.data.service.EdgeTravelService"
+            android:name="app.sotreus.core.data.service.EdgeLinkService"
             android:exported="false"
             android:foregroundServiceType="connectedDevice|location" />
 
