@@ -95,6 +95,38 @@ class AutoPlacesTest {
         assertEquals(101L, state.placeId)
     }
 
+    /** Stored history: days later, 500 km away. The old place must not hold for the first fixes. */
+    @Test fun aPlaceNeverHoldsAcrossALongGap() {
+        val (settled, _) = run((0..180 step 10).map { fix(it) })
+        assertEquals(100L, settled.placeId)
+        val days = 7 * 86_400
+        val far = 500_000.0
+        val areas = mutableListOf(AutoPlaces.Area(100L, lat0, lon0, 50, auto = true))
+        val (s1, a1) = AutoPlaces.step(settled, areas, fix(days, northM = far), 50)
+        assertEquals(Action.Leave, a1)
+        assertNull(s1.placeId)
+        // A short gap (one jump under the confirmation time) still holds, as before.
+        val (s2, a2) = AutoPlaces.step(settled, areas, fix(200, northM = 300.0), 50)
+        assertEquals(Action.Keep, a2)
+        assertEquals(100L, s2.placeId)
+    }
+
+    @Test fun aLongGapInsideThePlaceEntersItAgain() {
+        val (settled, _) = run((0..180 step 10).map { fix(it) })
+        val areas = mutableListOf(AutoPlaces.Area(100L, lat0, lon0, 50, auto = true))
+        val (s, a) = AutoPlaces.step(settled, areas, fix(180 + 3_600, northM = 5.0), 50)
+        assertEquals(Action.Enter(100L), a)
+        assertEquals(100L, s.placeId)
+    }
+
+    @Test fun settlingNeverSpansALongGap() {
+        // Two fixes, then an hour's silence, then two more at the same spot: four fixes over an hour,
+        // but no three minutes of settling on either side of the gap.
+        val (state, actions) = run(listOf(fix(0), fix(60), fix(3_660), fix(3_720)))
+        assertTrue(actions.none { it is Action.Create })
+        assertNull(state.placeId)
+    }
+
     @Test fun theCentreLeansToTheBetterFix() {
         val c = AutoPlaces.centre(listOf(AutoPlaces.Fix(0, north(0.0), lon0, 5f), AutoPlaces.Fix(1, north(20.0), lon0, 20f)))
         assertTrue(PlaceGeofence.distanceM(c.lat, c.lon, lat0, lon0) < 3)

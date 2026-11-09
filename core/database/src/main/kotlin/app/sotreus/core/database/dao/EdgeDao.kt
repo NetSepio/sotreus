@@ -13,6 +13,12 @@ import app.sotreus.core.database.entity.LocationFixEntity
 import app.sotreus.core.model.LocationSource
 import kotlinx.coroutines.flow.Flow
 
+/** Distinct seqs held: an untimed record moves to `edge_sightings` once its boot is anchored. */
+internal const val HELD_SEQS_SQL = """SELECT COUNT(*) FROM (
+    SELECT seq FROM edge_sightings WHERE device_id = :deviceId AND seq BETWEEN :fromSeq AND :toSeq
+    UNION SELECT seq FROM edge_untimed_records WHERE device_id = :deviceId AND seq BETWEEN :fromSeq AND :toSeq
+    UNION SELECT seq FROM edge_kept_records WHERE device_id = :deviceId AND seq BETWEEN :fromSeq AND :toSeq)"""
+
 @Dao
 interface EdgeDao {
     @Query("SELECT * FROM edge_devices ORDER BY paired_at_ms DESC")
@@ -45,6 +51,18 @@ interface EdgeDao {
 
     @Query("DELETE FROM edge_kept_records")
     suspend fun deleteAllKept()
+
+    /** Full-size Bluetooth packets: the owner's choice ([offMs] null), or Sotreus turning them off after early drops. */
+    @Query("UPDATE edge_devices SET full_size_packets = :on, full_size_off_ms = :offMs WHERE device_id = :deviceId")
+    suspend fun setFullSizePackets(deviceId: String, on: Boolean?, offMs: Long?)
+
+    /** How many of seqs [fromSeq]..[toSeq] this phone holds, in any table a record lands in. */
+    @Query(HELD_SEQS_SQL)
+    suspend fun heldSeqs(deviceId: String, fromSeq: Long, toSeq: Long): Long
+
+    /** A handshake on [boot]: records lost at the restarts since the last one, and restarts whose loss is not known. */
+    @Query("UPDATE edge_devices SET last_boot = :boot, records_lost = records_lost + :lost, restarts_not_known = restarts_not_known + :notKnown WHERE device_id = :deviceId")
+    suspend fun noteBoot(deviceId: String, boot: Long, lost: Long, notKnown: Long)
 
     @Query("UPDATE edge_devices SET last_connected_ms = :atMs, firmware = :firmware, caps_json = :capsJson, probe_salt = :probeSalt WHERE device_id = :deviceId")
     suspend fun connected(deviceId: String, atMs: Long, firmware: String, capsJson: String, probeSalt: String)

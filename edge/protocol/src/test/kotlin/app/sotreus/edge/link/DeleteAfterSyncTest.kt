@@ -206,6 +206,45 @@ class DeleteAfterSyncTest {
         assertEquals(live, edge.records.map { FakeEdge.seqOf(it) })
     }
 
+    @Test fun aStoreThatThrowsIsTracedAndEndsTheHandOff() = runTest {
+        val edge = FakeEdge()
+        val l = link(edge)
+        var stoppedWith: String? = null
+        val traces = ArrayList<String>()
+        val h = EdgeHandOff(l, backgroundScope, clock = { testScheduler.currentTime }, trace = { traces += it })
+        h.start(store = { throw IllegalStateException("disk full") }, onStopped = { stoppedWith = it })
+        val live = edge.fill(2)
+        runCurrent()
+        advanceTimeBy(5_000)
+        runCurrent()
+        assertTrue(edge.acks.isEmpty())
+        assertEquals("a record was not saved", stoppedWith)
+        assertTrue(traces.toString(), traces.any { it.contains("store failed: IllegalStateException: disk full") })
+        assertEquals(live, edge.records.map { FakeEdge.seqOf(it) })
+    }
+
+    @Test fun aRecordCorruptedInTransitIsTracedAndKeptOnTheEdge() = runTest {
+        val edge = FakeEdge()
+        edge.fill(5)
+        val l = link(edge)
+        var stoppedWith: String? = null
+        val traces = ArrayList<String>()
+        val h = EdgeHandOff(l, backgroundScope, clock = { testScheduler.currentTime }, trace = { traces += it })
+        h.start(store = { seqs(it) }, onStopped = { stoppedWith = it })
+        edge.corruptInTransit = { it == 8L }
+        edge.fill(5) // seqs 6..10; 8 arrives with its tail changed
+        runCurrent()
+        advanceTimeBy(3_000)
+        runCurrent()
+        assertEquals(listOf(7L), edge.acks)
+        assertEquals("a record arrived unreadable", stoppedWith)
+        assertTrue(traces.toString(), traces.any { it.contains("record 8 unreadable: CRC mismatch") })
+        // The Edge kept its own intact copy of 8 and everything after it, for the next sync.
+        val kept = edge.records.filter { FakeEdge.seqOf(it) >= 8 }
+        assertEquals(listOf(8L, 9L, 10L), kept.map { FakeEdge.seqOf(it) })
+        assertTrue(kept.all { app.sotreus.edge.protocol.EdgeRecordCodec.decode(it) is app.sotreus.edge.protocol.EdgeRecordCodec.Result.Ok })
+    }
+
     @Test fun aRecordLostInTransitIsNeverAcknowledged() = runTest {
         val edge = FakeEdge()
         edge.fill(5)

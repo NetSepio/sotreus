@@ -13,6 +13,7 @@ import app.sotreus.edge.link.EdgeHandOff
 import app.sotreus.edge.link.EdgeLink
 import app.sotreus.edge.link.LinkKind
 import app.sotreus.edge.link.EdgeLinkState
+import app.sotreus.edge.link.bleLink
 import app.sotreus.edge.link.NdjsonEdgeLink
 import app.sotreus.edge.link.config
 import app.sotreus.edge.link.info
@@ -91,6 +92,12 @@ data class EdgeLive(
 ) {
     val connected: Boolean get() = link is EdgeLinkState.Connected
 
+    /**
+     * Last time anything arrived from the Edge: heard in this run or, after Sotreus restarts while
+     * the Edge is away, the last stored record (`last_sync_ms`). 0 when nothing ever arrived.
+     */
+    val lastDataMs: Long get() = maxOf(lastHeardMs, device?.lastSyncMs ?: 0L)
+
     /** This phone lost the bond (Android deleted it): only pairing again brings the Edge back. */
     val pairingLost: Boolean get() = (link as? EdgeLinkState.Failed)?.pairingLost == true
     val listening: Boolean get() = connected && status?.mode != EdgeMode.MESH
@@ -128,6 +135,14 @@ class EdgeHub @Inject constructor(
     private val lock = Mutex()
     private var session: Job? = null
     @Volatile private var link: EdgeLink? = null
+
+    // Full-size packets: whether the current link has them, when it came up and on which Edge boot,
+    // the last full-size link the Edge dropped (judged at the next handshake), and early drops in a row.
+    @Volatile private var linkFullSize = false
+    @Volatile private var linkUpMs = 0L
+    @Volatile private var linkBoot: Long? = null
+    @Volatile private var pendingLoss: FullSizePackets.Loss? = null
+    @Volatile private var earlyDrops = 0
     private val syncRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     private val bodies = object : LinkedHashMap<String, SightingBody>(256, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, SightingBody>?) = size > MAX_BODIES
@@ -238,11 +253,16 @@ class EdgeHub @Inject constructor(
             when (s) {
                 is EdgeLinkState.Connected -> {
                     connection?.cancel()
+                    linkFullSize = false
+                    linkUpMs = System.currentTimeMillis()
                     connection = launch { runConnected(l, dev.deviceId) }
                 }
                 is EdgeLinkState.Lost, is EdgeLinkState.Failed, EdgeLinkState.Idle -> {
                     connection?.cancel()
                     connection = null
+                    // Lost is the Edge or the air dropping it; this app's own closes end in Idle.
+                    if (s is EdgeLinkState.Lost && linkFullSize) pendingLoss = FullSizePackets.loss(System.currentTimeMillis() - linkUpMs, linkBoot)
+                    linkFullSize = false
                     tagger.linkDown(System.currentTimeMillis())
                     _state.update { it.copy(together = false, linkRssi = null, lastError = (s as? EdgeLinkState.Failed)?.reason ?: it.lastError) }
                 }
@@ -260,6 +280,9 @@ class EdgeHub @Inject constructor(
             _state.update { s -> s.copy(lastError = it.message) }
         }.getOrNull() ?: return@coroutineScope
         val caps = ok.caps
+        linkBoot = ok.boot
+        // First after the handshake, so it usually lands before the Edge's 3 s step and this link follows it.
+        if (caps.bleFullSize) sendFullSize(l, deviceId, ok.boot)
         launch { syncLoop(l, deviceId) } // syncs at once, then hands off
         if (caps.liveSightings) launch { liveLoop(l) }
         launch { linkLoop(l) }
@@ -274,7 +297,46 @@ class EdgeHub @Inject constructor(
         }
     }
 
-    /** device ID check, boot anchor, clock, placement. */
+    /**
+     * This phone's full-size packets setting, sent on every link (the Edge stores it only when it
+     * changes). First the last dropped full-size link is judged: two in a row lost within 2 minutes,
+     * on the same Edge boot, turn the setting off for this Edge.
+     */
+    private suspend fun sendFullSize(l: EdgeLink, deviceId: String, boot: Long) {
+        earlyDrops = FullSizePackets.afterReconnect(earlyDrops, pendingLoss, boot)
+        pendingLoss = null
+        if (FullSizePackets.turnsOff(earlyDrops)) {
+            earlyDrops = 0
+            dao.setFullSizePackets(deviceId, false, System.currentTimeMillis())
+            Log.i(TAG, "full-size packets off: ${FullSizePackets.EARLY_DROPS_TO_TURN_OFF} links in a row lost within ${FullSizePackets.EARLY_DROP_MS / 1000} s")
+        }
+        val d = dao.device(deviceId) ?: return
+        val want = FullSizePackets.wanted(d.fullSizePackets, pairing.bluetooth5)
+        runCatching { l.bleLink(want) }
+            .onSuccess {
+                linkFullSize = it.thisLinkFullSize
+                Log.i(TAG, "ble_link full_size=$want: this link ${if (it.thisLinkFullSize) "full size" else "limited"}")
+            }
+            .onFailure { Log.w(TAG, "ble_link failed: ${it.message}") }
+    }
+
+    /** The owner's choice: stored, then sent on the live link (it applies from the next link at the latest). */
+    suspend fun setFullSizePackets(on: Boolean) {
+        val d = dao.current() ?: return
+        dao.setFullSizePackets(d.deviceId, on, null)
+        earlyDrops = 0
+        pendingLoss = null
+        if (_state.value.info?.caps?.bleFullSize == true) withLink { l -> runCatching { l.bleLink(on) } }
+    }
+
+    /** Records lost at the Edge's restarts since this phone's last handshake (protocol "Records lost at a restart"). */
+    private suspend fun noteRestarts(deviceId: String, boot: Long, st: EdgeStatus) {
+        runCatching { sync.noteBoot(deviceId, boot, st.log?.restartLoss) }
+            .onSuccess { n -> if (n != null && (n.lost > 0 || n.notKnown > 0)) Log.i(TAG, "restarts before boot $boot: ${n.lost} records lost, ${n.notKnown} restarts not known") }
+            .onFailure { Log.w(TAG, "restart loss not counted", it) }
+    }
+
+    /** device ID check, boot anchor, clock, placement, records lost at restarts. */
     private suspend fun handshake(l: EdgeLink, deviceId: String): EdgeInfo {
         val info = l.info()
         if (info.deviceId != deviceId) {
@@ -289,6 +351,7 @@ class EdgeHub @Inject constructor(
         val received = System.currentTimeMillis()
         val mid = sent + (received - sent) / 2
         dao.upsertAnchor(EdgeBootAnchorEntity(deviceId, EdgeTime.bootKey(info.boot), EdgeTime.anchor(st.uptimeMs, mid)))
+        noteRestarts(deviceId, info.boot, st)
         val offset = st.unixMs?.let { EdgeTime.clockOffset(it, sent, received) }
         l.setTime(System.currentTimeMillis(), tzOffsetMinutes())
         // A placement set on this phone while the Edge was away goes first.
@@ -441,7 +504,9 @@ class EdgeHub @Inject constructor(
                     try {
                         runCatching { pushPlacement(http, deviceId) }.onFailure { Log.w(TAG, "placement not sent over the network", it) }
                         lock.withLock {
-                            val log = http.status().log ?: return@withLock
+                            val st = http.status()
+                            runCatching { http.info() }.getOrNull()?.takeIf { it.deviceId == deviceId }?.let { noteRestarts(deviceId, it.boot, st) }
+                            val log = st.log ?: return@withLock
                             _state.update { it.copy(syncing = true) }
                             sync.run(http, deviceId, log.oldest, log.head, log.ringFull, progress = ::syncProgress)
                         }

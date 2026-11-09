@@ -54,6 +54,16 @@ class FakeEdge(
     var mode: String = "awareness"
     var placement: EdgePlacement? = null
     var battery: Int? = 82
+
+    /** `status.log.restart_loss`; null like firmware without the count. */
+    var restartLoss: JsonObject? = null
+
+    /** `ble_link`: this phone's stored setting, and whether the current link has full-size packets. */
+    var fullSize: Boolean = false
+    var linkFullSize: Boolean = false
+
+    /** The Edge's 3 s step has run on this link: a `ble_link` now changes only the next link. */
+    var linkSettled: Boolean = false
     val records = ArrayList<ByteArray>()
     val open = ArrayList<OpenSighting>()
     val received = ArrayList<String>()
@@ -106,7 +116,8 @@ class FakeEdge(
         val bytes = EdgeRecordCodec.encode(EdgeRecordHeader(seq, type, f, (boot and 0xFFFF).toInt(), firstMs, lastMs, body.size, 1), body)
         if (streaming) {
             // Handed off: sent now, kept in RAM until acknowledged; the oldest goes to flash when 32 wait.
-            if (!loseInTransit(seq)) NdjsonFramer.chunks(bytes, maxWrite).forEach { recordsOut.trySend(it) }
+            val sent = if (corruptInTransit(seq)) bytes.copyOf().also { b -> for (i in b.size - 12 until b.size) b[i] = (b[i].toInt() xor 0x5A).toByte() } else bytes
+            if (!loseInTransit(seq)) NdjsonFramer.chunks(sent, maxWrite).forEach { recordsOut.trySend(it) }
             unacked += bytes
             if (unacked.size > STREAM_HOLD) store(unacked.removeAt(0))
         } else {
@@ -133,6 +144,12 @@ class FakeEdge(
 
     /** Streamed records for which this returns true never reach the phone (they stay unacknowledged). */
     var loseInTransit: (Long) -> Boolean = { false }
+
+    /**
+     * Streamed records for which this returns true arrive with their last 12 bytes changed (as one
+     * real Edge's Bluetooth controller once sent a record); the Edge's own copy stays intact.
+     */
+    var corruptInTransit: (Long) -> Boolean = { false }
 
     fun stopStream(reason: String = "no confirmation from the app") {
         if (!streaming) return
@@ -198,6 +215,13 @@ class FakeEdge(
                     else EdgePlacement.parse(merged)
                 }
                 resp(id, "config" to config())
+            }
+            "ble_link" -> {
+                req.bool("full_size")?.let { on ->
+                    fullSize = on
+                    if (!linkSettled) linkFullSize = on
+                }
+                resp(id, "full_size" to fullSize, "this_link" to if (linkFullSize) "full_size" else "limited")
             }
             "set_time" -> {
                 req.long("unix_ms")?.let { bootAtMs = it - uptimeMs(); timeValid = true }
@@ -287,7 +311,8 @@ class FakeEdge(
         "battery" to obj("present" to (battery != null), "source" to (if (battery != null) "battery" else "usb"), "percent_approx" to battery),
         "link" to obj("mode" to "off", "state" to "off", "ssid" to "", "ip" to "", "stations" to 0, "channel" to 6, "sniffing" to true, "hopping" to true),
         "awareness" to obj("running" to (mode == "awareness"), "open_sightings" to obj("ble" to open.count { it.kind == SightingKind.BLE }, "wifi_ap" to open.count { it.kind == SightingKind.WIFI_AP }, "wifi_probe" to open.count { it.kind == SightingKind.WIFI_PROBE }), "records" to records.size),
-        "log" to obj("head" to head, "oldest" to oldest, "count" to records.size, "capacity" to 14_000, "erasing" to false, "write_failures" to 0),
+        "log" to obj("head" to head, "oldest" to oldest, "count" to records.size, "capacity" to 14_000, "erasing" to false, "write_failures" to 0)
+            .let { log -> restartLoss?.let { JsonObject(log + ("restart_loss" to it)) } ?: log },
         "events_dropped" to 0,
     )
 
@@ -304,6 +329,7 @@ class FakeEdge(
             "ble_observation" to true, "wifi24_observation" to true, "wifi_probe_observation" to true, "gnss" to false,
             "local_storage" to true, "firmware_switching" to false, "meshtastic_mode" to true, "lora" to true,
             "display" to true, "battery" to true, "ota_upload" to true, "live_sightings" to true, "placement" to true,
+            "ble_full_size" to true,
         )
 
         fun seqOf(record: ByteArray): Long =

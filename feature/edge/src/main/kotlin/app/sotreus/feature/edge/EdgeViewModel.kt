@@ -91,7 +91,15 @@ data class EdgeUiState(
     val position: PositionUi = PositionUi(),
     val message: String? = null,
     val nowMs: Long = System.currentTimeMillis(),
-)
+    /** This phone's Bluetooth has Bluetooth 5 features (full-size packets default on). */
+    val phoneBluetooth5: Boolean = false,
+) {
+    /** The Edge offers full-size Bluetooth packets (`caps.ble_full_size`). */
+    val fullSizeOffered: Boolean
+        get() = (live.info?.caps ?: device?.let { d ->
+            app.sotreus.edge.protocol.EdgeCapabilities.parse(runCatching { app.sotreus.edge.protocol.EdgeJson.parseToJsonElement(d.capsJson) as kotlinx.serialization.json.JsonObject }.getOrNull())
+        })?.bleFullSize == true
+}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -114,7 +122,7 @@ class EdgeViewModel @Inject constructor(
         combine(position, repo.positionSaved) { pos, saved -> pos.copy(saved = saved) },
         message,
     ) { q, s, p, pos, m ->
-        EdgeUiState(q.device, q.live, q.fix, q.untimed, s.sensingSource, s.edgeMaxAccuracyM, p, pos.copy(limitM = s.edgeStationaryLimitM), m, System.currentTimeMillis())
+        EdgeUiState(q.device, q.live, q.fix, q.untimed, s.sensingSource, s.edgeMaxAccuracyM, p, pos.copy(limitM = s.edgeStationaryLimitM), m, System.currentTimeMillis(), repo.phoneBluetooth5)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EdgeUiState())
 
     private data class Quad(val device: EdgeDeviceEntity?, val live: EdgeLive, val fix: GeoFix?, val untimed: Int)
@@ -199,6 +207,8 @@ class EdgeViewModel @Inject constructor(
     fun clearMessage() { message.value = null }
     fun setDeployment(d: EdgeDeployment) = run { repo.setDeployment(d) }
     fun setTagging(on: Boolean) = viewModelScope.launch { repo.setPhoneTagging(on) }
+
+    fun setFullSize(on: Boolean) = viewModelScope.launch { repo.setFullSizePackets(on) }
     fun setDataLink(link: EdgeDataLink) = run { repo.setDataLink(link) }
     fun setAwareness(key: String, on: Boolean) = run { repo.setAwareness(mapOf(key to on)) }
     fun setMode(mode: EdgeMode) = run { repo.setMode(mode) }

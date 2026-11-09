@@ -1,5 +1,6 @@
 package app.sotreus.edge.link
 
+import app.sotreus.edge.protocol.BleLinkResult
 import app.sotreus.edge.protocol.EdgeAccess
 import app.sotreus.edge.protocol.EdgeCommands
 import app.sotreus.edge.protocol.EdgeConfig
@@ -65,4 +66,8 @@ suspend fun EdgeLink.unwatch() {
 }
 
 /** PIN and access point details. Shown only on request; the PIN is stored Keystore-wrapped. */
+/** Full-size Bluetooth packets for this phone: stores [fullSize], or only reads when it is null. */
+suspend fun EdgeLink.bleLink(fullSize: Boolean?): BleLinkResult =
+    BleLinkResult.parse(ok { EdgeCommands.bleLink(it, fullSize) }.body) ?: throw EdgeRequestException("ble_link without full_size")
+
 suspend fun EdgeLink.access(): EdgeAccess = EdgeAccess.parse(ok { EdgeCommands.access(it) }.body) ?: throw EdgeRequestException("access without pin")

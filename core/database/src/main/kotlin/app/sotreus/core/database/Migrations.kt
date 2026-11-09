@@ -139,5 +139,21 @@ object Migrations {
         }
     }
 
-    val ALL = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+    /** v12: full-size Bluetooth packets per Edge, and when Sotreus turned them off after early drops. */
+    val MIGRATION_11_12 = object : Migration(11, 12) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE edge_devices ADD COLUMN full_size_packets INTEGER")
+            db.execSQL("ALTER TABLE edge_devices ADD COLUMN full_size_off_ms INTEGER")
+        }
+    }
+
+    /** Records lost at an Edge restart (protocol "Records lost at a restart"). */
+    val MIGRATION_12_13 = object : Migration(12, 13) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE edge_devices ADD COLUMN last_boot INTEGER")
+            db.execSQL("ALTER TABLE edge_devices ADD COLUMN restarts_not_known INTEGER NOT NULL DEFAULT 0")
+        }
+    }
+
+    val ALL = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
 }

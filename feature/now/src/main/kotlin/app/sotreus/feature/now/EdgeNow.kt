@@ -20,6 +20,7 @@ import app.sotreus.core.data.edge.EdgeLive
 import app.sotreus.core.data.live.LiveRadio
 import app.sotreus.core.designsystem.theme.SotreusTheme
 import app.sotreus.core.model.BleAddressType
+import app.sotreus.core.model.EdgeDeployment
 import app.sotreus.core.ui.Freshness
 import app.sotreus.core.ui.GhostButton
 import app.sotreus.core.ui.MonoLabel
@@ -42,7 +43,8 @@ import app.sotreus.intelligence.DeviceCategoryGuess
 internal fun edgeFreshness(state: NowUiState, edge: EdgeLive): List<Freshness> {
     val snap = state.snapshot
     val suffix = edge.device?.suffix.orEmpty()
-    val age = edge.lastLiveMs.takeIf { it > 0 }?.let { ageShort(snap.atMs - it) } ?: stringResource(R.string.fresh_none)
+    // After a restart with the Edge away, the age of the last stored record, marked limited below.
+    val age = maxOf(edge.lastLiveMs, edge.lastDataMs).takeIf { it > 0 }?.let { ageShort((snap.atMs - it).coerceAtLeast(0)) } ?: stringResource(R.string.fresh_none)
     val link = edge.status?.link
     val oneChannel = link != null && link.sniffing && !link.hopping
     return listOf(
@@ -66,7 +68,19 @@ internal fun EdgeTaggingLine(edge: EdgeLive, fixAccuracyM: Float?) {
         }
         EdgeLocationSource.EDGE_FIXED -> stringResource(R.string.edge_tag_fixed, edge.device?.placeAccuracyM?.let { "%.0f".format(it) } ?: "—")
         EdgeLocationSource.EDGE_GNSS -> stringResource(R.string.edge_tag_gnss)
-        EdgeLocationSource.NONE -> stringResource(R.string.edge_tag_none)
+        // A stationary Edge without a usable position: say which, so it does not read as this phone's location being off.
+        EdgeLocationSource.NONE -> {
+            val d = edge.device
+            val placement = d?.let { app.sotreus.core.data.edge.EdgeLocationTagger.placementOf(it) }
+            stringResource(
+                when {
+                    d?.deployment != EdgeDeployment.STATIONARY || placement == null -> R.string.edge_tag_none
+                    !placement.positioned -> R.string.edge_tag_not_set
+                    d.placementHeldSinceMs != null -> R.string.edge_tag_held
+                    else -> R.string.edge_tag_none
+                },
+            )
+        }
     }
     MonoLabel(text, small = true)
 }

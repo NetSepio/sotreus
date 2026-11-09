@@ -24,6 +24,15 @@
             android:exported="false"
             android:foregroundServiceType="connectedDevice|location" />
 
+        <!-- V2: after an update, resume the Edge link without waiting for Sotreus to be opened. -->
+        <receiver
+            android:name="app.sotreus.core.data.service.AppUpdatedReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.exports"

@@ -215,6 +215,11 @@ internal fun EdgeDeviceContent(
                 )
                 st?.log?.let { EdgeFact(stringResource(R.string.edge_kv_records), "%,d".format(it.count)) }
                 if (state.untimed > 0) EdgeFact(stringResource(R.string.edge_kv_untimed), state.untimed.toString())
+                // A restart whose loss is not known makes the count a floor.
+                if (device.recordsLost > 0) {
+                    val lost = "%,d".format(device.recordsLost)
+                    EdgeFact(stringResource(R.string.edge_kv_lost), if (device.restartsNotKnown > 0) stringResource(R.string.edge_kv_lost_at_least, lost) else lost)
+                }
                 if (device.deployment == EdgeDeployment.STATIONARY) EdgePositionFact(device, position.pickOnMap)
             }
         }
@@ -243,6 +248,16 @@ internal fun EdgeDeviceContent(
                 }
             }
             StationaryPosition(state.position, position)
+        }
+        if (state.fullSizeOffered) {
+            SwitchRow(
+                stringResource(R.string.edge_full_size),
+                device.fullSizePackets ?: state.phoneBluetooth5,
+                { vm?.setFullSize(it) },
+                subtitle = device.fullSizeOffMs?.takeIf { device.fullSizePackets == false }
+                    ?.let { stringResource(R.string.edge_full_size_off, clockTime(it)) }
+                    ?: stringResource(R.string.edge_full_size_note),
+            )
         }
         if (live.handOff && !live.syncing) Text(stringResource(R.string.edge_hand_off), style = SotreusTheme.typography.bodyS, color = c.textMuted)
         else PrimaryButton(stringResource(R.string.edge_sync_now), { vm?.syncNow() }, enabled = live.connected && !live.syncing)
@@ -329,6 +344,32 @@ private fun EdgeDevicePreview() {
             EdgeUiState(device = FakeSotreusData.edgeDevice, live = FakeSotreusData.edgeLive, source = SensingSource.EDGE, nowMs = FakeSotreusData.NOW),
             FakeSotreusData.edgeDevice, {},
             notify = app.sotreus.core.ui.NotificationAccess(shown = false) {},
+        )
+    }
+}
+
+/** Full-size packets turned off by Sotreus after two early drops. */
+@Preview(widthDp = 390, heightDp = 1300, showBackground = true, backgroundColor = 0xFF0B0E13)
+@Composable
+private fun EdgeFullSizeOffPreview() {
+    val device = FakeSotreusData.edgeDevice.copy(fullSizePackets = false, fullSizeOffMs = FakeSotreusData.NOW - 10 * 60_000L)
+    SotreusTheme {
+        EdgeDeviceContent(
+            EdgeUiState(device = device, live = FakeSotreusData.edgeLive.copy(device = device), source = SensingSource.EDGE, nowMs = FakeSotreusData.NOW, phoneBluetooth5 = true),
+            device, {},
+        )
+    }
+}
+
+/** Records lost at Edge restarts, one of them a power loss whose loss is not known. */
+@Preview(widthDp = 390, heightDp = 1300, showBackground = true, backgroundColor = 0xFF0B0E13)
+@Composable
+private fun EdgeRecordsLostPreview() {
+    val device = FakeSotreusData.edgeDevice.copy(recordsLost = 3, restartsNotKnown = 1)
+    SotreusTheme {
+        EdgeDeviceContent(
+            EdgeUiState(device = device, live = FakeSotreusData.edgeLive.copy(device = device), source = SensingSource.EDGE, nowMs = FakeSotreusData.NOW),
+            device, {},
         )
     }
 }
