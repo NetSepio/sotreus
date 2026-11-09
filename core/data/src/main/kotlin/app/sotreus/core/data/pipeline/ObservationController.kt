@@ -64,6 +64,14 @@ class ObservationController @Inject constructor(
     /** The Edge is paired and chosen as the sensor. */
     private val edgeSource = MutableStateFlow(false)
 
+    // Replayed: the receiver can fire before the controller's collector is running.
+    private val appUpdated = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(replay = 1)
+
+    /** Sotreus was just updated (`MY_PACKAGE_REPLACED`): resume the Edge link if the Edge is the sensor. */
+    fun onAppUpdated() {
+        appUpdated.tryEmit(Unit)
+    }
+
     /** The proximity check's radio, watched on the Edge at up to 4 Hz while it is open. */
     fun setWatch(entityId: String?) = edge.setWatch(entityId)
 
@@ -143,6 +151,16 @@ class ObservationController @Inject constructor(
                         onEdge && fg && !svc.running.value -> runCatching { svc.start(context) }
                     }
                 }
+        }
+        scope.launch {
+            appUpdated.collect {
+                // Sotreus was just updated: Android stopped the Edge service, and companion presence
+                // never reports an Edge that stayed in range. Start it again as if the Edge appeared.
+                val onEdge = settingsRepository.current().sensingSource == app.sotreus.core.model.SensingSource.EDGE && edgeDao.current() != null
+                if (onEdge && !app.sotreus.core.data.service.EdgeLinkService.running.value) {
+                    runCatching { app.sotreus.core.data.service.EdgeLinkService.start(context) }
+                }
+            }
         }
         scope.launch {
             app.sotreus.edge.android.EdgePresence.events.collect { e ->

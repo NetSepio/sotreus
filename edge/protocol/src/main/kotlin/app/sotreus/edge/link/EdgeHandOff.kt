@@ -126,7 +126,8 @@ class EdgeHandOff(
                         store(fresh)
                     } catch (e: CancellationException) {
                         throw e
-                    } catch (_: Exception) {
+                    } catch (e: Exception) {
+                        trace("store failed: ${e.javaClass.simpleName}: ${e.message}")
                         emptySet()
                     }
                     val now = clock()
@@ -136,7 +137,10 @@ class EdgeHandOff(
                         val seq = seqOf(r)
                         val want = expected ?: seq
                         when {
-                            r !is EdgeRecordCodec.Result.Ok -> hole = "a record arrived unreadable"
+                            r is EdgeRecordCodec.Result.Corrupt -> {
+                                hole = "a record arrived unreadable"
+                                trace("record $seq unreadable: ${r.reason}")
+                            }
                             seq != want -> hole = "a record did not arrive"
                             seq !in committed -> hole = "a record was not saved"
                         }

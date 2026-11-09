@@ -2,6 +2,7 @@ package app.sotreus.core.data.edge
 
 import app.sotreus.core.data.pipeline.ObservationPipeline
 import app.sotreus.core.data.pipeline.PastSighting
+import app.sotreus.core.database.DatabaseTransactions
 import app.sotreus.core.database.dao.EdgeDao
 import app.sotreus.core.database.entity.EdgeDeviceEntity
 import app.sotreus.core.database.entity.EdgeSightingEntity
@@ -16,8 +17,10 @@ import app.sotreus.edge.location.MovedChecks
 import app.sotreus.edge.location.SightingLocation
 import app.sotreus.edge.protocol.EdgePositionRecord
 import app.sotreus.edge.protocol.EdgeRecordCodec
+import app.sotreus.edge.protocol.EdgeRestartLoss
 import app.sotreus.edge.protocol.EdgeTime
 import app.sotreus.edge.protocol.Hex
+import app.sotreus.edge.protocol.RestartLossPlanner
 import app.sotreus.edge.protocol.SightingBody
 import app.sotreus.edge.protocol.SyncPlanner
 import app.sotreus.edge.protocol.WifiProbeSighting
@@ -36,6 +39,7 @@ class EdgeSync @Inject constructor(
     private val dao: EdgeDao,
     private val pipeline: ObservationPipeline,
     private val tagger: EdgeLocationTagger,
+    private val transactions: DatabaseTransactions,
 ) {
     data class Outcome(
         val stored: Int,
@@ -90,6 +94,22 @@ class EdgeSync @Inject constructor(
         return Outcome(stored, untimed, result.corrupt, plan.lost, false, result.deletedThrough, result.cursor)
     }
 
+    data class BootNote(val lost: Long, val notKnown: Long)
+
+    /**
+     * A handshake on [boot] (protocol "Records lost at a restart"): adds the records the Edge's
+     * restarts since this phone's last handshake lost and this phone does not hold, and the
+     * restarts whose loss is not known. One transaction with the boot it moves to, so each restart
+     * is judged once.
+     */
+    suspend fun noteBoot(deviceId: String, boot: Long, report: EdgeRestartLoss?): BootNote? = transactions.run {
+        val d = dao.device(deviceId) ?: return@run null
+        val plan = RestartLossPlanner.plan(d.lastBoot, boot, report)
+        val lost = plan.ranges.sumOf { r -> (r.last - r.first + 1) - dao.heldSeqs(deviceId, r.first, r.last) }
+        dao.noteBoot(deviceId, boot, lost, plan.notKnown)
+        BootNote(lost, plan.notKnown)
+    }
+
     /**
      * Records handed off live (`stream_start`): the same store path as a sync, de-duplicated by
      * `(device_id, seq)`. Returns the seqs now in the database, which alone may be acknowledged.
@@ -104,8 +124,22 @@ class EdgeSync @Inject constructor(
      * Stores records. Every readable record lands in one table before it counts as committed:
      * timed sightings in `edge_sightings`, untimed ones in `edge_untimed_records`, the rest raw in
      * `edge_kept_records`. Re-stored records are ignored (`(device_id, seq)` is unique).
+     *
+     * One transaction for the page, History rows included: a write that fails leaves nothing
+     * behind, so a sighting row that already exists on a retry really is fully stored and its
+     * History rows are not written twice. The pipeline's lock is taken first (live sightings
+     * wait), then the transaction, so the two never wait on each other.
      */
-    private suspend fun store(device: EdgeDeviceEntity, page: List<EdgeRecordCodec.Result>, anchors: Map<Int, Long>, now: Long): Stored {
+    private suspend fun store(device: EdgeDeviceEntity, page: List<EdgeRecordCodec.Result>, anchors: Map<Int, Long>, now: Long): Stored =
+        pipeline.withPastLock { held -> transactions.run { storeInTransaction(device, page, anchors, now, held) } }
+
+    private suspend fun storeInTransaction(
+        device: EdgeDeviceEntity,
+        page: List<EdgeRecordCodec.Result>,
+        anchors: Map<Int, Long>,
+        now: Long,
+        held: ObservationPipeline.PastLock,
+    ): Stored {
         val rows = ArrayList<EdgeSightingEntity>()
         val past = ArrayList<PastSighting?>()
         val untimed = ArrayList<EdgeUntimedRecordEntity>()
@@ -155,10 +189,10 @@ class EdgeSync @Inject constructor(
         // Only rows that were not already stored feed History, so a repeated page adds nothing.
         val inserted = if (rows.isEmpty()) emptyList() else dao.insertSightings(rows)
         val fresh = rows.indices.mapNotNull { i -> past[i]?.takeIf { inserted.getOrNull(i) != -1L } }
-        pipeline.recordPast(fresh, now)
+        pipeline.recordPast(fresh, now, held)
         if (untimed.isNotEmpty()) dao.insertUntimed(untimed)
         if (kept.isNotEmpty()) dao.insertKept(kept)
-        // Reached only when every write above succeeded: these seqs are in the database.
+        // Reached only when every write above succeeded; the transaction commits them together.
         return Stored(inserted.count { it != -1L }, untimed.size, readable.toSet())
     }
 

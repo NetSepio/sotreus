@@ -162,10 +162,80 @@ data class LocatedRow(
     val source: app.sotreus.core.model.LocationSource?,
 )
 
+/** [ObservationDao.locatedUnplaced]'s query; a constant so a JVM test can run it on SQLite. */
+internal const val LOCATED_UNPLACED_OBSERVATIONS_SQL = """SELECT o.id, o.observed_at_ms AS at_ms, o.lat, o.lon, o.loc_source AS source,
+        COALESCE(o.loc_accuracy_m, (SELECT sl.accuracy_m FROM session_locations sl
+            WHERE o.session_id IS NOT NULL AND sl.session_id = o.session_id AND sl.lat = o.lat AND sl.lon = o.lon
+            AND sl.at_ms <= o.observed_at_ms AND o.observed_at_ms - sl.at_ms <= :maxFixAgeMs
+            ORDER BY sl.at_ms DESC LIMIT 1)) AS accuracy_m
+    FROM observations o WHERE o.id > :afterId AND o.place_id IS NULL AND o.lat IS NOT NULL AND o.lon IS NOT NULL
+    ORDER BY o.id LIMIT :limit"""
+
+/** Ended visits of :placeId with no observation filed there inside their span. */
+internal const val EMPTY_STORED_VISITS = "SELECT v.id FROM place_visits v WHERE v.place_id = :placeId AND v.ended_at_ms IS NOT NULL " +
+    "AND NOT EXISTS (SELECT 1 FROM observations o WHERE o.place_id = v.place_id " +
+    "AND o.observed_at_ms BETWEEN v.started_at_ms AND v.ended_at_ms)"
+
+/** [PlaceDao.visitsNear]'s query; a constant so a JVM test can run it on SQLite. */
+internal const val VISITS_NEAR_SQL = """SELECT * FROM place_visits WHERE place_id = :placeId
+    AND started_at_ms <= :toMs + :gapMs AND (ended_at_ms IS NULL OR ended_at_ms >= :fromMs - :gapMs)
+    ORDER BY started_at_ms"""
+
+/**
+ * [PlaceDao.repairVisitEnds]'s query: ended visits that end before their latest radio get that radio's
+ * time as their end. A restart used to end an open visit at its start.
+ */
+internal const val REPAIR_VISIT_ENDS_SQL = """UPDATE place_visits
+    SET ended_at_ms = (SELECT MAX(ve.last_seen_ms) FROM visit_entities ve WHERE ve.visit_id = place_visits.id)
+    WHERE ended_at_ms IS NOT NULL
+    AND ended_at_ms < (SELECT MAX(ve.last_seen_ms) FROM visit_entities ve WHERE ve.visit_id = place_visits.id)"""
+
+/** An observation filed under a place, for recording the visits stored sightings make. */
+data class FiledRow(
+    val id: Long,
+    @ColumnInfo(name = "at_ms") val atMs: Long,
+    @ColumnInfo(name = "entity_id") val entityId: String,
+    @ColumnInfo(name = "place_id") val placeId: Long,
+)
+
+/** A located row filed under a place with a position, to check the two agree. */
+data class FiledLocatedRow(
+    val id: Long,
+    val lat: Double,
+    val lon: Double,
+    @ColumnInfo(name = "place_lat") val placeLat: Double,
+    @ColumnInfo(name = "place_lon") val placeLon: Double,
+    @ColumnInfo(name = "place_id") val placeId: Long,
+)
+
 @Dao
 interface ObservationDao {
-    @Query("SELECT id, observed_at_ms AS at_ms, lat, lon, loc_accuracy_m AS accuracy_m, loc_source AS source FROM observations WHERE id > :afterId AND place_id IS NULL AND lat IS NOT NULL AND lon IS NOT NULL ORDER BY id LIMIT :limit")
-    suspend fun locatedUnplaced(afterId: Long, limit: Int): List<LocatedRow>
+    @Query("SELECT COALESCE(MAX(id), 0) FROM observations")
+    suspend fun maxId(): Long
+
+    @Query(
+        "SELECT o.id, o.lat, o.lon, p.lat AS place_lat, p.lon AS place_lon, o.place_id FROM observations o " +
+            "JOIN places p ON p.id = o.place_id WHERE p.auto = 1 AND p.lat IS NOT NULL AND p.lon IS NOT NULL " +
+            "AND o.lat IS NOT NULL AND o.lon IS NOT NULL AND o.id > :afterId ORDER BY o.id LIMIT :limit",
+    )
+    suspend fun filedInAutoPlaces(afterId: Long, limit: Int): List<FiledLocatedRow>
+
+    @Query("UPDATE observations SET place_id = NULL WHERE id IN (:ids)")
+    suspend fun unfile(ids: List<Long>)
+
+    @Query(
+        "SELECT id, observed_at_ms AS at_ms, entity_id, place_id FROM observations " +
+            "WHERE id > :afterId AND id <= :throughId AND place_id IS NOT NULL ORDER BY id LIMIT :limit",
+    )
+    suspend fun filedBetween(afterId: Long, throughId: Long, limit: Int): List<FiledRow>
+
+    /**
+     * Located rows not yet filed under a place. Rows from a V1 geotagged session stored no accuracy;
+     * they take it from the session fix they were tagged with (same position, taken at most
+     * [maxFixAgeMs] before the sighting), and stay without one otherwise.
+     */
+    @Query(LOCATED_UNPLACED_OBSERVATIONS_SQL)
+    suspend fun locatedUnplaced(afterId: Long, limit: Int, maxFixAgeMs: Long): List<LocatedRow>
 
     @Query("UPDATE observations SET place_id = :placeId WHERE id IN (:ids) AND place_id IS NULL")
     suspend fun fileUnder(ids: List<Long>, placeId: Long)
@@ -219,6 +289,16 @@ interface ObservationDao {
 interface EncounterDao {
     @Query("SELECT id, started_at_ms AS at_ms, first_lat AS lat, first_lon AS lon, loc_accuracy_m AS accuracy_m, loc_source AS source FROM encounters WHERE id > :afterId AND place_id IS NULL AND first_lat IS NOT NULL AND first_lon IS NOT NULL ORDER BY id LIMIT :limit")
     suspend fun locatedUnplaced(afterId: Long, limit: Int): List<LocatedRow>
+
+    @Query(
+        "SELECT e.id, e.first_lat AS lat, e.first_lon AS lon, p.lat AS place_lat, p.lon AS place_lon, e.place_id FROM encounters e " +
+            "JOIN places p ON p.id = e.place_id WHERE p.auto = 1 AND p.lat IS NOT NULL AND p.lon IS NOT NULL " +
+            "AND e.first_lat IS NOT NULL AND e.first_lon IS NOT NULL AND e.id > :afterId ORDER BY e.id LIMIT :limit",
+    )
+    suspend fun filedInAutoPlaces(afterId: Long, limit: Int): List<FiledLocatedRow>
+
+    @Query("UPDATE encounters SET place_id = NULL WHERE id IN (:ids)")
+    suspend fun unfile(ids: List<Long>)
 
     @Query("UPDATE encounters SET place_id = :placeId WHERE id IN (:ids) AND place_id IS NULL")
     suspend fun fileUnder(ids: List<Long>, placeId: Long)
@@ -318,6 +398,38 @@ interface PlaceDao {
 
     @Query("UPDATE place_visits SET ended_at_ms = NULL WHERE id = :visitId")
     suspend fun reopenVisit(visitId: Long)
+
+    /** When the latest radio in [visitId] was heard: the visit's last activity, kept across a restart. */
+    @Query("SELECT MAX(last_seen_ms) FROM visit_entities WHERE visit_id = :visitId")
+    suspend fun visitLastSeen(visitId: Long): Long?
+
+    @Query(REPAIR_VISIT_ENDS_SQL)
+    suspend fun repairVisitEnds(): Int
+
+    /** Visits of [placeId] that [fromMs]..[toMs] overlaps or comes within [gapMs] of (open visits run on). */
+    @Query(VISITS_NEAR_SQL)
+    suspend fun visitsNear(placeId: Long, fromMs: Long, toMs: Long, gapMs: Long): List<PlaceVisitEntity>
+
+    @Query("UPDATE place_visits SET started_at_ms = :startedAtMs, ended_at_ms = :endedAtMs WHERE id = :visitId")
+    suspend fun setVisitSpan(visitId: Long, startedAtMs: Long, endedAtMs: Long?)
+
+    @Query("DELETE FROM place_visits WHERE id = :visitId")
+    suspend fun deleteVisit(visitId: Long)
+
+    @Query("SELECT * FROM visit_entities WHERE visit_id = :visitId")
+    suspend fun visitEntitiesOf(visitId: Long): List<VisitEntityEntity>
+
+    @Query("DELETE FROM visit_entities WHERE visit_id = :visitId")
+    suspend fun deleteVisitEntities(visitId: Long)
+
+    @Query("SELECT * FROM visit_entities WHERE visit_id = :visitId AND entity_id IN (:entityIds)")
+    suspend fun visitEntities(visitId: Long, entityIds: List<String>): List<VisitEntityEntity>
+
+    @Query("DELETE FROM visit_entities WHERE visit_id IN ($EMPTY_STORED_VISITS)")
+    suspend fun deleteEmptyStoredVisitEntities(placeId: Long)
+
+    @Query("DELETE FROM place_visits WHERE id IN ($EMPTY_STORED_VISITS)")
+    suspend fun deleteEmptyStoredVisitRows(placeId: Long)
 
     /** Places with a saved location, for picking the place by phone location. */
     @Query("SELECT * FROM places WHERE lat IS NOT NULL AND lon IS NOT NULL")

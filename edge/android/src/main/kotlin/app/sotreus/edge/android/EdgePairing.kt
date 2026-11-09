@@ -45,6 +45,9 @@ class EdgePairing @Inject constructor(@ApplicationContext private val context: C
 
     val bluetoothOn: Boolean get() = adapter?.isEnabled == true
 
+    /** This phone's Bluetooth has Bluetooth 5 features (2M PHY): the default for full-size packets. */
+    val bluetooth5: Boolean get() = runCatching { adapter?.isLe2MPhySupported == true }.getOrDefault(false)
+
     fun request(): AssociationRequest = AssociationRequest.Builder()
         .addDeviceFilter(
             BluetoothLeDeviceFilter.Builder()

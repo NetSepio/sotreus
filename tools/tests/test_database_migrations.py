@@ -162,12 +162,43 @@ class MigrationElevenTest(unittest.TestCase):
     def test_upgrade_keeps_places_as_the_owners_and_matches_room_schema(self):
         db, before = _create(10)
         _insert_minimal(db, before, 'places', name='Home', created_at_ms=1, keep_learning=1, updated_at_ms=2, lat=12.97, lon=77.59, radius_m=150)
-        sql = _migration_sql('MIGRATION_10_11', 'val ALL')
+        sql = _migration_sql('MIGRATION_10_11', 'val MIGRATION_11_12')
         self.assertEqual(1, len(sql))
         for statement in sql:
             db.execute(statement)
         self.assertEqual(('Home', 150, 0), db.execute('SELECT name,radius_m,auto FROM places').fetchone())
         _assert_matches(self, db, 11)
+        db.close()
+
+
+class MigrationTwelveTest(unittest.TestCase):
+    """v12: full-size Bluetooth packets per Edge; an existing Edge follows the phone's default."""
+
+    def test_upgrade_leaves_the_choice_unset_and_matches_room_schema(self):
+        db, before = _create(11)
+        _insert_minimal(db, before, 'edge_devices', device_id='9f3c00aa11bb22cc', name='Sotreus Edge', suffix='96FF', sync_cursor=4_813,
+                        data_link='BLUETOOTH', deployment='STATIONARY', phone_tagging=1, placement_pending=0)
+        sql = _migration_sql('MIGRATION_11_12', 'val MIGRATION_12_13')
+        self.assertEqual(2, len(sql))
+        for statement in sql:
+            db.execute(statement)
+        self.assertEqual((4_813, None, None), db.execute('SELECT sync_cursor,full_size_packets,full_size_off_ms FROM edge_devices').fetchone())
+        _assert_matches(self, db, 12)
+        db.close()
+
+class MigrationThirteenTest(unittest.TestCase):
+    """v13: records lost at an Edge restart; an existing Edge starts with no boot seen and nothing not known."""
+
+    def test_upgrade_keeps_the_lost_count_and_matches_room_schema(self):
+        db, before = _create(12)
+        _insert_minimal(db, before, 'edge_devices', device_id='9f3c00aa11bb22cc', name='Sotreus Edge', suffix='96FF', sync_cursor=4_813,
+                        records_lost=7, data_link='BLUETOOTH', deployment='TRAVEL', phone_tagging=1, placement_pending=0)
+        sql = _migration_sql('MIGRATION_12_13', 'val ALL')
+        self.assertEqual(2, len(sql))
+        for statement in sql:
+            db.execute(statement)
+        self.assertEqual((7, None, 0), db.execute('SELECT records_lost,last_boot,restarts_not_known FROM edge_devices').fetchone())
+        _assert_matches(self, db, 13)
         db.close()
 
 if __name__ == '__main__':

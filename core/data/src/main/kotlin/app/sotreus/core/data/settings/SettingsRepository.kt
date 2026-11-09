@@ -55,6 +55,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val edgeNotifyAskDismissed = booleanPreferencesKey("edge_notify_ask_dismissed")
         val autoPlacesSortedObs = androidx.datastore.preferences.core.longPreferencesKey("auto_places_sorted_obs_id")
         val autoPlacesSortedEnc = androidx.datastore.preferences.core.longPreferencesKey("auto_places_sorted_enc_id")
+        val autoPlacesSortVersion = intPreferencesKey("auto_places_sort_version")
+        val autoPlacesVisitsObs = longPreferencesKey("auto_places_visits_obs_id")
         val autoPlaceRadius = intPreferencesKey("auto_place_radius_m")
         val nowView = stringPreferencesKey("now_view")
         val retention = stringPreferencesKey("retention")
@@ -248,6 +250,24 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
     suspend fun setAutoPlacesSortedThrough(observationId: Long, encounterId: Long) {
         store.edit { it[Keys.autoPlacesSortedObs] = observationId; it[Keys.autoPlacesSortedEnc] = encounterId }
     }
+
+    /** The sorting rules the stored watermark was made with; 0 when never sorted. */
+    suspend fun autoPlacesSortVersion(): Int = store.data.first()[Keys.autoPlacesSortVersion] ?: 0
+
+    /** New sorting rules: sort every unplaced row again, and record visits again, from the start. */
+    suspend fun restartAutoPlacesSort(version: Int) {
+        store.edit {
+            it[Keys.autoPlacesSortedObs] = 0L
+            it[Keys.autoPlacesSortedEnc] = 0L
+            it[Keys.autoPlacesVisitsObs] = 0L
+            it[Keys.autoPlacesSortVersion] = version
+        }
+    }
+
+    /** The last observation id whose filed sightings have their visits recorded. */
+    suspend fun autoPlacesVisitsThrough(): Long = store.data.first()[Keys.autoPlacesVisitsObs] ?: 0L
+
+    suspend fun setAutoPlacesVisitsThrough(observationId: Long) { store.edit { it[Keys.autoPlacesVisitsObs] = observationId } }
     suspend fun setAutoPlaceRadius(meters: Int) { if (meters in app.sotreus.core.model.SotreusDefaults.AUTO_PLACE_RADII_M) store.edit { it[Keys.autoPlaceRadius] = meters } }
     suspend fun setNowView(v: NowView) { store.edit { it[Keys.nowView] = v.name } }
     suspend fun setRetention(v: RetentionPolicy) { store.edit { it[Keys.retention] = v.name } }

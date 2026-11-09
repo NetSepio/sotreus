@@ -596,6 +596,15 @@ private fun NowEdgeOutOfReachPreview() {
     SotreusTheme { NowContent(NowUiState(snapshot = FakeSotreusData.snapshot, edge = lost), {}, {}, {}, {}, {}, {}, {}) }
 }
 
+/** Sotreus restarted while a stationary Edge with no position is away: the last stored record's age. */
+@Preview(widthDp = 390, heightDp = 1000, showBackground = true, backgroundColor = 0xFF0B0E13)
+@Composable
+private fun NowEdgeAwayAfterRestartPreview() {
+    val device = FakeSotreusData.edgeDevice.copy(deployment = app.sotreus.core.model.EdgeDeployment.STATIONARY, lastSyncMs = FakeSotreusData.NOW - 86_400_000)
+    val away = app.sotreus.core.data.edge.EdgeLive(device = device, link = app.sotreus.edge.link.EdgeLinkState.Connecting)
+    SotreusTheme { NowContent(NowUiState(snapshot = FakeSotreusData.snapshot, edge = away), {}, {}, {}, {}, {}, {}, {}) }
+}
+
 @Preview(widthDp = 390, heightDp = 1000, showBackground = true, backgroundColor = 0xFF0B0E13)
 @Composable
 private fun NowListPreview() {

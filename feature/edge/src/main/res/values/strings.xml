@@ -18,6 +18,9 @@
     <string name="edge_travel">Travel</string>
     <string name="edge_stationary">Stationary</string>
     <string name="edge_tagging">Use this phone\'s location</string>
+    <string name="edge_full_size">Full-size Bluetooth packets</string>
+    <string name="edge_full_size_note">About 5 times fewer packets for the same data. Some older phones lose the link with them.</string>
+    <string name="edge_full_size_off">Turned off at %1$s: two links in a row dropped within 2 minutes.</string>
     <string name="edge_done">Done</string>
 
     <!-- Device -->
@@ -33,6 +36,8 @@
     <string name="edge_kv_syncing">Syncing %1$s of %2$s</string>
     <string name="edge_kv_records">Records on the Edge</string>
     <string name="edge_kv_untimed">Unknown time</string>
+    <string name="edge_kv_lost">Records lost</string>
+    <string name="edge_kv_lost_at_least">At least %1$s</string>
     <string name="edge_never">Never</string>
     <string name="edge_ago">%1$s ago</string>
     <string name="edge_position">Position</string>

@@ -16,9 +16,18 @@ import kotlin.math.max
  */
 object AutoPlaces {
     const val GOOD_ACCURACY_M = 25f
+
+    /** A sighting keeps a phone fix only if the fix was taken at most this long before it. */
+    const val FIX_MAX_AGE_MS = 10_000L
     const val SETTLE_MS = 3 * 60_000L
     const val SETTLE_MIN_FIXES = 3
     const val LEAVE_CONFIRM_MS = 20_000L
+
+    /**
+     * After this long without a good fix, where the listener was no longer counts: the next good
+     * fix is judged afresh, so a place never holds across a gap (stored history spans days).
+     */
+    const val STATE_GAP_MS = 30 * 60_000L
     const val DEFAULT_RADIUS_M = 50
     val RADIUS_CHOICES_M = listOf(25, 50, 100, 200)
 
@@ -37,6 +46,8 @@ object AutoPlaces {
         /** First good fix beyond the current place's exit distance, while still counted inside. */
         val outsideSinceMs: Long? = null,
         val candidate: Candidate? = null,
+        /** The last good fix's time, for [STATE_GAP_MS]. */
+        val lastAtMs: Long? = null,
     )
 
     sealed interface Action {
@@ -58,6 +69,18 @@ object AutoPlaces {
     /** Where [fix] takes [state], given the places that exist and the radius for new ones. */
     fun step(state: State, areas: List<Area>, fix: Fix, radiusM: Int): Pair<State, Action> {
         if (!good(fix)) return state to Action.Keep
+        val last = state.lastAtMs
+        val (next, action) = if (last != null && fix.atMs - last > STATE_GAP_MS) {
+            // A long gap: judged as a fix outside every place, leaving the old one if it lands elsewhere.
+            val (n, a) = outside(State(), areas, fix, radiusM)
+            n to if (a == Action.Keep && state.placeId != null) Action.Leave else a
+        } else {
+            stepGood(state, areas, fix, radiusM)
+        }
+        return next.copy(lastAtMs = fix.atMs) to action
+    }
+
+    private fun stepGood(state: State, areas: List<Area>, fix: Fix, radiusM: Int): Pair<State, Action> {
         val current = state.placeId?.let { id -> areas.firstOrNull { it.placeId == id } }
         if (current != null) {
             val d = PlaceGeofence.distanceM(current.lat, current.lon, fix.lat, fix.lon)
@@ -72,7 +95,7 @@ object AutoPlaces {
     }
 
     /** The automatic place made for a [Action.Create] got [placeId]. */
-    fun created(state: State, placeId: Long): State = State(placeId = placeId)
+    fun created(state: State, placeId: Long): State = State(placeId = placeId, lastAtMs = state.lastAtMs)
 
     private fun outside(state: State, areas: List<Area>, fix: Fix, radiusM: Int): Pair<State, Action> {
         match(areas, fix)?.let { return State(placeId = it) to Action.Enter(it) }

@@ -42,6 +42,9 @@ data class EdgeCapabilities(val raw: Map<String, Boolean> = emptyMap()) {
     /** `placement` in config (V2 firmware addition). */
     val placement get() = has("placement")
 
+    /** `ble_link`: this phone's Bluetooth links may keep full-size link-layer packets. */
+    val bleFullSize get() = has("ble_full_size")
+
     companion object {
         fun parse(caps: JsonObject?): EdgeCapabilities =
             EdgeCapabilities(caps.orEmpty().mapNotNull { (k, v) -> (v as? JsonPrimitive)?.booleanOrNull?.let { k to it } }.toMap())
@@ -136,9 +139,44 @@ data class EdgeLogStatus(
     val writeFailures: Long,
     val deletedAfterSync: Long = 0,
     val deleting: Boolean = false,
+    /** Null from firmware without the count. */
+    val restartLoss: EdgeRestartLoss? = null,
 ) {
     /** The ring may have overwritten records (it is full to within one 16-record sector). Unknown capacity counts as full. */
     val ringFull: Boolean get() = capacity <= 0 || count >= capacity - 16
+}
+
+/**
+ * `status.log.restart_loss` (protocol "Records lost at a restart"): records a restart lost,
+ * numbered but neither stored nor confirmed with `stream_ack`. Kept in RAM that survives a
+ * software restart, a crash or a watchdog reset; after a power loss or the reset pin it starts
+ * again at [sinceBoot].
+ */
+data class EdgeRestartLoss(
+    val sinceBoot: Long,
+    /** Records lost since [sinceBoot], including ranges no longer listed. */
+    val records: Long,
+    /** The latest restarts that lost records, oldest first. */
+    val ranges: List<Range>,
+) {
+    /** Seqs [from]..[to], numbered during boot [boot]. Sent but unconfirmed records are in it too, so this phone may hold some. */
+    data class Range(val boot: Long, val from: Long, val to: Long) {
+        val size: Long get() = to - from + 1
+    }
+
+    companion object {
+        fun parse(o: JsonObject?): EdgeRestartLoss? {
+            val since = o?.long("since_boot") ?: return null
+            val ranges = o.arr("ranges").orEmpty().mapNotNull { e ->
+                val r = e as? JsonObject ?: return@mapNotNull null
+                val boot = r.long("boot") ?: return@mapNotNull null
+                val from = r.long("from") ?: return@mapNotNull null
+                val to = r.long("to")?.takeIf { it >= from } ?: return@mapNotNull null
+                Range(boot, from, to)
+            }.sortedBy { it.boot }
+            return EdgeRestartLoss(since, o.long("records") ?: ranges.sumOf { it.size }, ranges)
+        }
+    }
 }
 
 data class EdgeAwarenessStatus(
@@ -194,7 +232,8 @@ data class EdgeStatus(
                 },
                 log = g?.let {
                     EdgeLogStatus(it.long("head") ?: 0, it.long("oldest") ?: 0, it.long("count") ?: 0, it.long("capacity") ?: 0,
-                        it.bool("erasing") == true, it.long("write_failures") ?: 0, it.long("deleted_after_sync") ?: 0, it.bool("deleting") == true)
+                        it.bool("erasing") == true, it.long("write_failures") ?: 0, it.long("deleted_after_sync") ?: 0, it.bool("deleting") == true,
+                        EdgeRestartLoss.parse(it.obj("restart_loss")))
                 },
                 eventsDropped = o.long("events_dropped") ?: 0,
             )
@@ -396,6 +435,9 @@ object EdgeCommands {
 
     fun unwatch(id: Long) = cmd("unwatch", id)
     fun access(id: Long) = cmd("access", id)
+
+    /** Bluetooth only. With [fullSize], stores this phone's setting; without it, only reads. */
+    fun bleLink(id: Long, fullSize: Boolean?) = cmd("ble_link", id, fullSize?.let { mapOf("full_size" to JsonPrimitive(it)) }.orEmpty())
     fun pairingOpen(id: Long, seconds: Int = 120) = cmd("pairing_open", id, mapOf("seconds" to JsonPrimitive(seconds)))
     fun reboot(id: Long) = cmd("reboot", id)
 
@@ -415,5 +457,15 @@ object EdgeCommands {
 data class EdgeAccess(val pin: String, val apSsid: String, val apPassword: String) {
     companion object {
         fun parse(o: JsonObject): EdgeAccess? = o.str("pin")?.let { EdgeAccess(it, o.str("ap_ssid").orEmpty(), o.str("ap_password").orEmpty()) }
+    }
+}
+
+/**
+ * `ble_link` response: [fullSize] is this phone's stored setting; [thisLinkFullSize] is what the
+ * current link has, or will have once the Edge's 3 s step runs.
+ */
+data class BleLinkResult(val fullSize: Boolean, val thisLinkFullSize: Boolean) {
+    companion object {
+        fun parse(o: JsonObject): BleLinkResult? = o.bool("full_size")?.let { BleLinkResult(it, o.str("this_link") == "full_size") }
     }
 }

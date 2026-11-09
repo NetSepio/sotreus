@@ -25,6 +25,8 @@
     <string name="edge_tag_fixed">Location · fixed · ±%1$s m</string>
     <string name="edge_tag_gnss">Location · Edge GNSS</string>
     <string name="edge_tag_none">Location · off</string>
+    <string name="edge_tag_not_set">Edge position · not set</string>
+    <string name="edge_tag_held">Edge position · may have moved</string>
     <string name="edge_banner_lost">Edge out of reach since %1$s.</string>
     <string name="edge_banner_failed">Edge not connected: %1$s</string>
     <string name="edge_banner_connecting">Connecting to your Edge…</string>

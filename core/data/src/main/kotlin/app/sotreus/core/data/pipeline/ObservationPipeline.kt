@@ -206,7 +206,8 @@ class ObservationPipeline @Inject constructor(
         placeChangedAtMs = now
         visitFirstSeen.clear()
         attentionIds.clear()
-        placeTracker.ensure(place?.id, now)
+        // Only a place that holds now: an unconfirmed one would open a visit the next flush ends empty.
+        placeTracker.ensure(heldPlace(now), now)
         baseline = place?.let { placeTracker.baseline(it.id) }
         baselineLoadedAt = now
     }
@@ -263,7 +264,9 @@ class ObservationPipeline @Inject constructor(
 
         val placeId = currentPlace?.id?.takeIf { !placeByLocation || location.fresh(now) != null }
         val session = activeSession
-        val visitId = placeTracker.ensure(placeId, now)
+        // A stationary Edge keeps its place's visit open without a fix from this phone.
+        val visitPlaceId = heldPlace(now)
+        val visitId = placeTracker.ensure(visitPlaceId, now)
         // Opt-in: where the phone was, as a ~14 m plus code, only from a fix taken in the last minute.
         val brandNew = mutableListOf<EntityEntity>()
         val updates = mutableListOf<EntitySystemFields>()
@@ -333,13 +336,21 @@ class ObservationPipeline @Inject constructor(
         accumulatePresence(batch, now)
         if (visitId != null) {
             places.upsertVisitEntities(
-                batch.filter { observedPlaces[it.key] == placeId && placeId != null }.map { s ->
+                batch.filter { observedPlaces[it.key] == visitPlaceId && visitPlaceId != null }.map { s ->
                     VisitEntityEntity(visitId, s.key, visitFirstSeen.getOrPut(s.key) { s.lastSeen }, s.lastSeen)
                 },
             )
         }
         if (session != null) recordSession(session, batch, brandNew.map { it.id }.toSet(), now)
     }
+
+    /** [PlaceTracker.heldPlace] for the selected place now. */
+    private fun heldPlace(now: Long): Long? = PlaceTracker.heldPlace(
+        selectedId = currentPlace?.id,
+        phoneConfirms = !placeByLocation || location.fresh(now) != null,
+        edgeFixedPlaceId = edgeFixedPlaceId,
+        edgeFixedNow = edgeLocator?.locate(now)?.source == LocationSource.EDGE_FIXED,
+    )
 
     private fun stamp(s: Sighting): String =
         "${classifier.revision}|${s.name}|${s.serviceUuids.sorted()}|${s.manufacturerId}|${s.manufacturerDataHex}|${s.vendorIeOuis.sorted()}|${s.facts}"
@@ -391,7 +402,7 @@ class ObservationPipeline @Inject constructor(
     private fun phoneTag(fix: app.sotreus.sensing.LocationSource.Fix?, atMs: Long): TaggedLocation? {
         if (!locateAll || fix == null || fix.mock) return null
         val acc = fix.accuracyM ?: return null
-        if (acc > app.sotreus.intelligence.AutoPlaces.GOOD_ACCURACY_M || kotlin.math.abs(fix.atMs - atMs) > PHONE_TAG_MAX_GAP_MS) return null
+        if (acc > app.sotreus.intelligence.AutoPlaces.GOOD_ACCURACY_M || kotlin.math.abs(fix.atMs - atMs) > app.sotreus.intelligence.AutoPlaces.FIX_MAX_AGE_MS) return null
         return TaggedLocation(fix.atMs, fix.lat, fix.lon, acc, LocationSource.PHONE)
     }
 
@@ -421,9 +432,12 @@ class ObservationPipeline @Inject constructor(
      * V2: sighting windows the Edge heard while this phone was not receiving it live (synced
      * records). Classified like live radios; written as an entity update, one encounter and one
      * observation each, with the window's own times and location. Never touches the live state.
+     * Call it inside [withPastLock], which holds the pipeline's lock so a caller can wrap these
+     * writes and its own in one database transaction (lock first, then transaction, always).
      */
-    suspend fun recordPast(items: List<PastSighting>, now: Long) = mutex.withLock {
-        if (items.isEmpty()) return@withLock
+    suspend fun recordPast(items: List<PastSighting>, now: Long, held: PastLock) {
+        check(held.owner === this)
+        if (items.isEmpty()) return
         val tmp = LiveSightings()
         val sightings = items.map { p ->
             tmp.upsert(p.key, p.observation).copy(firstSeen = p.firstMs, lastSeen = p.lastMs, rssi = p.rssiMax, rssiMax = p.rssiMax)
@@ -469,6 +483,12 @@ class ObservationPipeline @Inject constructor(
             if (loc != null) edgeDao.setEntityLocated(p.key, p.lastMs, loc.endLat ?: loc.lat, loc.endLon ?: loc.lon, loc.accuracyM, loc.source)
         }
     }
+
+    /** Proof that the pipeline's lock is held, for [recordPast]. */
+    class PastLock internal constructor(internal val owner: ObservationPipeline)
+
+    /** Holds the pipeline's lock (live sightings wait) while [block] records past sightings. */
+    suspend fun <T> withPastLock(block: suspend (PastLock) -> T): T = mutex.withLock { block(PastLock(this)) }
 
     private fun accumulatePresence(batch: List<Sighting>, now: Long) {
         batch.forEach { s ->
@@ -671,7 +691,7 @@ class ObservationPipeline @Inject constructor(
                 hasRemoteId = s.facts.vendorIes.any { it.oui == "FA:0B:BC" } || s.serviceUuids.any { it.contains("FFFA", ignoreCase = true) },
             )
         }
-        val confirmedPlace = currentPlace?.takeIf { !placeByLocation || location.fresh(now) != null }
+        val confirmedPlace = currentPlace?.takeIf { it.id == heldPlace(now) }
         _snapshot.value = LiveSnapshot(
             atMs = now,
             conditionNotes = listOfNotNull(insights.notice.value?.line(), gnss.state.value.notice?.line),
@@ -718,7 +738,6 @@ class ObservationPipeline @Inject constructor(
     }
 
     companion object {
-        private const val PHONE_TAG_MAX_GAP_MS = 10_000L
         const val SIMULATED_PREFIX = "sim:"
         private const val TRAIL_STEP_MS = 250L
         private const val TRAIL_WINDOW_MS = 60_000L

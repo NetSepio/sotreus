@@ -29,7 +29,7 @@ data class EdgeDeviceEntity(
     @ColumnInfo(name = "last_sync_ms") val lastSyncMs: Long? = null,
     /** Next seq to fetch; advanced only after a page is stored. */
     @ColumnInfo(name = "sync_cursor") val syncCursor: Long,
-    /** Records the ring buffer overwrote before this phone fetched them. */
+    /** Records lost before this phone held them: overwritten by the ring buffer, or lost at an Edge restart. */
     @ColumnInfo(name = "records_lost") val recordsLost: Long = 0,
     @ColumnInfo(name = "data_link") val dataLink: EdgeDataLink = EdgeDataLink.BLUETOOTH,
     val deployment: EdgeDeployment = EdgeDeployment.TRAVEL,
@@ -49,6 +49,17 @@ data class EdgeDeviceEntity(
     @ColumnInfo(name = "phone_tagging") val phoneTagging: Boolean = true,
     /** The placement above (mode and position) was set on this phone and is not on the Edge yet. */
     @ColumnInfo(name = "placement_pending", defaultValue = "0") val placementPending: Boolean = false,
+    /**
+     * Full-size Bluetooth packets on this phone's links (protocol "Link-layer packets"). Null
+     * follows this phone's default: on when its Bluetooth has Bluetooth 5 features.
+     */
+    @ColumnInfo(name = "full_size_packets") val fullSizePackets: Boolean? = null,
+    /** Set when Sotreus turned full-size packets off after links dropped early; cleared by the owner's choice. */
+    @ColumnInfo(name = "full_size_off_ms") val fullSizeOffMs: Long? = null,
+    /** The Edge's boot at this phone's last handshake: restarts after it are judged for lost records. */
+    @ColumnInfo(name = "last_boot") val lastBoot: Long? = null,
+    /** Edge restarts whose lost records are not known (a power loss, the reset pin, older firmware). */
+    @ColumnInfo(name = "restarts_not_known", defaultValue = "0") val restartsNotKnown: Long = 0,
 )
 
 /** Unix ms at which an Edge boot started, seen by this phone while connected. */

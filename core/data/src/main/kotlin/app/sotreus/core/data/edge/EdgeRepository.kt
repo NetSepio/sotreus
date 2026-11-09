@@ -216,6 +216,11 @@ class EdgeRepository @Inject constructor(
         save(d.copy(placementHeldSinceMs = null))
     }
 
+    /** This phone's Bluetooth has Bluetooth 5 features: full-size packets default to on. */
+    val phoneBluetooth5: Boolean get() = pairing.bluetooth5
+
+    suspend fun setFullSizePackets(on: Boolean) = hub.setFullSizePackets(on)
+
     suspend fun setPhoneTagging(on: Boolean) {
         val d = dao.current() ?: return
         save(d.copy(phoneTagging = on))

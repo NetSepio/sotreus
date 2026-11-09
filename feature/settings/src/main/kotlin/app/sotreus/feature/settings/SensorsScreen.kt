@@ -271,7 +271,9 @@ private fun EdgeSensorCards(live: app.sotreus.core.data.edge.EdgeLive, lastResul
     val heard = live.status?.awareness?.takeIf { listening }
     val cfg = live.config?.awareness?.takeIf { listening }
     val wifi = live.status?.link?.takeIf { listening }
-    val lastResult = lastResultMs.takeIf { it > 0 }?.let { stringResource(R.string.kv_ago, ageShort((now - it).coerceAtLeast(0))) } ?: never
+    // Nothing from the Edge since Sotreus started: the last stored record's age, not "never".
+    val lastResult = (lastResultMs.takeIf { it > 0 } ?: live.lastDataMs.takeIf { it > 0 })
+        ?.let { stringResource(R.string.kv_ago, ageShort((now - it).coerceAtLeast(0))) } ?: never
     SensorCard(
         title = stringResource(R.string.sensor_ble),
         status = stringResource(if (listening) R.string.status_edge_listening else R.string.status_edge_away),
