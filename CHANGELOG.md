@@ -2,6 +2,48 @@
 
 All notable changes to Sotreus Android. Versions follow `versionName` in `app/build.gradle.kts`.
 
+## 1.2.0 — 2026-11-10
+
+### Added
+
+- Pair a Sotreus Edge from Settings › Sotreus Edge. Android lists the Edge, and you type the
+  6-digit code from its display; the bond encrypts the link. Pairing needs no scan permission.
+- Use the Edge as the sensor. While it is chosen, this phone's Bluetooth and Wi-Fi scanning stays
+  off, and Now, History, Places, Journey/Sit and the proximity check use what the Edge hears.
+  Context (aircraft, satellites, environment, known cameras) stays on this phone. "Use this phone's
+  radios" switches back; Sotreus never switches by itself.
+- Hand new records from the Edge straight to this phone while connected. What the Edge heard while
+  away syncs on reconnect, and the Edge deletes records once this phone has saved them.
+- Keep the Edge link running while Sotreus is closed, with a visible notification that says whether
+  the Edge is connected. It starts again when the Edge comes back in range, after Android restarts
+  Sotreus, and after an app update.
+- Add the Edge screen: link signal, with this phone or apart, records on the Edge, records with an
+  unknown time, last sync, Sync now, and Forget this Edge (sightings already on this phone stay).
+- Choose how the Edge is used. Travel: while the phone and Edge are together, this phone's location
+  tags sightings ("Use this phone's location"), under a visible notification. Stationary: set the
+  Edge's position once, from this phone (averaged fixes), on a map, or by typed coordinates; it is
+  stored on the Edge. Sotreus asks when a stationary Edge may have moved.
+- Give each Edge sighting the Edge's location at the time it heard the radio, with its source (the
+  Edge's fixed position, this phone with the Edge, or none) and accuracy. A location is never
+  filled from an older fix or between fixes.
+- Show the Edge's link and freshness on Now, add a Sweep view, and group the list By category with
+  each guess's basis (signature, advertisement, network or vendor).
+- Add Automatic places, asked once on Now: Sotreus files what it hears under places it makes where
+  you stay a few minutes, from this phone's location or a stationary Edge's position. Places made
+  from synced history get their visits too.
+- Show "Records lost" on the Edge screen when the Edge's storage overwrote records before this phone
+  synced them, or a restart lost them; "At least N" when a restart's loss is not known.
+- Add Full-size Bluetooth packets on the Edge screen: about 5 times fewer packets for the same data.
+  It turns itself off for that Edge after two links in a row drop within 2 minutes, and says when.
+- Add a Field tools limit for setting a stationary Edge's position from this phone (default 30 m).
+
+### Changed
+
+- Request companion-device presence and network state for the Edge link. No background location
+  permission.
+- Move the database to schema 13 (from 7); existing data is kept. Bump the Android version to 1.2.0
+  (code 8).
+
 ## 1.1.4 — 2026-11-05
 
 ### Added
