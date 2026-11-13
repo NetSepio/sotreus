@@ -76,4 +76,8 @@
     <string name="places_no_location">no location</string>
     <string name="places_location_saved">location saved</string>
     <string name="maps_chooser">Open location in</string>
+    <string name="map_picker_type">Type coordinates</string>
+    <string name="map_picker_type_hint">12.97160, 77.59460</string>
+    <string name="map_picker_type_invalid">Type a latitude and a longitude, such as 12.97160, 77.59460.</string>
+    <string name="map_picker_cancel">Cancel</string>
 </resources>

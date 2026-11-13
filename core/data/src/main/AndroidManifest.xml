@@ -8,6 +8,8 @@
     <!-- Active Journey movement and optional geotagged sessions; also declared by :sensing:android. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Mesh mode only: this phone's location handed to the mesh while Sotreus is closed (HANDOFF_V3_MESH.md §3.1). -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
 
     <application>

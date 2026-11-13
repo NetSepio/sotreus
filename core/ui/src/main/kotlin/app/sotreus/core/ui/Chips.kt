@@ -26,7 +26,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.sotreus.core.designsystem.theme.SotreusTheme
 
-enum class ChipTone { NEUTRAL, TEXT, ACCENT, ACCENT_FILLED, DASHED, ATTENTION_OUTLINE }
+/** [NETWORK]: data a network or the mesh reported (Network colour), e.g. mesh messages and node positions. */
+enum class ChipTone { NEUTRAL, TEXT, ACCENT, ACCENT_FILLED, DASHED, ATTENTION_OUTLINE, NETWORK }
 
 /** Small mono chip for states and metadata: NEW, FAMILIAR, TAGGED, STALE, MAINNET, SENSED · 1 S AGO. */
 @Composable
@@ -39,6 +40,7 @@ fun StateChip(text: String, tone: ChipTone, modifier: Modifier = Modifier, small
         ChipTone.ACCENT_FILLED -> Triple(c.accent, Color.Transparent, c.accentTint)
         ChipTone.DASHED -> Triple(c.textSoft, c.textMuted, Color.Transparent)
         ChipTone.ATTENTION_OUTLINE -> Triple(c.accent, c.attentionLine, Color.Transparent)
+        ChipTone.NETWORK -> Triple(c.reservedV11Network, c.reservedV11Network, Color.Transparent)
     }
     val shape = SotreusTheme.shapes.pill
     Box(

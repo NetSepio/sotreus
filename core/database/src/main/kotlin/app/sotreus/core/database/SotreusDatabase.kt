@@ -57,6 +57,8 @@ import app.sotreus.core.database.entity.VisitEntityEntity
         app.sotreus.core.database.entity.EdgeDeviceEntity::class, app.sotreus.core.database.entity.EdgeBootAnchorEntity::class,
         app.sotreus.core.database.entity.EdgeUntimedRecordEntity::class, app.sotreus.core.database.entity.EdgeSightingEntity::class,
         app.sotreus.core.database.entity.LocationFixEntity::class, app.sotreus.core.database.entity.EdgeKeptRecordEntity::class,
+        app.sotreus.core.database.entity.MeshMessageEntity::class, app.sotreus.core.database.entity.MeshNodeEntity::class,
+        app.sotreus.core.database.entity.MeshWaypointEntity::class, app.sotreus.core.database.entity.MeshConversationEntity::class,
     ],
     version = SotreusDatabase.SCHEMA_VERSION,
     exportSchema = true,
@@ -76,9 +78,10 @@ abstract class SotreusDatabase : RoomDatabase() {
     abstract fun vendorLookupDao(): VendorLookupDao
     abstract fun trackerStopDao(): app.sotreus.core.database.dao.TrackerStopDao
     abstract fun edgeDao(): app.sotreus.core.database.dao.EdgeDao
+    abstract fun meshDao(): app.sotreus.core.database.dao.MeshDao
 
     companion object {
-        const val SCHEMA_VERSION = 13
+        const val SCHEMA_VERSION = 14
         const val NAME = "sotreus.db"
     }
 }

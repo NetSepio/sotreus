@@ -32,6 +32,7 @@ class DataControls @Inject constructor(
     private val trackerStops: app.sotreus.core.database.dao.TrackerStopDao,
     private val insights: app.sotreus.core.data.field.FieldInsights,
     private val edge: app.sotreus.core.database.dao.EdgeDao,
+    private val mesh: app.sotreus.core.database.dao.MeshDao,
 ) {
     /** A session's observations, encounters, timeline, locations, context and attention events. */
     suspend fun deleteSession(sessionId: Long) {
@@ -80,6 +81,8 @@ class DataControls @Inject constructor(
         edge.deleteAllUntimed()
         edge.deleteAllFixes()
         edge.deleteAllKept()
+        // V3: mesh messages, nodes and waypoints are covered by erase too (HANDOFF_V3_MESH.md §3.3).
+        mesh.deleteAll()
         settings.clearPlaceAnchor()
         entities.deleteOrphans()
         pipeline.forgetAll()
@@ -111,6 +114,7 @@ class DataControls @Inject constructor(
         edge.deleteSightingsOlderThan(cutoff)
         edge.deleteFixesOlderThan(cutoff)
         edge.deleteKeptOlderThan(cutoff)
+        mesh.deleteOlderThan(cutoff)
         entities.deleteOrphans()
         return removed
     }

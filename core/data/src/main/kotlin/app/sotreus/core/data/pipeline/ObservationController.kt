@@ -55,7 +55,8 @@ class ObservationController @Inject constructor(
     @ApplicationScope private val scope: CoroutineScope,
 ) {
     /** What runs the sensing: the phone's radios, the Edge, or nothing. */
-    private data class Plan(val wanted: Boolean, val simulated: Boolean, val intensity: app.sotreus.core.model.ScanIntensity, val useEdge: Boolean)
+    /** [link]: the Edge link runs, for sensing ([useEdge]) or for the mesh alone (HANDOFF_V3_MESH.md §2). */
+    private data class Plan(val wanted: Boolean, val simulated: Boolean, val intensity: app.sotreus.core.model.ScanIntensity, val useEdge: Boolean, val link: Boolean)
 
     @Volatile private var edgeMode = false
 
@@ -63,6 +64,9 @@ class ObservationController @Inject constructor(
     private val travelTagging = MutableStateFlow(false)
     /** The Edge is paired and chosen as the sensor. */
     private val edgeSource = MutableStateFlow(false)
+
+    /** V3: the paired Edge's last known mode is Mesh, so its link runs for the mesh whatever senses. */
+    private val meshLink = MutableStateFlow(false)
 
     // Replayed: the receiver can fire before the controller's collector is running.
     private val appUpdated = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(replay = 1)
@@ -135,9 +139,13 @@ class ObservationController @Inject constructor(
             combine(edgeDao.observeDevices(), settingsRepository.settings.map { it.sensingSource }) { devices, source ->
                 val d = devices.firstOrNull()
                 val onEdge = source == app.sotreus.core.model.SensingSource.EDGE && d != null
-                onEdge to (onEdge && d!!.deployment == app.sotreus.core.model.EdgeDeployment.TRAVEL && d.phoneTagging)
-            }.distinctUntilChanged().collect { (onEdge, travel) ->
-                edgeSource.value = onEdge
+                val mesh = d != null && d.lastMode == app.sotreus.edge.protocol.EdgeMode.MESH.wire
+                // In Mesh mode the Edge hears no devices: there is nothing for travel tagging to tag.
+                Triple(onEdge, onEdge && !mesh && d!!.deployment == app.sotreus.core.model.EdgeDeployment.TRAVEL && d.phoneTagging, mesh)
+            }.distinctUntilChanged().collect { (onEdge, travel, mesh) ->
+                // The link service runs while the Edge is the sensor, and in Mesh mode for the mesh (V3).
+                edgeSource.value = onEdge || mesh
+                meshLink.value = mesh
                 travelTagging.value = travel
                 app.sotreus.core.data.service.EdgeLinkService.travelTagging.value = travel
             }
@@ -225,8 +233,8 @@ class ObservationController @Inject constructor(
         }
         scope.launch {
             var wasSimulated = false
-            combine(settingsRepository.settings, combine(foreground, app.sotreus.core.data.service.ObservationService.running, app.sotreus.core.data.service.EdgeLinkService.running, travelTagging) { fg, service, _, _ -> fg to service }, sessions.observeActive(), permissions.access, boost) { s, visibility, session, access, boosted ->
-                val (fg, service) = visibility
+            combine(settingsRepository.settings, combine(foreground, app.sotreus.core.data.service.ObservationService.running, app.sotreus.core.data.service.EdgeLinkService.running, travelTagging, meshLink) { fg, service, _, _, mesh -> Triple(fg, service, mesh) }, sessions.observeActive(), permissions.access, boost) { s, visibility, session, access, boosted ->
+                val (fg, service, mesh) = visibility
                 settings = s
                 sessionLocates = session != null && (session.geotag || (session.kind == SessionKind.JOURNEY && s.journeyMovement))
                 if (wasSimulated && !s.simulatedRadios) pipeline.clearSimulated()
@@ -235,15 +243,21 @@ class ObservationController @Inject constructor(
                 edgeTagger.configure(s.edgeMaxAccuracyM, s.edgeTogetherMinDbm)
                 // V2: with an Edge as the sensor, this phone's BLE and Wi-Fi scanning stays off; the link needs
                 // only Nearby devices (Bluetooth connect) and Bluetooth on, not location.
-                val useEdge = s.sensingSource == app.sotreus.core.model.SensingSource.EDGE && !s.simulatedRadios
+                // V3: a Journey or Sit started in Mesh mode with this phone's radios (HANDOFF_V3_MESH.md §2.2)
+                // senses with them for that session only; the source setting does not change.
+                val phoneSession = session?.phoneRadios == true
+                val useEdge = s.sensingSource == app.sotreus.core.model.SensingSource.EDGE && !s.simulatedRadios && !phoneSession
                 val canSense = when {
                     s.simulatedRadios -> true
                     useEdge -> access.canConnectEdge && access.bluetoothOn
                     else -> access.canScan && access.locationOn
                 }
-                val wanted = (fg || (session != null && service) || (useEdge && app.sotreus.core.data.service.EdgeLinkService.running.value)) && canSense
-                Plan(wanted, s.simulatedRadios, if (boosted) app.sotreus.core.model.ScanIntensity.PERFORMANCE else s.scanIntensity, useEdge)
-            }.distinctUntilChanged().collectLatest { (wanted, simulated, intensity, useEdge) ->
+                val linkService = app.sotreus.core.data.service.EdgeLinkService.running.value
+                val wanted = (fg || (session != null && service) || (useEdge && linkService)) && canSense
+                // The mesh needs the link whatever senses: while visible, in a session, or under the link service.
+                val link = (wanted && useEdge) || (mesh && !s.simulatedRadios && (fg || service || linkService) && access.canConnectEdge && access.bluetoothOn)
+                Plan(wanted, s.simulatedRadios, if (boosted) app.sotreus.core.model.ScanIntensity.PERFORMANCE else s.scanIntensity, useEdge, link)
+            }.distinctUntilChanged().collectLatest { (wanted, simulated, intensity, useEdge, link) ->
                 // Location first: the place must reflect where the phone is before anything is tagged.
                 // Cancelled (by collectLatest) if the app leaves the foreground while waiting for a fix.
                 if (wanted && !_observing.value) {
@@ -260,19 +274,18 @@ class ObservationController @Inject constructor(
                         if (useEdge) {
                             hub.stop()
                             pipeline.edgeLocator = edgeTagger
-                            edge.start()
                         } else {
-                            edge.stop()
                             pipeline.edgeLocator = null
                             hub.start(intensity, simulated)
                         }
                         edgeMode = useEdge
                     } else if (_observing.value) {
                         hub.stop()
-                        edge.stop()
                         pipeline.edgeLocator = null
                         pipeline.onStop(now)
                     }
+                    // The Edge link: for sensing, or kept for the mesh while this phone senses (V3).
+                    if (link) edge.start() else if (edge.running) edge.stop()
                     _observing.value = wanted
                 }
             }

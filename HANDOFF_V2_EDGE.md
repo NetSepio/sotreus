@@ -38,7 +38,8 @@ conflicts on privacy, the stricter rule wins.
 ### Not in V2 on this branch
 
 - Mesh mode UI (messages, nodes, channels, waypoints, TAK) → separate later branch. The app shows
-  the mode and can switch it, nothing more.
+  the mode and can switch it, nothing more. Now planned in `HANDOFF_V3_MESH.md` (branch
+  `mesh-mode`), which also amends §4.7 for mesh position sharing only.
 - iOS → phase 2 (`:edge:protocol` is Android-free so it can be shared).
 - OTA firmware update from the app, signed firmware manifest.
 - GNSS firmware (no supported board has GNSS yet). The app side is ready for it (§4.2).

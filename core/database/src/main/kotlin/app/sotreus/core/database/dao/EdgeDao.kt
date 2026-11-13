@@ -17,7 +17,8 @@ import kotlinx.coroutines.flow.Flow
 internal const val HELD_SEQS_SQL = """SELECT COUNT(*) FROM (
     SELECT seq FROM edge_sightings WHERE device_id = :deviceId AND seq BETWEEN :fromSeq AND :toSeq
     UNION SELECT seq FROM edge_untimed_records WHERE device_id = :deviceId AND seq BETWEEN :fromSeq AND :toSeq
-    UNION SELECT seq FROM edge_kept_records WHERE device_id = :deviceId AND seq BETWEEN :fromSeq AND :toSeq)"""
+    UNION SELECT seq FROM edge_kept_records WHERE device_id = :deviceId AND seq BETWEEN :fromSeq AND :toSeq
+    UNION SELECT seq FROM mesh_messages WHERE device_id = :deviceId AND seq IS NOT NULL AND seq BETWEEN :fromSeq AND :toSeq)"""
 
 @Dao
 interface EdgeDao {
@@ -43,6 +44,14 @@ interface EdgeDao {
     @Query("UPDATE edge_devices SET sync_cursor = MAX(sync_cursor, :cursor), last_sync_ms = :atMs WHERE device_id = :deviceId")
     suspend fun raiseCursor(deviceId: String, cursor: Long, atMs: Long)
 
+    /** The Edge's mode as last seen (handshake or `mode` event): Mesh takes Now's tab while it is `mesh`. */
+    @Query("UPDATE edge_devices SET last_mode = :mode WHERE device_id = :deviceId")
+    suspend fun setLastMode(deviceId: String, mode: String)
+
+    /** The owner's answer to the mesh position disclosure: `client`, `fixed` or `off`. */
+    @Query("UPDATE edge_devices SET mesh_position_choice = :choice WHERE device_id = :deviceId")
+    suspend fun setMeshPositionChoice(deviceId: String, choice: String?)
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertKept(rows: List<app.sotreus.core.database.entity.EdgeKeptRecordEntity>)
 
@@ -51,6 +60,13 @@ interface EdgeDao {
 
     @Query("DELETE FROM edge_kept_records")
     suspend fun deleteAllKept()
+
+    /** Mesh text kept raw before Mesh mode had its own tables (V3 backfill). */
+    @Query("SELECT * FROM edge_kept_records WHERE type = 4 LIMIT 500")
+    suspend fun keptMeshText(): List<app.sotreus.core.database.entity.EdgeKeptRecordEntity>
+
+    @Query("DELETE FROM edge_kept_records WHERE type = 4 AND device_id = :deviceId AND seq IN (:seqs)")
+    suspend fun deleteKept(deviceId: String, seqs: List<Long>)
 
     /** Full-size Bluetooth packets: the owner's choice ([offMs] null), or Sotreus turning them off after early drops. */
     @Query("UPDATE edge_devices SET full_size_packets = :on, full_size_off_ms = :offMs WHERE device_id = :deviceId")

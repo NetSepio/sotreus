@@ -45,6 +45,18 @@ data class EdgeCapabilities(val raw: Map<String, Boolean> = emptyMap()) {
     /** `ble_link`: this phone's Bluetooth links may keep full-size link-layer packets. */
     val bleFullSize get() = has("ble_full_size")
 
+    /** `mesh_nodes` takes `offset`/`limit` and answers `total`/`next` (V3 firmware addition). */
+    val meshNodesPaging get() = has("mesh_nodes_paging")
+
+    /** `mesh_node` takes `remove: true`, dropping a node from the Edge's table. */
+    val meshNodeRemove get() = has("mesh_node_remove")
+
+    /**
+     * `mesh_node` takes its node as `node` and `mesh_waypoint` its target as `waypoint_id`, so `id`
+     * stays the echoed request id. Without it, `mesh_node` reads the node from `id`.
+     */
+    val meshTargetFields get() = has("mesh_target_fields")
+
     companion object {
         fun parse(caps: JsonObject?): EdgeCapabilities =
             EdgeCapabilities(caps.orEmpty().mapNotNull { (k, v) -> (v as? JsonPrimitive)?.booleanOrNull?.let { k to it } }.toMap())
@@ -361,7 +373,7 @@ data class LivePage(val rows: List<LiveRow>, val total: Int, val nextOffset: Int
     }
 }
 
-/** Events and responses from the Edge (protocol §3). Mesh events are passed through as [Other]. */
+/** Events and responses from the Edge (protocol §3). Unknown events are passed through as [Other]. */
 sealed interface EdgeEvent {
     data class Response(val id: Long?, val ok: Boolean, val error: String?, val body: JsonObject) : EdgeEvent
     data class Status(val status: EdgeStatus) : EdgeEvent
@@ -378,6 +390,25 @@ sealed interface EdgeEvent {
     data class SyncDone(val id: Long?, val ok: Boolean, val sent: Long, val next: Long, val head: Long, val more: Boolean) : EdgeEvent
     /** The phone hand-off started or stopped (`stream` event). After a stop, unacknowledged records are stored on the Edge. */
     data class Stream(val started: Boolean, val reason: String?) : EdgeEvent
+
+    // Mesh mode (HANDOFF_V3_MESH.md). Best effort, like every live event: the record log and
+    // `mesh_messages` / `mesh_nodes` fill any gap.
+
+    /** Text addressed to us or to a channel. Also written as a type 4 record. */
+    data class MeshRx(val message: app.sotreus.edge.protocol.mesh.MeshMessage) : EdgeEvent
+
+    /** A sent message moved on; [reason] is Meshtastic's routing error when it failed. */
+    data class MeshTx(val packetId: Long, val delivery: app.sotreus.edge.protocol.mesh.MeshDelivery, val reason: Int?) : EdgeEvent
+
+    /** Node info, position or telemetry arrived. */
+    data class MeshNodeHeard(val node: app.sotreus.edge.protocol.mesh.MeshNode) : EdgeEvent
+    data class MeshRoute(val trace: app.sotreus.edge.protocol.mesh.MeshTraceroute) : EdgeEvent
+    data class MeshWaypointHeard(val id: Long) : EdgeEvent
+
+    /** A remote admin (`mesh_admin`) or remote hardware (`mesh_rhw`) request arrived from another node. */
+    data class MeshRemote(val hardware: Boolean, val from: Long?, val request: Int, val outcome: String) : EdgeEvent
+    data class MeshTakHeard(val from: Long?) : EdgeEvent
+
     data class Other(val ev: String, val body: JsonObject) : EdgeEvent
 
     companion object {
@@ -404,6 +435,19 @@ sealed interface EdgeEvent {
             "mode" -> Mode(EdgeMode.of(o.str("mode")), o.bool("restarting") == true)
             "stream" -> Stream(o.str("state") == "started", o.str("reason"))
             "sync_done" -> SyncDone(o.long("id"), o.bool("ok") == true, o.long("sent") ?: 0, o.long("next") ?: 0, o.long("head") ?: 0, o.bool("more") == true)
+            "mesh_rx" -> o.obj("msg")?.let(app.sotreus.edge.protocol.mesh.MeshMessage::parse)?.let(::MeshRx) ?: Other(ev, o)
+            "mesh_tx" -> {
+                val id = o.long("id")
+                val d = app.sotreus.edge.protocol.mesh.MeshDelivery.of(o.str("status"))
+                if (id == null || d == null) Other(ev, o) else MeshTx(id, d, o.int("reason"))
+            }
+            "mesh_node" -> o.obj("node")?.let(app.sotreus.edge.protocol.mesh.MeshNode::parse)?.let(::MeshNodeHeard) ?: Other(ev, o)
+            "mesh_traceroute" -> app.sotreus.edge.protocol.mesh.MeshTraceroute.parse(o)?.let(::MeshRoute) ?: Other(ev, o)
+            "mesh_waypoint" -> o.long("id")?.let(::MeshWaypointHeard) ?: Other(ev, o)
+            "mesh_admin", "mesh_rhw" -> MeshRemote(
+                ev == "mesh_rhw", app.sotreus.edge.protocol.mesh.MeshNodeId.parse(o.str("from")), o.int("request") ?: 0, o.str("outcome").orEmpty(),
+            )
+            "mesh_tak" -> MeshTakHeard(app.sotreus.edge.protocol.mesh.MeshNodeId.parse(o.str("from")))
             else -> Other(ev, o)
         }
     }

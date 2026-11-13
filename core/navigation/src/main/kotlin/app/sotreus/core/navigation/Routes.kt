@@ -46,6 +46,16 @@ import kotlinx.serialization.Serializable
 /** V2: Sotreus Edge: pairing when none is paired, otherwise the device screen. */
 @Serializable data object EdgeRoute
 @Serializable data object EdgeMapRoute
+
+// V3 Mesh mode (HANDOFF_V3_MESH.md): Mesh takes Now's tab while the Edge is in Mesh mode.
+@Serializable data object MeshRoute
+/** [conversation] is `ch:<index>` or `dm:<node number>`. */
+@Serializable data class MeshConversationRoute(val conversation: String)
+@Serializable data class MeshNodeRoute(val num: Long)
+@Serializable data object MeshSettingsRoute
+@Serializable data object MeshChannelsRoute
+/** Picks the fixed mesh position on a map (Mesh settings, M8). */
+@Serializable data object MeshPositionMapRoute
 @Serializable data object DiagnosticsRoute
 @Serializable data object SignaturesRoute
 @Serializable data object PrivacyRoute

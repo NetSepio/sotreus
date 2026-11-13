@@ -21,6 +21,7 @@ class SotreusApplication : Application(), Configuration.Provider {
     @Inject lateinit var observation: ObservationController
     @Inject lateinit var presence: PresenceController
     @Inject lateinit var contextSources: ContextRepository
+    @Inject lateinit var mesh: app.sotreus.core.data.mesh.MeshHub
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -39,6 +40,7 @@ class SotreusApplication : Application(), Configuration.Provider {
         RadioDb.init { assets.open("lookups/radiodb.bin") }
         Notifications.ensureChannels(this)
         observation.start()
+        mesh.start()
         presence.start()
         contextSources.start()
         RetentionWorker.schedule(this)

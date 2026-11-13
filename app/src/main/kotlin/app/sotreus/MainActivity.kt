@@ -26,6 +26,7 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var walletBridge: WalletActivityBridge
     @Inject lateinit var settings: SettingsRepository
     @Inject lateinit var friends: FriendRepository
+    @Inject lateinit var mesh: app.sotreus.core.data.mesh.MeshHub
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Dark-only app: light system-bar icons on transparent bars, regardless of system theme.
@@ -59,7 +60,7 @@ class MainActivity : ComponentActivity() {
                                 getSystemService(android.content.ClipboardManager::class.java).setPrimaryClip(android.content.ClipData.newPlainText("Sotreus crash", crash))
                             }) { androidx.compose.material3.Text(stringResource(R.string.crash_copy)) } },
                         )
-                    } else SotreusApp(settings = settings, pendingInvite = friends.pendingInvite)
+                    } else SotreusApp(settings = settings, pendingInvite = friends.pendingInvite, mesh = mesh.state)
                 }
             }
         }

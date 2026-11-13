@@ -88,4 +88,16 @@
     <string name="edge_forget">Forget this Edge</string>
     <string name="edge_forget_body">Sightings already on this phone stay.</string>
     <string name="edge_cancel">Cancel</string>
+    <string name="edge_mode_label">Mode</string>
+    <string name="edge_mode_awareness">Awareness</string>
+    <string name="edge_mode_mesh">Mesh</string>
+    <string name="edge_mode_note">Switching restarts the Edge (about 15 s). In Mesh mode it does not listen for devices.</string>
+    <string name="edge_mode_to_mesh_title">Switch to Mesh?</string>
+    <string name="edge_mode_to_mesh_body">Your Edge restarts (about 15 s) and stops listening for devices until you switch back. Messages, nodes and channels are on its setup page.</string>
+    <string name="edge_mode_to_mesh">Switch to Mesh</string>
+    <string name="edge_mode_to_awareness_title">Switch to Awareness?</string>
+    <string name="edge_mode_to_awareness_body">Your Edge restarts (about 15 s) and listens for devices again. Its mesh is off until you switch back.</string>
+    <string name="edge_mode_to_awareness">Switch to Awareness</string>
+    <string name="edge_map_offline_ways">On the Edge screen, Set from this phone and Type coordinates work without a map.</string>
+    <string name="edge_map_back">Back to the Edge</string>
 </resources>

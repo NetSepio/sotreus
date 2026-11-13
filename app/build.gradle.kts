@@ -57,8 +57,8 @@ android {
     defaultConfig {
         // One application ID for every distribution (and for iOS). Code namespace stays app.sotreus.
         applicationId = "com.sotreus.app"
-        versionCode = 8
-        versionName = "1.2.0"
+        versionCode = 9
+        versionName = "1.3.0"
     }
 
     // Release only. Debug keeps the debug keystore. A missing key fails the release build
@@ -154,6 +154,7 @@ dependencies {
     implementation(project(":feature:journey"))
     implementation(project(":feature:settings"))
     implementation(project(":feature:edge"))
+    implementation(project(":feature:mesh"))
     implementation(project(":feature:friends"))
     implementation(project(":feature:proofs"))
     implementation(project(":feature:context"))

@@ -57,6 +57,15 @@ interface EdgeLink {
     /** Sends the command built for a fresh id and waits for its response. */
     suspend fun request(timeoutMs: Long = DEFAULT_TIMEOUT_MS, build: (id: Long) -> String): EdgeEvent.Response
 
+    /**
+     * Sends [line], whose `id` is already [echoId], and waits for the response echoing it. For
+     * commands whose own parameter is named `id` (`mesh_node` names its node there), so the Edge's
+     * echo carries that value instead of a request number. Links that answer each request on its
+     * own (HTTP) need no matching.
+     */
+    suspend fun requestEcho(echoId: Long, line: String, timeoutMs: Long = DEFAULT_TIMEOUT_MS): EdgeEvent.Response =
+        request(timeoutMs) { line }
+
     /** Fetches records from [from], at most [limit], calling [onRecord] in seq order. */
     suspend fun fetchRecords(from: Long, limit: Int, onRecord: suspend (EdgeRecordCodec.Result) -> Unit): FetchResult
 

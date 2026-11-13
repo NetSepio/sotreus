@@ -119,6 +119,22 @@ class NdjsonEdgeLink(
         }
     }
 
+    override suspend fun requestEcho(echoId: Long, line: String, timeoutMs: Long): EdgeEvent.Response {
+        if (transport.state.value !is EdgeLinkState.Connected) throw EdgeRequestException("not connected")
+        val deferred = CompletableDeferred<EdgeEvent.Response>()
+        synchronized(lock) {
+            if (echoId in pending) throw EdgeRequestException("a request for this node is still waiting")
+            pending[echoId] = deferred
+        }
+        try {
+            val bytes = NdjsonFramer.frame(line)
+            writes.withLock { NdjsonFramer.chunks(bytes, transport.maxWrite).forEach { transport.write(it) } }
+            return withTimeout(timeoutMs) { deferred.await() }
+        } finally {
+            synchronized(lock) { if (pending[echoId] === deferred) pending.remove(echoId) }
+        }
+    }
+
     override suspend fun fetchRecords(from: Long, limit: Int, onRecord: suspend (EdgeRecordCodec.Result) -> Unit): FetchResult = syncs.withLock {
         val sink = Channel<ByteArray>(Channel.UNLIMITED)
         // A hand-off shares the byte stream: resetting mid-record would misalign it.

@@ -174,6 +174,7 @@ private fun FreshnessChips(s: SessionEntity, snap: LiveSnapshot) {
     val throttled = snap.status.wifiLastRequestRejected || (wifiAge ?: 0) > snap.status.wifiScanIntervalMs
     val dash = stringResource(R.string.chip_dash)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.s), verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.s)) {
+        if (s.phoneRadios) StateChip(stringResource(R.string.session_phone_radios), ChipTone.TEXT, small = false)
         StateChip(stringResource(if (s.geotag) R.string.chip_location_on else R.string.chip_location_off), ChipTone.NEUTRAL, small = false)
         if (snap.journeyMovementEnabled) StateChip(stringResource(if (snap.movementLocationReady) R.string.chip_movement_ready else R.string.chip_movement_waiting),
             if (snap.movementLocationReady) ChipTone.NEUTRAL else ChipTone.ATTENTION_OUTLINE, small = false)

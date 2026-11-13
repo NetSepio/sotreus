@@ -238,6 +238,101 @@ object FakeSotreusData {
 
     val edgePaired = app.sotreus.core.data.edge.EdgeRepository.PairResult.Paired(edgeInfo, oldest = 1, head = 4_812, waiting = 4_812, firstMs = null, lastMs = null)
 
+    // ---- V3: Mesh mode (previews only; mocks M1–M8) ------------------------------------------
+
+    const val MESH_SELF = 0x5AC1E0D2L
+    const val MESH_BASE = 0xA1B2C3D4L
+    const val MESH_HILL = 0x11112222L
+    const val MESH_TRAIL = 0x33334444L
+    const val MESH_KITE = 0x55556666L
+    const val MESH_BUS = 0x00003480L
+    const val MESH_BEACON = 0x0000BC09L
+    const val PHONE_LAT = 12.97160
+    const val PHONE_LON = 77.59460
+
+    val meshConfig: app.sotreus.edge.protocol.mesh.MeshConfig = app.sotreus.edge.protocol.mesh.MeshConfig.parse(
+        app.sotreus.edge.protocol.EdgeJson.parseToJsonElement(
+            """{"region":"IN","preset":"LONG_FAST","hop_limit":3,"rebroadcast":"all","tx_power":0,"node_id":"!5ac1e0d2",
+               "long_name":"Sotreus Edge 96FF","short_name":"SE2B","role":"CLIENT","licensed":false,
+               "channels":[{"name":"","psk":"default","position_precision":13},{"name":"Team","psk":"base64:q83vASNFZ4mrze8BI0VniQ==","position_precision":19}],
+               "position":{"mode":"client","interval_s":900},"telemetry_interval_s":1800,
+               "canned":["OK","On my way","Need assistance","All fine here"],"mqtt":{"enabled":false},
+               "admin":{"enabled":true,"mode":"open"},"store_forward":{"server":false}}""",
+        ) as kotlinx.serialization.json.JsonObject,
+    )!!
+
+    val meshStatus: app.sotreus.edge.protocol.mesh.MeshStatus = app.sotreus.edge.protocol.mesh.MeshStatus.parse(
+        app.sotreus.edge.protocol.EdgeJson.parseToJsonElement(
+            """{"radio_present":true,"running":true,"node_id":"!5ac1e0d2","node_num":1522655442,"role":"CLIENT","region":"IN","preset":"LONG_FAST",
+               "channel_util_pct":4.1,"air_util_tx_pct":0.8,"polite_hold":false,"nodes":6,"store_forward_routers":["!11112222"],
+               "admin":{"enabled":true,"mode":"open","keys":0,"requests":0,"refused":0},"counters":{"rx":1284,"tx":96,"relayed":40}}""",
+        ) as kotlinx.serialization.json.JsonObject,
+    )
+
+    val meshLive = app.sotreus.core.data.mesh.MeshLive(
+        deviceId = edgeDevice.deviceId, meshMode = true, connected = true, selfNum = MESH_SELF, status = meshStatus, statusAtMs = NOW - 4_000,
+        config = meshConfig, positionChoice = app.sotreus.edge.protocol.mesh.MeshPositionMode.CLIENT, sharing = true, lastSharedMs = NOW - 40_000,
+    )
+
+    private fun meshNode(num: Long, long: String, short: String, role: String, heardAgoMs: Long, snr: Float, hops: Int?, battery: Int? = null,
+                         lat: Double? = null, lon: Double? = null, bits: Int? = 13, posAgoMs: Long = heardAgoMs, favorite: Boolean = false,
+                         ignored: Boolean = false, key: Boolean = true) =
+        app.sotreus.core.database.entity.MeshNodeEntity(
+            deviceId = edgeDevice.deviceId, num = num, longName = long, shortName = short, role = role, hasKey = key, favorite = favorite, ignored = ignored,
+            lastHeardMs = NOW - heardAgoMs, rssi = -98, snr = snr, hopsAway = hops, battery = battery, voltage = battery?.let { 3.3f + it / 140f },
+            channelUtil = 4.1f, airUtil = 0.8f, uptimeS = 273_600, telemetryMs = NOW - 6 * 60_000L,
+            lat = lat, lon = lon, altM = lat?.let { 920 }, precisionBits = lat?.let { bits }, positionMs = lat?.let { NOW - posAgoMs },
+        )
+
+    val meshNodes = listOf(
+        meshNode(MESH_BASE, "Base Camp", "BASE", "CLIENT", 2 * 60_000L, 6.5f, 2, 84, 12.9917, 77.6150, posAgoMs = 4 * 60_000L, favorite = true)
+            .copy(temperatureC = 24.6f, humidityPct = 61f, pressureHpa = 1009f, neighbors = "$MESH_HILL:7.0,$MESH_TRAIL:-2.5"),
+        meshNode(MESH_HILL, "Hill Repeater", "HILL", "ROUTER", 3 * 60_000L, 7.0f, 0, 101, 13.0256, 77.5946, bits = 16, favorite = true),
+        meshNode(MESH_TRAIL, "Trailhead", "TRL1", "CLIENT", 9 * 60_000L, -2.5f, 1, 52, 12.9716, 77.6085, bits = 19),
+        meshNode(MESH_KITE, "Kite", "KITE", "TAK", 21 * 60_000L, -8.0f, 3, key = false),
+        meshNode(MESH_BUS, "Meshtastic 3480", "3480", "CLIENT", DAY, -12.25f, null, key = false),
+        meshNode(MESH_BEACON, "Beacon 9", "BCN9", "TRACKER", 2 * 60 * 60_000L, -9f, 4, ignored = true, key = false),
+    )
+
+    private fun meshMsg(from: Long, packet: Long, conversation: String, text: String, agoMs: Long, outgoing: Boolean = false, delivery: String? = null,
+                        replyId: Long? = null, reaction: Boolean = false, hops: Int? = 2, snr: Float? = 6.5f, read: Boolean = true, pki: Boolean = false) =
+        app.sotreus.core.database.entity.MeshMessageEntity(
+            deviceId = edgeDevice.deviceId, fromNode = from, packetId = packet,
+            toNode = app.sotreus.core.data.mesh.MeshRows.peerOf(conversation)?.let { if (outgoing) it else MESH_SELF } ?: app.sotreus.edge.protocol.mesh.MeshNodeId.BROADCAST,
+            channel = app.sotreus.core.data.mesh.MeshRows.channelOf(conversation) ?: 0, conversation = conversation, text = text, outgoing = outgoing,
+            atMs = NOW - agoMs, timeFromEdge = true, rssi = if (outgoing) null else -98, snr = if (outgoing) null else snr, hops = if (outgoing) null else hops,
+            replyId = replyId, reaction = reaction, pki = pki, delivery = delivery, read = read,
+        )
+
+    val meshChannelMessages = listOf(
+        meshMsg(MESH_BASE, 101, "ch:0", "Leaving the trailhead now, radio check?", 112 * 60_000L),
+        meshMsg(MESH_SELF, 102, "ch:0", "Loud and clear from the car park", 111 * 60_000L, outgoing = true, delivery = "delivered"),
+        meshMsg(MESH_TRAIL, 103, "ch:0", "Same here. Water point is open", 104 * 60_000L, hops = 1, snr = -2.5f),
+        meshMsg(MESH_BASE, 104, "ch:0", "👍", 103 * 60_000L, replyId = 103, reaction = true),
+        meshMsg(MESH_HILL, 105, "ch:0", "👍", 102 * 60_000L, replyId = 103, reaction = true, hops = 0),
+        meshMsg(MESH_BASE, 106, "ch:0", "Reached the ridge, all fine", 6 * 60_000L, snr = 5.5f, read = false),
+        meshMsg(MESH_SELF, 107, "ch:0", "Great, we leave in 20 min", 3 * 60_000L, outgoing = true, delivery = "relayed", replyId = 106),
+        meshMsg(MESH_SELF, 108, "ch:0", "Bring the spare battery", 2 * 60_000L, outgoing = true, delivery = "failed"),
+        meshMsg(MESH_SELF, 109, "ch:0", "On my way", 60_000L, outgoing = true, delivery = "sent"),
+    )
+
+    val meshConversations = listOf(
+        app.sotreus.core.database.dao.MeshConversationRow("ch:0", 0, "Reached the ridge, all fine", false, MESH_BASE, app.sotreus.edge.protocol.mesh.MeshNodeId.BROADCAST, NOW - 2 * 60_000L, null, false, 2),
+        app.sotreus.core.database.dao.MeshConversationRow("ch:1", 1, "On my way", true, MESH_SELF, app.sotreus.edge.protocol.mesh.MeshNodeId.BROADCAST, NOW - 14 * 60_000L, "delivered", false, 0),
+        app.sotreus.core.database.dao.MeshConversationRow("dm:$MESH_BASE", 0, "Copy that, see you at five", false, MESH_BASE, MESH_SELF, NOW - 6 * 60_000L, null, true, 1),
+        app.sotreus.core.database.dao.MeshConversationRow("dm:$MESH_HILL", 0, "Are you relaying the trail?", true, MESH_SELF, MESH_HILL, NOW - 60 * 60_000L, "no_ack", true, 0),
+        app.sotreus.core.database.dao.MeshConversationRow("dm:$MESH_BUS", 0, "Hello from the bus stop", false, MESH_BUS, MESH_SELF, NOW - DAY, null, false, 0),
+    )
+
+    val meshWaypoints = listOf(
+        app.sotreus.core.database.entity.MeshWaypointEntity(edgeDevice.deviceId, 7, MESH_BASE, "Ridge", null, 13.0005, 77.6040, null, null, NOW - 30 * 60_000L),
+        app.sotreus.core.database.entity.MeshWaypointEntity(edgeDevice.deviceId, 8, MESH_SELF, "Car park", null, 12.9790, 77.5880, null, null, NOW - 90 * 60_000L),
+    )
+
+    val meshRoute = app.sotreus.edge.protocol.mesh.MeshTraceroute(
+        requestId = 9, to = MESH_BASE, route = listOf(MESH_HILL), snrTowards = listOf(7.0, 5.5), routeBack = listOf(MESH_HILL), snrBack = listOf(6.0, 6.75),
+    )
+
     private fun entity(
         id: String, kind: RadioKind, name: String?, family: DeviceFamily?, signature: String?, guess: String?, rssi: Int,
         state: UserEntityState = UserEntityState.UNCLASSIFIED, userName: String? = null, notable: Boolean = false, security: String? = null,

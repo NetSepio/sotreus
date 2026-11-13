@@ -19,6 +19,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -89,7 +90,13 @@ class SessionsViewModel @Inject constructor(
     private val sessions: SessionRepository,
     private val settings: SettingsRepository,
     pipeline: ObservationPipeline,
+    mesh: app.sotreus.core.data.mesh.MeshHub,
 ) : ViewModel() {
+    /** V3: the Edge senses but is in Mesh mode, so it hears no devices: a session asks first (HANDOFF_V3_MESH.md §2.2). */
+    val meshAsk: StateFlow<Boolean> = combine(settings.settings, mesh.state) { s, m ->
+        s.sensingSource == app.sotreus.core.model.SensingSource.EDGE && m.meshMode && !s.simulatedRadios
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     val state: StateFlow<SessionsUiState> = combine(sessions.observeList(), settings.settings, pipeline.snapshot) { list, s, snap ->
         SessionsUiState(list, s, snap.access, snap.atMs)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SessionsUiState())
@@ -104,8 +111,8 @@ class SessionsViewModel @Inject constructor(
         }
     }
 
-    fun start(kind: SessionKind, geotag: Boolean, label: String, labelNoPlace: String, onStarted: (Long) -> Unit) = viewModelScope.launch {
-        onStarted(sessions.start(kind, geotag, label, labelNoPlace))
+    fun start(kind: SessionKind, geotag: Boolean, label: String, labelNoPlace: String, phoneRadios: Boolean = false, onStarted: (Long) -> Unit) = viewModelScope.launch {
+        onStarted(sessions.start(kind, geotag, label, labelNoPlace, phoneRadios))
     }
 }
 
@@ -120,7 +127,15 @@ internal fun SessionsScreen(navigate: (Any) -> Unit, vm: SessionsViewModel = hil
     val locationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> vm.setGeotag(granted) }
     val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
-    fun start(kind: SessionKind) {
+    val meshAsk by vm.meshAsk.collectAsStateWithLifecycle()
+    var asking by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<SessionKind?>(null) }
+
+    fun start(kind: SessionKind, phoneRadios: Boolean = false) {
+        // In Mesh mode the Edge hears no devices: never start this phone's scanning without asking (§2.2).
+        if (meshAsk && !phoneRadios) {
+            asking = kind
+            return
+        }
         if (!state.canStart) {
             navigate(PermissionsRoute)
             return
@@ -131,7 +146,16 @@ internal fun SessionsScreen(navigate: (Any) -> Unit, vm: SessionsViewModel = hil
         ) vm.askNotificationsOnce { notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) }
         val label = if (kind == SessionKind.JOURNEY) "$labelJourney · $partOfDay" else partOfDay
         val labelNoPlace = if (kind == SessionKind.JOURNEY) "$labelJourney · $partOfDay" else "$labelSit · $partOfDay"
-        vm.start(kind, state.geotagOn && hasLocation(), label, labelNoPlace) { navigate(SessionLiveRoute(it)) }
+        vm.start(kind, state.geotagOn && hasLocation(), label, labelNoPlace, phoneRadios) { navigate(SessionLiveRoute(it)) }
+    }
+
+    asking?.let { kind ->
+        app.sotreus.core.ui.ConfirmDialog(
+            stringResource(R.string.session_mesh_title),
+            stringResource(if (kind == SessionKind.JOURNEY) R.string.session_mesh_body_journey else R.string.session_mesh_body_sit),
+            stringResource(R.string.session_mesh_use_phone), stringResource(R.string.session_mesh_cancel),
+            onConfirm = { asking = null; start(kind, phoneRadios = true) }, onDismiss = { asking = null }, destructive = false,
+        )
     }
 
     SessionsContent(

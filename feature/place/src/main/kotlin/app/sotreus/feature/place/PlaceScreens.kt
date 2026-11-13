@@ -94,6 +94,7 @@ data class PlaceUiState(
     val mask: Boolean = true,
     val locating: Boolean = false,
     val noFix: Boolean = false,
+    val mapBackground: app.sotreus.core.model.MapBackground = app.sotreus.core.model.MapBackground.NONE,
 )
 
 @HiltViewModel
@@ -107,7 +108,7 @@ class PlaceViewModel @Inject constructor(
     val id = handle.toRoute<PlaceRoute>().placeId
     private val fix = MutableStateFlow(false to false)
     val state: StateFlow<PlaceUiState> = combine(places.observeBaseline(id), settings.settings, fix) { v, s, (locating, noFix) ->
-        PlaceUiState(false, v, s.maskCoordinates, locating, noFix)
+        PlaceUiState(false, v, s.maskCoordinates, locating, noFix, s.mapBackground)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PlaceUiState())
 
     /** One foreground fix, saved as this place's location. */
@@ -310,7 +311,9 @@ private fun LocationSection(state: PlaceUiState, onUseCurrent: () -> Unit, onPic
             )
             Text(stringResource(R.string.loc_radius_note), style = SotreusTheme.typography.caption, color = c.textMuted)
             if (mapShown) {
-                app.sotreus.core.ui.PinMap(lat, lon, 15.5, stringResource(R.string.map_a11y, place.name), Modifier.fillMaxWidth().height(200.dp))
+                // "Show map" is the owner's request; a downloaded street area is used instead when set.
+                val bg = if (state.mapBackground == app.sotreus.core.model.MapBackground.OFFLINE) app.sotreus.core.model.MapBackground.OFFLINE else app.sotreus.core.model.MapBackground.ONLINE
+                app.sotreus.core.ui.PinMap(lat, lon, 15.5, stringResource(R.string.map_a11y, place.name), Modifier.fillMaxWidth().height(200.dp), background = bg)
                 Text(stringResource(R.string.map_attribution), style = SotreusTheme.typography.monoLabelS, color = c.textDim)
             } else {
                 DashedPanel {

@@ -95,7 +95,13 @@ class NowViewModel @Inject constructor(
     phone: app.sotreus.core.data.pipeline.PhoneLocation,
     areas: app.sotreus.context.environment.AreaNameRepository,
     private val edgeRepo: app.sotreus.core.data.edge.EdgeRepository,
+    mesh: app.sotreus.core.data.mesh.MeshHub,
 ) : ViewModel() {
+    /** V3: this phone senses while the paired Edge is in Mesh mode: Now offers Open Mesh (HANDOFF_V3_MESH.md §2.1). */
+    val meshOpen: kotlinx.coroutines.flow.StateFlow<Boolean> = combine(settings.settings, mesh.state) { s, m ->
+        s.sensingSource != app.sotreus.core.model.SensingSource.EDGE && m.meshMode
+    }.stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), false)
+
     /** The area for the latest fix, looked up again only when the phone has moved about a kilometre. */
     private val hereArea = phone.latest
         .map { fix -> fix?.takeIf { !it.mock }?.let { Math.round(it.lat * 100) / 100.0 to Math.round(it.lon * 100) / 100.0 } }
