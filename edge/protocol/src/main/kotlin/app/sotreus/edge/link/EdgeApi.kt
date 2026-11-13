@@ -18,7 +18,7 @@ import kotlinx.serialization.json.JsonObject
 // Typed calls over any [EdgeLink]. A refused command throws [EdgeRequestException] with the
 // Edge's own error text.
 
-private suspend fun EdgeLink.ok(build: (Long) -> String): EdgeEvent.Response {
+internal suspend fun EdgeLink.ok(build: (Long) -> String): EdgeEvent.Response {
     val r = request(build = build)
     if (!r.ok) throw EdgeRequestException(r.error ?: "refused")
     return r

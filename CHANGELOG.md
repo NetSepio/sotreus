@@ -2,6 +2,45 @@
 
 All notable changes to Sotreus Android. Versions follow `versionName` in `app/build.gradle.kts`.
 
+## 1.3.0 — 2026-11-13
+
+### Added
+
+- Use a Sotreus Edge in Mesh mode as a Meshtastic-compatible radio. While the Edge is in Mesh mode
+  and is the source, the Mesh tab takes Now's place; it goes back to Now in Awareness mode.
+- Send and receive mesh messages on channels and as direct messages, with replies, reactions,
+  quick messages and delivery status (sent, relayed, delivered, no reply, failed). Ask a
+  store & forward node for missed messages. New messages raise a notification; their text is
+  hidden on the lock screen.
+- See the nodes your Edge hears: role, hops, last packet's signal, battery and readings. A node's
+  page shows its reported position, a traceroute, its neighbours, Ask position, Favourite, Ignore,
+  and Remove from your Edge's node list when the Edge supports it.
+- Show this phone, nodes at the positions they report, and waypoints on the Mesh map, with the
+  distance and bearing to a node worked out from the two positions only. Long-press to send a
+  waypoint.
+- Edit, add and delete channels, share them as a Meshtastic link and QR code, and import one by
+  scanning or pasting.
+- Change mesh settings from the app: owner names, region, preset, role, hop limit, rebroadcast,
+  transmit power, licensed (ham) mode, modules (MQTT, store & forward, remote admin, telemetry,
+  range test and others), TAK team and role, and a new identity. Read the radio's status.
+- Choose your position on the mesh, asked once before anything is shared: this phone's location
+  (the default), your Edge's set position (the default for a stationary Edge), a point on a map,
+  or off.
+- Fill an unset LoRa region from this phone's mobile network country, and say so.
+- Switch the Edge between Awareness and Mesh mode from the Edge screen.
+- Ask before a Journey or Sit uses this phone's radios while the Edge is in Mesh mode; the radios
+  are used for that session only.
+
+### Changed
+
+- Map pickers (places, the Edge's position, your mesh position) follow Field tools › Map
+  background. With None they load nothing from the internet and offer this phone's location or
+  typed coordinates; a street map can still be loaded for that screen.
+- Keep the Edge link running in Mesh mode, whatever senses.
+- Request background location for sharing your position on the mesh only.
+- Move the database to schema 14 (from 13); existing data is kept, and mesh text received
+  earlier moves to the new mesh tables. Bump the Android version to 1.3.0 (code 9).
+
 ## 1.2.0 — 2026-11-10
 
 ### Added

@@ -40,6 +40,7 @@ class EdgeSync @Inject constructor(
     private val pipeline: ObservationPipeline,
     private val tagger: EdgeLocationTagger,
     private val transactions: DatabaseTransactions,
+    private val mesh: app.sotreus.core.database.dao.MeshDao,
 ) {
     data class Outcome(
         val stored: Int,
@@ -122,8 +123,8 @@ class EdgeSync @Inject constructor(
 
     /**
      * Stores records. Every readable record lands in one table before it counts as committed:
-     * timed sightings in `edge_sightings`, untimed ones in `edge_untimed_records`, the rest raw in
-     * `edge_kept_records`. Re-stored records are ignored (`(device_id, seq)` is unique).
+     * timed sightings in `edge_sightings`, untimed ones in `edge_untimed_records`, mesh text in
+     * `mesh_messages`, the rest raw in `edge_kept_records`. Re-stored records are ignored (`(device_id, seq)` is unique).
      *
      * One transaction for the page, History rows included: a write that fails leaves nothing
      * behind, so a sighting row that already exists on a retry really is fully stored and its
@@ -144,6 +145,7 @@ class EdgeSync @Inject constructor(
         val past = ArrayList<PastSighting?>()
         val untimed = ArrayList<EdgeUntimedRecordEntity>()
         val kept = ArrayList<app.sotreus.core.database.entity.EdgeKeptRecordEntity>()
+        val meshRows = ArrayList<app.sotreus.core.database.entity.MeshMessageEntity>()
         val readable = ArrayList<Long>()
         for (r in page) {
             val ok = r as? EdgeRecordCodec.Result.Ok ?: continue
@@ -182,7 +184,9 @@ class EdgeSync @Inject constructor(
                     if (wall != null) tagger.onEdgePosition(body, wall.first)
                     keep()
                 }
-                // Mesh text (a later branch), Edge events and unknown types: kept raw.
+                // Mesh text goes to the mesh tables (HANDOFF_V3_MESH.md §3.3), one row per message.
+                is app.sotreus.edge.protocol.MeshTextRecord -> meshRows += app.sotreus.core.data.mesh.MeshRows.fromRecord(device.deviceId, h, body, wall?.first, now)
+                // Edge events and unknown types: kept raw.
                 else -> keep()
             }
         }
@@ -192,6 +196,7 @@ class EdgeSync @Inject constructor(
         pipeline.recordPast(fresh, now, held)
         if (untimed.isNotEmpty()) dao.insertUntimed(untimed)
         if (kept.isNotEmpty()) dao.insertKept(kept)
+        app.sotreus.core.data.mesh.MeshRows.store(mesh, meshRows)
         // Reached only when every write above succeeded; the transaction commits them together.
         return Stored(inserted.count { it != -1L }, untimed.size, readable.toSet())
     }

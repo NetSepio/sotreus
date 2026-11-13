@@ -141,4 +141,11 @@
     <string name="route_cameras_none">No listed cameras within 150 m of this path.</string>
     <string name="route_cameras_missing">A camera list that is switched on is not on this phone yet. Download it in Path and map settings.</string>
     <string name="route_cameras_credit">Camera locations © OpenStreetMap contributors (ODbL). People mapped them; this phone did not sense them. A list can be out of date.</string>
+    <!-- V3: a session while the Edge is in Mesh mode (HANDOFF_V3_MESH.md §2.2) -->
+    <string name="session_mesh_title">Your Edge is in Mesh mode</string>
+    <string name="session_mesh_body_journey">It hears no devices now. Use this phone\'s radios for this journey? When it ends, Sotreus goes back to your Edge.</string>
+    <string name="session_mesh_body_sit">It hears no devices now. Use this phone\'s radios for this sit? When it ends, Sotreus goes back to your Edge.</string>
+    <string name="session_mesh_use_phone">Use this phone\'s radios</string>
+    <string name="session_mesh_cancel">Cancel</string>
+    <string name="session_phone_radios">This phone\'s radios</string>
 </resources>

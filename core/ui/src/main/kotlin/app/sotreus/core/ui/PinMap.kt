@@ -26,9 +26,6 @@ import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 
-/** OpenFreeMap's dark vector style: no API key, OpenStreetMap data. Loaded only on request. */
-const val PIN_MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/dark"
-
 /**
  * A MapLibre map with a fixed centre pin (places, a stationary Edge). With [onCenterChanged] the map is draggable and reports
  * the point under the pin; otherwise it is a static preview. Rotation and the compass are off: the
@@ -43,6 +40,8 @@ fun PinMap(
     modifier: Modifier = Modifier,
     onCenterChanged: ((Double, Double) -> Unit)? = null,
     onReady: (MapLibreMap) -> Unit = {},
+    /** Where tiles come from: the owner's Field tools setting, or ONLINE when they asked for it on this screen. */
+    background: app.sotreus.core.model.MapBackground = app.sotreus.core.model.MapBackground.ONLINE,
 ) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -75,7 +74,7 @@ fun PinMap(
         AndroidView(
             factory = {
                 mapView.getMapAsync { map ->
-                    map.setStyle(PIN_MAP_STYLE_URL)
+                    map.setStyle(mapStyle(background, c.ink))
                     map.uiSettings.apply {
                         isRotateGesturesEnabled = false
                         isCompassEnabled = false
@@ -100,4 +99,32 @@ fun PinMap(
         Box(Modifier.align(Alignment.Center).size(26.dp).background(c.accent.copy(alpha = 0.22f), SotreusTheme.shapes.pill))
         Box(Modifier.align(Alignment.Center).size(12.dp).background(c.accent, SotreusTheme.shapes.pill).border(2.dp, c.ink, SotreusTheme.shapes.pill))
     }
+}
+
+/**
+ * Shown in place of a map picker while street maps are off (Field tools › Map background: None):
+ * nothing is loaded from the internet unless the owner asks for this screen. The picker's offline
+ * ways to set the point (this phone's location, typed coordinates) sit below it.
+ */
+@Composable
+fun MapOffPanel(onLoadOnline: () -> Unit, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.layout.Column(modifier, verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(SotreusTheme.spacing.m)) {
+        CaveatBox(androidx.compose.ui.res.stringResource(R.string.map_off_kicker), androidx.compose.ui.res.stringResource(R.string.map_off_body))
+        GhostButton(androidx.compose.ui.res.stringResource(R.string.map_off_load), onLoadOnline)
+    }
+}
+
+/** Under a map that reads only the downloaded street area (Map background: Offline). */
+@Composable
+fun MapOfflineAreaNote(modifier: Modifier = Modifier) {
+    androidx.compose.material3.Text(
+        androidx.compose.ui.res.stringResource(R.string.map_offline_area_note),
+        style = SotreusTheme.typography.caption, color = SotreusTheme.colors.textDim, modifier = modifier,
+    )
+}
+
+@androidx.compose.ui.tooling.preview.Preview(widthDp = 390, heightDp = 260, showBackground = true, backgroundColor = 0xFF0B0E13)
+@Composable
+private fun MapOffPanelPreview() {
+    SotreusTheme { MapOffPanel({}) }
 }

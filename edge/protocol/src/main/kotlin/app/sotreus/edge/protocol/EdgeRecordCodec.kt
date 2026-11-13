@@ -223,6 +223,25 @@ object EdgeBodies {
         return b
     }
 
+    /** Type 4 (protocol §4): one mesh text message, received or sent. */
+    fun meshText(
+        from: Long, to: Long, packetId: Long, channel: Int, hopLimit: Int, hopStart: Int,
+        rssi: Int, snr: Float, sent: Boolean, text: String,
+    ): ByteArray {
+        val t = text.encodeToByteArray().let { it.copyOf(it.size.coerceAtMost(206)) }
+        val b = ByteArray(18 + t.size)
+        val w = LeWriter(b)
+        w.u32(0, from and 0xFFFFFFFFL); w.u32(4, to and 0xFFFFFFFFL); w.u32(8, packetId and 0xFFFFFFFFL)
+        w.u8(12, channel)
+        w.u8(13, (hopLimit and 0x0F) or ((hopStart and 0x0F) shl 4))
+        w.u8(14, rssi.coerceIn(-128, 127) and 0xFF)
+        w.u8(15, Math.round(snr * 4).coerceIn(-128, 127) and 0xFF)
+        w.u8(16, if (sent) 1 else 0)
+        w.u8(17, t.size)
+        w.bytes(18, t)
+        return b
+    }
+
     fun position(
         lat: Double, lon: Double, altitudeM: Double?, hAccM: Float?, vAccM: Float?,
         satellites: Int, fixType: Int, speedMps: Float?,

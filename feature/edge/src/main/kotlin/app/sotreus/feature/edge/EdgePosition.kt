@@ -119,12 +119,21 @@ internal fun StationaryPosition(pos: PositionUi, actions: PositionActions) {
 
 // ---- Pick on a map ----------------------------------------------------------------------------
 
-data class EdgeMapState(val start: Pair<Double, Double>? = null, val zoom: Double = 16.0, val ready: Boolean = false, val saving: Boolean = false, val error: String? = null)
+data class EdgeMapState(
+    val start: Pair<Double, Double>? = null,
+    val zoom: Double = 16.0,
+    val ready: Boolean = false,
+    val saving: Boolean = false,
+    val error: String? = null,
+    /** Field tools › Map background: with None the picker loads nothing unless asked. */
+    val background: app.sotreus.core.model.MapBackground = app.sotreus.core.model.MapBackground.NONE,
+)
 
 @HiltViewModel
 class EdgeMapPickerViewModel @Inject constructor(
     private val repo: EdgeRepository,
     private val location: app.sotreus.sensing.LocationSource,
+    private val settings: app.sotreus.core.data.settings.SettingsRepository,
 ) : ViewModel() {
     val state = MutableStateFlow(EdgeMapState())
 
@@ -133,7 +142,7 @@ class EdgeMapPickerViewModel @Inject constructor(
             val d = repo.devices.first().firstOrNull()
             val saved = if (d?.placeLat != null && d.placeLon != null) d.placeLat!! to d.placeLon!! else null
             val start = saved ?: location.currentFix(8_000)?.let { it.lat to it.lon }
-            state.value = EdgeMapState(start ?: (20.0 to 0.0), if (start != null) 17.0 else 1.5, ready = true)
+            state.value = EdgeMapState(start ?: (20.0 to 0.0), if (start != null) 17.0 else 1.5, ready = true, background = settings.current().mapBackground)
         }
     }
 
@@ -160,8 +169,17 @@ internal fun EdgeMapPickerScreen(onBack: () -> Unit, vm: EdgeMapPickerViewModel 
     var zoom by remember { mutableStateOf(state.zoom) }
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     val scope = rememberCoroutineScope()
+    var online by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    val bg = if (online) app.sotreus.core.model.MapBackground.ONLINE else state.background
     Column(Modifier.fillMaxSize().padding(SotreusTheme.spacing.screenH), verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.l)) {
         BackTopBar(onBack = onBack, title = stringResource(R.string.edge_map_title))
+        // Street maps are off: the Edge screen's own ways work without a map.
+        if (state.ready && bg == app.sotreus.core.model.MapBackground.NONE) {
+            app.sotreus.core.ui.MapOffPanel({ online = true })
+            Text(stringResource(R.string.edge_map_offline_ways), style = SotreusTheme.typography.bodyS, color = c.textMuted)
+            GhostButton(stringResource(R.string.edge_map_back), onBack, minHeight = SotreusTheme.sizes.minTouch)
+            return@Column
+        }
         Text(stringResource(R.string.edge_map_lead), style = SotreusTheme.typography.bodyS, color = c.textMuted)
         Box(Modifier.weight(1f).fillMaxWidth()) {
             val start = state.start
@@ -173,10 +191,12 @@ internal fun EdgeMapPickerScreen(onBack: () -> Unit, vm: EdgeMapPickerViewModel 
                         map?.cameraPosition?.zoom?.let { zoom = it }
                     },
                     onReady = { map = it; center = start; zoom = state.zoom },
+                    background = bg,
                 )
             }
         }
         Text(stringResource(R.string.edge_map_attribution), style = SotreusTheme.typography.monoLabelS, color = c.textDim)
+        if (bg == app.sotreus.core.model.MapBackground.OFFLINE) app.sotreus.core.ui.MapOfflineAreaNote()
         val accuracy = center?.let { ManualPosition.mapAccuracyM(it.first, zoom) }
         center?.let { (lat, lon) -> MonoLabel(stringResource(R.string.edge_map_coords, "%.5f".format(lat), "%.5f".format(lon), "%.0f".format(accuracy))) }
         Text(stringResource(R.string.edge_map_note), style = SotreusTheme.typography.caption, color = c.textDim)

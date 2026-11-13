@@ -87,13 +87,14 @@ class SessionRepository @Inject constructor(
 
     /** Starts the foreground observation service with a visible notification. */
     /** [label] names the session at a saved place ("Office · morning"); [labelNoPlace] otherwise. */
-    suspend fun start(kind: SessionKind, geotag: Boolean, label: String, labelNoPlace: String): Long {
+    /** [phoneRadios]: in Mesh mode, this phone's radios sense for this session only (HANDOFF_V3_MESH.md §2.2). */
+    suspend fun start(kind: SessionKind, geotag: Boolean, label: String, labelNoPlace: String, phoneRadios: Boolean = false): Long {
         sessions.active()?.let { return it.id }
         val now = System.currentTimeMillis()
         val placeId = settings.current().currentPlaceId
         val placeName = placeId?.let { places.get(it)?.name }
         val id = sessions.insert(
-            SessionEntity(kind = kind, name = placeName?.let { "$it · $label" } ?: labelNoPlace, startedAtMs = now, geotag = geotag, placeId = placeId, startLabel = placeName),
+            SessionEntity(kind = kind, name = placeName?.let { "$it · $label" } ?: labelNoPlace, startedAtMs = now, geotag = geotag, placeId = placeId, startLabel = placeName, phoneRadios = phoneRadios),
         )
         sessions.insertEvent(SessionEventEntity(sessionId = id, atMs = now, kind = SessionEventKind.STARTED))
         settings.setGeotagNextSession(false)

@@ -17,4 +17,12 @@
     <string name="data_notification_edge_travel_text">Saving where your Edge hears devices, using this phone\'s location while they are together. Tap to open.</string>
     <string name="data_notification_presence_text">This phone is broadcasting rotating tokens that only approved friends can recognise.</string>
     <string name="data_notification_session_movement">Observing shared movement with phone location. Route saving is off.</string>
+    <string name="data_channel_mesh">Mesh messages</string>
+    <string name="data_channel_mesh_description">New messages your Edge receives in Mesh mode. Their text is hidden on the lock screen.</string>
+    <string name="data_notification_mesh_public">New mesh message</string>
+    <string name="data_notification_mesh_channel">%1$s · %2$s</string>
+    <string name="data_notification_edge_mesh">Sotreus Edge · mesh</string>
+    <string name="data_notification_edge_mesh_text">Mesh messages come to this phone. Tap to open.</string>
+    <string name="data_notification_edge_mesh_sharing">Sotreus Edge · sharing your location</string>
+    <string name="data_notification_edge_mesh_sharing_text">Sharing your location on the mesh. Change it in Mesh settings.</string>
 </resources>

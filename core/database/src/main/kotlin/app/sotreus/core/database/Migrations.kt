@@ -155,5 +155,25 @@ object Migrations {
         }
     }
 
-    val ALL = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
+    /** v14, Mesh mode (HANDOFF_V3_MESH.md): messages, nodes, waypoints, conversation settings; the Edge's last mode and position choice. */
+    val MIGRATION_13_14 = object : Migration(13, 14) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            MESH_14_SQL.forEach(db::execSQL)
+        }
+    }
+
+    val ALL = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
 }
+
+private val MESH_14_SQL = listOf(
+    "ALTER TABLE edge_devices ADD COLUMN last_mode TEXT",
+    "ALTER TABLE edge_devices ADD COLUMN mesh_position_choice TEXT",
+    "ALTER TABLE sessions ADD COLUMN phone_radios INTEGER NOT NULL DEFAULT 0",
+    "CREATE TABLE IF NOT EXISTS `mesh_messages` (`device_id` TEXT NOT NULL, `from_node` INTEGER NOT NULL, `packet_id` INTEGER NOT NULL, `to_node` INTEGER NOT NULL, `channel` INTEGER NOT NULL, `conversation` TEXT NOT NULL, `text` TEXT NOT NULL, `outgoing` INTEGER NOT NULL, `at_ms` INTEGER NOT NULL, `time_from_edge` INTEGER NOT NULL, `rssi` INTEGER, `snr` REAL, `hops` INTEGER, `reply_id` INTEGER, `reaction` INTEGER NOT NULL, `pki` INTEGER NOT NULL, `delivery` TEXT, `reason` INTEGER, `seq` INTEGER, `read` INTEGER NOT NULL, PRIMARY KEY(`device_id`, `from_node`, `packet_id`))",
+    "CREATE INDEX IF NOT EXISTS `index_mesh_messages_device_id_conversation_at_ms` ON `mesh_messages` (`device_id`, `conversation`, `at_ms`)",
+    "CREATE INDEX IF NOT EXISTS `index_mesh_messages_at_ms` ON `mesh_messages` (`at_ms`)",
+    "CREATE TABLE IF NOT EXISTS `mesh_nodes` (`device_id` TEXT NOT NULL, `num` INTEGER NOT NULL, `long_name` TEXT, `short_name` TEXT, `hw_model` INTEGER, `role` TEXT, `has_key` INTEGER NOT NULL, `favorite` INTEGER NOT NULL, `ignored` INTEGER NOT NULL, `last_heard_ms` INTEGER, `rssi` INTEGER, `snr` REAL, `hops_away` INTEGER, `battery` INTEGER, `voltage` REAL, `channel_util` REAL, `air_util` REAL, `uptime_s` INTEGER, `temperature_c` REAL, `humidity_pct` REAL, `pressure_hpa` REAL, `telemetry_ms` INTEGER, `lat` REAL, `lon` REAL, `alt_m` INTEGER, `precision_bits` INTEGER, `position_ms` INTEGER, `neighbors` TEXT, PRIMARY KEY(`device_id`, `num`))",
+    "CREATE INDEX IF NOT EXISTS `index_mesh_nodes_last_heard_ms` ON `mesh_nodes` (`last_heard_ms`)",
+    "CREATE TABLE IF NOT EXISTS `mesh_waypoints` (`device_id` TEXT NOT NULL, `id` INTEGER NOT NULL, `from_node` INTEGER, `name` TEXT NOT NULL, `description` TEXT, `lat` REAL, `lon` REAL, `expire_ms` INTEGER, `icon` INTEGER, `at_ms` INTEGER NOT NULL, PRIMARY KEY(`device_id`, `id`))",
+    "CREATE TABLE IF NOT EXISTS `mesh_conversations` (`device_id` TEXT NOT NULL, `conversation` TEXT NOT NULL, `muted` INTEGER NOT NULL, PRIMARY KEY(`device_id`, `conversation`))",
+)

@@ -37,13 +37,21 @@ import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import javax.inject.Inject
 
-data class PickerState(val name: String = "", val start: Pair<Double, Double>? = null, val zoom: Double = 15.5, val ready: Boolean = false)
+data class PickerState(
+    val name: String = "",
+    val start: Pair<Double, Double>? = null,
+    val zoom: Double = 15.5,
+    val ready: Boolean = false,
+    /** Field tools › Map background: with None the picker loads nothing unless asked. */
+    val background: app.sotreus.core.model.MapBackground = app.sotreus.core.model.MapBackground.NONE,
+)
 
 @HiltViewModel
 class PlaceMapPickerViewModel @Inject constructor(
     handle: SavedStateHandle,
     private val places: PlaceRepository,
     private val location: LocationSource,
+    private val settings: app.sotreus.core.data.settings.SettingsRepository,
 ) : ViewModel() {
     private val id = handle.toRoute<PlaceMapRoute>().placeId
     val state = MutableStateFlow(PickerState())
@@ -53,7 +61,7 @@ class PlaceMapPickerViewModel @Inject constructor(
             val p = places.observePlace(id).first()
             val saved = if (p?.lat != null && p.lon != null) p.lat!! to p.lon!! else null
             val start = saved ?: location.currentFix(8_000)?.let { it.lat to it.lon }
-            state.value = PickerState(p?.name.orEmpty(), start ?: (20.0 to 0.0), if (start != null) 15.5 else 1.5, ready = true)
+            state.value = PickerState(p?.name.orEmpty(), start ?: (20.0 to 0.0), if (start != null) 15.5 else 1.5, ready = true, background = settings.current().mapBackground)
         }
     }
 
@@ -62,6 +70,13 @@ class PlaceMapPickerViewModel @Inject constructor(
     fun save(lat: Double, lon: Double, done: () -> Unit) = viewModelScope.launch {
         places.setLocation(id, lat, lon)
         done()
+    }
+
+    /** "12.97160, 77.59460": false when it is not a latitude and a longitude. */
+    fun saveTyped(text: String, done: () -> Unit): Boolean {
+        val t = app.sotreus.edge.location.ManualPosition.parseTyped(text) ?: return false
+        save(t.lat, t.lon, done)
+        return true
     }
 }
 
@@ -73,10 +88,25 @@ internal fun PlaceMapPickerScreen(onBack: () -> Unit, vm: PlaceMapPickerViewMode
     var center by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
+    // Street maps follow Field tools › Map background; with None, nothing loads unless asked here.
+    var online by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    val bg = if (online) app.sotreus.core.model.MapBackground.ONLINE else state.background
+    var typing by remember { mutableStateOf(false) }
+    var typedInvalid by remember { mutableStateOf(false) }
+    var noFix by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().padding(horizontal = SotreusTheme.spacing.screenH, vertical = SotreusTheme.spacing.screenH), verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.xl)) {
         BackTopBar(onBack = onBack)
         Text(stringResource(R.string.map_picker_title), style = SotreusTheme.typography.titleS, color = c.text)
-        Text(stringResource(R.string.map_picker_lead, state.name), style = SotreusTheme.typography.bodyS, color = c.textMuted)
+        if (bg != app.sotreus.core.model.MapBackground.NONE) Text(stringResource(R.string.map_picker_lead, state.name), style = SotreusTheme.typography.bodyS, color = c.textMuted)
+        if (state.ready && bg == app.sotreus.core.model.MapBackground.NONE) {
+            app.sotreus.core.ui.MapOffPanel({ online = true })
+            GhostButton(stringResource(R.string.loc_use_current), {
+                scope.launch { vm.myLocation()?.let { (lat, lon) -> vm.save(lat, lon, onBack) } ?: run { noFix = true } }
+            }, minHeight = SotreusTheme.sizes.minTouch)
+            GhostButton(stringResource(R.string.map_picker_type), { typing = true }, minHeight = SotreusTheme.sizes.minTouch)
+            if (noFix) Text(stringResource(R.string.loc_no_fix), style = SotreusTheme.typography.bodyS, color = c.accent)
+            if (typedInvalid) Text(stringResource(R.string.map_picker_type_invalid), style = SotreusTheme.typography.bodyS, color = c.accent)
+        } else {
         Box(Modifier.weight(1f).fillMaxWidth()) {
             val start = state.start
             if (state.ready && start != null) {
@@ -84,12 +114,14 @@ internal fun PlaceMapPickerScreen(onBack: () -> Unit, vm: PlaceMapPickerViewMode
                     start.first, start.second, state.zoom, stringResource(R.string.map_a11y, state.name), Modifier.fillMaxSize(),
                     onCenterChanged = { lat, lon -> center = lat to lon },
                     onReady = { map = it; center = start },
+                    background = bg,
                 )
             }
         }
         Text(stringResource(R.string.map_attribution), style = SotreusTheme.typography.monoLabelS, color = c.textDim)
         center?.let { (lat, lon) -> MonoLabel(stringResource(R.string.loc_coords, formatCoord(lat), formatCoord(lon))) }
-        Text(stringResource(R.string.map_note), style = SotreusTheme.typography.caption, color = c.textDim)
+        if (bg == app.sotreus.core.model.MapBackground.OFFLINE) app.sotreus.core.ui.MapOfflineAreaNote()
+        else Text(stringResource(R.string.map_note), style = SotreusTheme.typography.caption, color = c.textDim)
         GhostButton(
             stringResource(R.string.map_picker_center),
             {
@@ -104,5 +136,17 @@ internal fun PlaceMapPickerScreen(onBack: () -> Unit, vm: PlaceMapPickerViewMode
             strong = true,
         )
         PrimaryButton(stringResource(R.string.map_picker_save), { center?.let { (lat, lon) -> vm.save(lat, lon, onBack) } }, enabled = center != null)
+        }
+    }
+    if (typing) {
+        app.sotreus.core.ui.TextInputDialog(
+            title = stringResource(R.string.map_picker_type),
+            initial = "",
+            placeholder = stringResource(R.string.map_picker_type_hint),
+            confirm = stringResource(R.string.map_picker_save),
+            dismiss = stringResource(R.string.map_picker_cancel),
+            onConfirm = { t -> typedInvalid = !vm.saveTyped(t, onBack); typing = false },
+            onDismiss = { typing = false },
+        )
     }
 }

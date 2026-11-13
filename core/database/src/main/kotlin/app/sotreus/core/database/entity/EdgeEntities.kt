@@ -60,6 +60,10 @@ data class EdgeDeviceEntity(
     @ColumnInfo(name = "last_boot") val lastBoot: Long? = null,
     /** Edge restarts whose lost records are not known (a power loss, the reset pin, older firmware). */
     @ColumnInfo(name = "restarts_not_known", defaultValue = "0") val restartsNotKnown: Long = 0,
+    /** The Edge's last known mode (`awareness` / `mesh`): Mesh takes Now's tab while it is `mesh` (HANDOFF_V3_MESH.md §2.1). */
+    @ColumnInfo(name = "last_mode") val lastMode: String? = null,
+    /** The owner's answer to the position disclosure (`client`, `fixed`, `off`); null until answered (§3.1). */
+    @ColumnInfo(name = "mesh_position_choice") val meshPositionChoice: String? = null,
 )
 
 /** Unix ms at which an Edge boot started, seen by this phone while connected. */

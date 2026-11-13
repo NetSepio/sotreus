@@ -47,6 +47,11 @@ class FakeEdge(
         private set
     private val control = NdjsonFramer()
 
+    /** Mesh mode: node table, messages, `config.mesh` (protocol §2 `mesh_*`). */
+    val mesh = FakeMesh(this)
+
+    internal fun nowMs(): Long = phoneNowMs()
+
     var boot: Long = 9
     var bootAtMs: Long = phoneNowMs() - 60_000
     var timeValid: Boolean = true
@@ -208,6 +213,7 @@ class FakeEdge(
             "set_config", "set_mode" -> {
                 val patch = if (req.str("cmd") == "set_mode") req else req.obj("config") ?: JsonObject(emptyMap())
                 patch.str("mode")?.let { mode = it }
+                patch.obj("mesh")?.let { mesh.mergeConfig(it) }
                 patch.obj("placement")?.let { p ->
                     val cur = placement ?: EdgePlacement(app.sotreus.edge.protocol.DeploymentMode.TRAVEL)
                     val merged = JsonObject(cur.toJson() + p)
@@ -294,7 +300,11 @@ class FakeEdge(
         when (req.str("cmd")) {
             "watch", "unwatch", "pairing_open", "reboot" -> resp(id)
             "access" -> resp(id, "pin" to "12345678", "ap_ssid" to "Sotreus-Edge-$suffix", "ap_password" to "abcdefghjkmn")
-            else -> err(id, "unknown command")
+            else -> when (val r = mesh.handle(req)) {
+                is FakeMesh.Reply.Ok -> resp(id, *r.fields.toTypedArray())
+                is FakeMesh.Reply.Err -> err(id, r.message)
+                null -> err(id, "unknown command")
+            }
         }
     }
 
@@ -314,12 +324,14 @@ class FakeEdge(
         "log" to obj("head" to head, "oldest" to oldest, "count" to records.size, "capacity" to 14_000, "erasing" to false, "write_failures" to 0)
             .let { log -> restartLoss?.let { JsonObject(log + ("restart_loss" to it)) } ?: log },
         "events_dropped" to 0,
+        "mesh" to mesh.status(),
     )
 
     private fun config() = obj(
         "mode" to mode, "link" to "off",
         "placement" to (placement ?: EdgePlacement(app.sotreus.edge.protocol.DeploymentMode.TRAVEL)).toJson(),
         "awareness" to obj("ble" to true, "ble_active" to true, "wifi_aps" to true, "wifi_probes" to true, "probe_names" to false, "rssi_floor" to -100, "close_after_s" to 60, "max_window_s" to 300),
+        "mesh" to mesh.config,
     )
 
     companion object {
@@ -329,7 +341,7 @@ class FakeEdge(
             "ble_observation" to true, "wifi24_observation" to true, "wifi_probe_observation" to true, "gnss" to false,
             "local_storage" to true, "firmware_switching" to false, "meshtastic_mode" to true, "lora" to true,
             "display" to true, "battery" to true, "ota_upload" to true, "live_sightings" to true, "placement" to true,
-            "ble_full_size" to true,
+            "ble_full_size" to true, "mesh_nodes_paging" to true, "mesh_node_remove" to true, "mesh_target_fields" to true,
         )
 
         fun seqOf(record: ByteArray): Long =

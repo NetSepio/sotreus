@@ -48,6 +48,7 @@ import app.sotreus.feature.onboarding.onboardingGraph
 import app.sotreus.feature.place.placeGraph
 import app.sotreus.feature.proofs.proofsGraph
 import app.sotreus.feature.settings.settingsGraph
+import app.sotreus.feature.mesh.meshGraph
 import app.sotreus.feature.edge.edgeGraph
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.reflect.KClass
@@ -59,6 +60,15 @@ enum class TopLevelDestination(val route: Any, val routeClass: KClass<*>, val ic
     JOURNEY(JourneyRoute, JourneyRoute::class, SotreusIcons.Journey, R.string.nav_journey),
     CONTEXT(ContextRoute, ContextRoute::class, SotreusIcons.Context, R.string.nav_context),
     SETTINGS(SettingsRoute, SettingsRoute::class, SotreusIcons.Settings, R.string.nav_settings),
+
+    /** V3: takes Now's place while the paired Edge is in Mesh mode and is the source (HANDOFF_V3_MESH.md §2.1). */
+    MESH(app.sotreus.core.navigation.MeshRoute, app.sotreus.core.navigation.MeshRoute::class, SotreusIcons.Mesh, R.string.nav_mesh);
+
+    companion object {
+        /** The bar: Mesh in Now's slot in Mesh mode, otherwise the usual five. */
+        fun bar(meshTab: Boolean): List<TopLevelDestination> =
+            if (meshTab) listOf(MESH, HISTORY, JOURNEY, CONTEXT, SETTINGS) else listOf(NOW, HISTORY, JOURNEY, CONTEXT, SETTINGS)
+    }
 }
 
 private class AppNavigator(private val nav: NavHostController) : SotreusNavigator {
@@ -85,7 +95,12 @@ private class AppNavigator(private val nav: NavHostController) : SotreusNavigato
 
 /** App shell: ink background, system insets, bottom nav on tab roots only. */
 @Composable
-fun SotreusApp(settings: SettingsRepository, pendingInvite: MutableStateFlow<String?>, navController: NavHostController = rememberNavController()) {
+fun SotreusApp(
+    settings: SettingsRepository,
+    pendingInvite: MutableStateFlow<String?>,
+    mesh: kotlinx.coroutines.flow.StateFlow<app.sotreus.core.data.mesh.MeshLive>? = null,
+    navController: NavHostController = rememberNavController(),
+) {
     val loaded by settings.settings.collectAsState(initial = null as SotreusSettings?)
     val current = loaded ?: run {
         Box(Modifier.fillMaxSize())
@@ -94,7 +109,16 @@ fun SotreusApp(settings: SettingsRepository, pendingInvite: MutableStateFlow<Str
     val navigator = remember(navController) { AppNavigator(navController) }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val destination = backStackEntry?.destination
+    val meshLive = mesh?.collectAsState()?.value
+    // Mesh replaces Now while the Edge's last known mode is Mesh and the Edge is the source (§2.1).
+    val meshTab = meshLive?.meshMode == true && current.sensingSource == app.sotreus.core.model.SensingSource.EDGE
+    val bar = TopLevelDestination.bar(meshTab)
     val onTabRoot = TopLevelDestination.entries.any { destination.isOn(it) }
+    // The slot changed under an open Now or Mesh: open the other one.
+    LaunchedEffect(meshTab, destination) {
+        if (meshTab && destination.isOn(TopLevelDestination.NOW)) navigator.tab(app.sotreus.core.navigation.MeshRoute)
+        if (!meshTab && destination.isOn(TopLevelDestination.MESH)) navigator.tab(NowRoute)
+    }
     val invite by pendingInvite.collectAsState()
     LaunchedEffect(invite) { if (invite != null && current.onboardingDone) navigator.navigate(FriendsRoute) }
 
@@ -104,7 +128,7 @@ fun SotreusApp(settings: SettingsRepository, pendingInvite: MutableStateFlow<Str
         bottomBar = {
             if (onTabRoot) {
                 SotreusBottomNav(
-                    TopLevelDestination.entries.map { tab ->
+                    bar.map { tab ->
                         SotreusNavItem(
                             label = stringResource(tab.label),
                             icon = tab.icon,
@@ -127,6 +151,7 @@ fun SotreusApp(settings: SettingsRepository, pendingInvite: MutableStateFlow<Str
             journeyGraph(navigator)
             settingsGraph(navigator)
             edgeGraph(navigator)
+            meshGraph(navigator)
             entityGraph(navigator)
             attentionGraph(navigator)
             placeGraph(navigator)

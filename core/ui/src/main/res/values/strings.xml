@@ -173,4 +173,9 @@
     <string name="heat_weak">Weak</string>
     <string name="heat_strong">Strong</string>
     <string name="export_format_atak">ATAK data package</string>
+    <!-- Map pickers without the internet -->
+    <string name="map_off_kicker">Street maps are off</string>
+    <string name="map_off_body">Nothing is loaded from the internet. Set the point another way, or load the street map for this screen.</string>
+    <string name="map_off_load">Load the street map</string>
+    <string name="map_offline_area_note">Shows the street area downloaded in Field tools. Outside it the map is blank.</string>
 </resources>

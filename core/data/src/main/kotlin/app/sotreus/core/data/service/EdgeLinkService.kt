@@ -45,16 +45,16 @@ class EdgeLinkService : LifecycleService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         Notifications.ensureChannels(this)
-        if (!promote(edge.state.value.connected, travelTagging.value)) {
+        if (!promote(edge.state.value.connected, travelTagging.value, meshSharing.value)) {
             stopSelf()
             return START_NOT_STICKY
         }
         if (!watching) {
             watching = true
             lifecycleScope.launch {
-                combine(edge.state.map { it.connected }.distinctUntilChanged(), travelTagging) { connected, travel -> connected to travel }
+                combine(edge.state.map { it.connected }.distinctUntilChanged(), travelTagging, meshSharing) { connected, travel, sharing -> Triple(connected, travel, sharing) }
                     .distinctUntilChanged()
-                    .collect { (connected, travel) -> if (!promote(connected, travel)) stopSelf() }
+                    .collect { (connected, travel, sharing) -> if (!promote(connected, travel, sharing)) stopSelf() }
             }
         }
         return START_STICKY
@@ -63,20 +63,23 @@ class EdgeLinkService : LifecycleService() {
     @Volatile private var watching = false
 
     /** (Re)states the foreground notification and service type. False when Android refuses it. */
-    private fun promote(connected: Boolean, travel: Boolean): Boolean {
-        val location = travel && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    private fun promote(connected: Boolean, travel: Boolean, sharing: Boolean): Boolean {
+        val location = (travel || sharing) && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val type = if (Build.VERSION.SDK_INT >= 29) {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or (if (location) ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION else 0)
         } else 0
-        return runCatching { ServiceCompat.startForeground(this, Notifications.ID_EDGE, notification(connected, travel), type) }.isSuccess
+        return runCatching { ServiceCompat.startForeground(this, Notifications.ID_EDGE, notification(connected, travel, sharing), type) }.isSuccess
     }
 
-    private fun notification(connected: Boolean, travel: Boolean): Notification {
+    private fun notification(connected: Boolean, travel: Boolean, sharing: Boolean): Notification {
         val tap = Notifications.launchIntent(this)?.let {
             PendingIntent.getActivity(this, 0, it, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         }
         val (title, text) = when {
             !connected -> R.string.data_notification_edge_waiting to R.string.data_notification_edge_waiting_text
+            // Mesh mode (HANDOFF_V3_MESH.md §3.1): sharing this phone's location is always said.
+            sharing -> R.string.data_notification_edge_mesh_sharing to R.string.data_notification_edge_mesh_sharing_text
+            edge.state.value.status?.mode == app.sotreus.edge.protocol.EdgeMode.MESH -> R.string.data_notification_edge_mesh to R.string.data_notification_edge_mesh_text
             travel -> R.string.data_notification_edge_travel to R.string.data_notification_edge_travel_text
             else -> R.string.data_notification_edge to R.string.data_notification_edge_text
         }
@@ -95,6 +98,9 @@ class EdgeLinkService : LifecycleService() {
 
         /** Travel mode with this phone's location tagging: set by the observation controller. */
         val travelTagging = MutableStateFlow(false)
+
+        /** This phone's location handed to the mesh (HANDOFF_V3_MESH.md §3.1): set by the mesh hub. */
+        val meshSharing = MutableStateFlow(false)
 
         fun start(context: Context) {
             ContextCompat.startForegroundService(context, Intent(context, EdgeLinkService::class.java))

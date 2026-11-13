@@ -151,6 +151,8 @@ data class SessionEntity(
     val geotag: Boolean,
     @ColumnInfo(name = "place_id") val placeId: Long?,
     @ColumnInfo(name = "start_label") val startLabel: String?,
+    /** V3: this phone's radios sense for this session while the Edge is in Mesh mode (HANDOFF_V3_MESH.md §2.2). */
+    @ColumnInfo(name = "phone_radios", defaultValue = "0") val phoneRadios: Boolean = false,
 )
 
 @Entity(tableName = "session_entities", primaryKeys = ["session_id", "entity_id"], indices = [Index("entity_id")])

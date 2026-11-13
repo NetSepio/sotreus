@@ -175,6 +175,7 @@ internal fun EdgeDeviceContent(
     val live = state.live
     val st = live.status
     var confirmForget by remember { mutableStateOf(false) }
+    var confirmMode by remember { mutableStateOf<EdgeMode?>(null) }
     ScreenColumn(top = SotreusTheme.spacing.screenH) {
         BackTopBar(onBack = onBack, title = stringResource(R.string.edge_title))
         // Name, firmware and link, with the state on the right.
@@ -263,7 +264,31 @@ internal fun EdgeDeviceContent(
         else PrimaryButton(stringResource(R.string.edge_sync_now), { vm?.syncNow() }, enabled = live.connected && !live.syncing)
         if (state.source == SensingSource.EDGE) GhostButton(stringResource(R.string.edge_use_phone), { vm?.usePhoneRadios() })
         else PrimaryButton(stringResource(R.string.edge_use), { vm?.useEdge() })
+        // The app shows the mode and can switch it (HANDOFF_V2_EDGE.md); Mesh itself is run from the
+        // Edge's setup page. Offered once this run has read the Edge's capabilities and status.
+        if (live.info?.caps?.meshtasticMode == true && st != null) {
+            Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.m)) {
+                MonoLabel(stringResource(R.string.edge_mode_label))
+                SegmentedToggle(
+                    listOf(EdgeMode.AWARENESS to stringResource(R.string.edge_mode_awareness), EdgeMode.MESH to stringResource(R.string.edge_mode_mesh)),
+                    st.mode,
+                    { if (it != st.mode) confirmMode = it },
+                )
+                Text(stringResource(R.string.edge_mode_note), style = SotreusTheme.typography.bodyS, color = c.textMuted)
+            }
+        }
         DestructiveTextButton(stringResource(R.string.edge_forget), { confirmForget = true })
+    }
+    confirmMode?.let { to ->
+        val mesh = to == EdgeMode.MESH
+        ConfirmDialog(
+            stringResource(if (mesh) R.string.edge_mode_to_mesh_title else R.string.edge_mode_to_awareness_title),
+            stringResource(if (mesh) R.string.edge_mode_to_mesh_body else R.string.edge_mode_to_awareness_body),
+            stringResource(if (mesh) R.string.edge_mode_to_mesh else R.string.edge_mode_to_awareness),
+            stringResource(R.string.edge_cancel),
+            onConfirm = { vm?.setMode(to); confirmMode = null }, onDismiss = { confirmMode = null },
+            destructive = false,
+        )
     }
     if (confirmForget) {
         ConfirmDialog(
@@ -370,6 +395,19 @@ private fun EdgeRecordsLostPreview() {
         EdgeDeviceContent(
             EdgeUiState(device = device, live = FakeSotreusData.edgeLive.copy(device = device), source = SensingSource.EDGE, nowMs = FakeSotreusData.NOW),
             device, {},
+        )
+    }
+}
+
+/** The Edge in Mesh mode: the chip and the mode switch say so, and it hears no devices. */
+@Preview(widthDp = 390, heightDp = 1300, showBackground = true, backgroundColor = 0xFF0B0E13)
+@Composable
+private fun EdgeMeshPreview() {
+    val live = FakeSotreusData.edgeLive.copy(status = FakeSotreusData.edgeStatus.copy(mode = EdgeMode.MESH))
+    SotreusTheme {
+        EdgeDeviceContent(
+            EdgeUiState(device = FakeSotreusData.edgeDevice, live = live, source = SensingSource.EDGE, nowMs = FakeSotreusData.NOW),
+            FakeSotreusData.edgeDevice, {},
         )
     }
 }

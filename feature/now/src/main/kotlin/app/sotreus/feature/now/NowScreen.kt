@@ -88,6 +88,7 @@ import app.sotreus.core.ui.R as UiR
 internal fun NowScreen(navigate: (Any) -> Unit, vm: NowViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     val locationFailed by vm.locationFailed.collectAsStateWithLifecycle()
+    val meshOpen by vm.meshOpen.collectAsStateWithLifecycle()
     var picker by remember { mutableStateOf(false) }
     androidx.lifecycle.compose.LifecycleStartEffect(Unit) {
         vm.edgeLiveVisible(true)
@@ -125,6 +126,8 @@ internal fun NowScreen(navigate: (Any) -> Unit, vm: NowViewModel = hiltViewModel
             !notify.shown && !state.settings.edgeNotifyAskDismissed,
         onAllowNotifications = notify.request,
         onNotNowNotifications = vm::dismissNotifyAsk,
+        meshOpen = meshOpen,
+        onOpenMesh = { navigate(app.sotreus.core.navigation.MeshRoute) },
     )
     // Automatic places: asked once (docs/plans/auto-places.md), switchable in Privacy & retention.
     if (state.settings.onboardingDone && state.settings.autoPlaces == null) {
@@ -166,6 +169,8 @@ internal fun NowContent(
     askNotifications: Boolean = false,
     onAllowNotifications: () -> Unit = {},
     onNotNowNotifications: () -> Unit = {},
+    meshOpen: Boolean = false,
+    onOpenMesh: () -> Unit = {},
 ) {
     val snap = state.snapshot
     val edge = state.edge
@@ -184,6 +189,10 @@ internal fun NowContent(
         }
         if (state.settings.simulatedRadios) WarningBanner(stringResource(R.string.now_simulated_banner))
         if (edge != null) EdgeLinkBanner(edge, snap.atMs, onUsePhone, onPairAgain)
+        if (meshOpen) {
+            WarningBanner(stringResource(R.string.now_mesh_banner))
+            GhostButton(stringResource(R.string.now_open_mesh), onOpenMesh)
+        }
         if (askNotifications) EdgeNotifyAsk(onAllowNotifications, onNotNowNotifications)
         when {
             state.needsPermissions -> PermissionPrompt(onPermissions)

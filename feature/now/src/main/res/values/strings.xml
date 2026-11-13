@@ -164,4 +164,7 @@
     <string name="edge_notify_banner">Your Edge keeps listening while Sotreus is closed. Allow notifications so a notice shows while it does.</string>
     <string name="edge_notify_allow">Allow notifications</string>
     <string name="edge_notify_not_now">Not now</string>
+    <!-- V3: this phone senses while the Edge is in Mesh mode (HANDOFF_V3_MESH.md §2.1) -->
+    <string name="now_mesh_banner">Your Edge is in Mesh mode.</string>
+    <string name="now_open_mesh">Open Mesh</string>
 </resources>

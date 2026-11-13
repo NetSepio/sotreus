@@ -21,6 +21,31 @@ object SotreusIcons {
         }
     }
 
+    /** Mesh (V3): three nodes joined. Takes Now's tab in Mesh mode (mocks M1–M8). */
+    val Mesh: ImageVector by lazy {
+        icon("Mesh") {
+            stroke(circle(12f, 5.5f, 2f))
+            stroke(circle(5.5f, 17.5f, 2f))
+            stroke(circle(18.5f, 17.5f, 2f))
+            stroke("M11 7.3 6.6 15.6M13 7.3l4.4 8.3M7.5 17.5h9")
+        }
+    }
+
+    /** Send (M2): an arrow pointing right. */
+    val Send: ImageVector by lazy {
+        icon("Send") { stroke("M5 12h13M13 6l6 6-6 6") }
+    }
+
+    /** Add a waypoint (M5): a diamond on a stem. */
+    val Waypoint: ImageVector by lazy {
+        icon("Waypoint") { stroke("M12 3l6 6-6 6-6-6z"); stroke("M12 18v4M10 20h4") }
+    }
+
+    /** Centre on this phone (M5). */
+    val Centre: ImageVector by lazy {
+        icon("Centre") { stroke(circle(12f, 12f, 4f)); stroke("M12 2v3M12 19v3M2 12h3M19 12h3") }
+    }
+
     val History: ImageVector by lazy {
         icon("History") {
             stroke(circle(12f, 12f, 9f))

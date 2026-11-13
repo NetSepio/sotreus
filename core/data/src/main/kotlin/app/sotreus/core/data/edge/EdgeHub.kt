@@ -132,6 +132,11 @@ class EdgeHub @Inject constructor(
     private val _state = MutableStateFlow(EdgeLive())
     val state: StateFlow<EdgeLive> = _state.asStateFlow()
 
+    private val _meshEvents = MutableSharedFlow<EdgeEvent>(extraBufferCapacity = 256, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    /** Mesh events from the Edge (HANDOFF_V3_MESH.md), for [app.sotreus.core.data.mesh.MeshHub]. */
+    val meshEvents: SharedFlow<EdgeEvent> = _meshEvents.asSharedFlow()
+
     private val lock = Mutex()
     private var session: Job? = null
     @Volatile private var link: EdgeLink? = null
@@ -352,6 +357,7 @@ class EdgeHub @Inject constructor(
         val mid = sent + (received - sent) / 2
         dao.upsertAnchor(EdgeBootAnchorEntity(deviceId, EdgeTime.bootKey(info.boot), EdgeTime.anchor(st.uptimeMs, mid)))
         noteRestarts(deviceId, info.boot, st)
+        if (st.mode != EdgeMode.UNKNOWN) dao.setLastMode(deviceId, st.mode.wire)
         val offset = st.unixMs?.let { EdgeTime.clockOffset(it, sent, received) }
         l.setTime(System.currentTimeMillis(), tzOffsetMinutes())
         // A placement set on this phone while the Edge was away goes first.
@@ -595,7 +601,12 @@ class EdgeHub @Inject constructor(
                 heard()
             }
             is EdgeEvent.Status -> _state.update { it.copy(status = ev.status, statusAtMs = System.currentTimeMillis()) }
-            is EdgeEvent.Mode -> _state.update { s -> s.copy(status = s.status?.copy(mode = ev.mode)) }
+            is EdgeEvent.Mode -> {
+                _state.update { s -> s.copy(status = s.status?.copy(mode = ev.mode), device = s.device?.copy(lastMode = ev.mode.wire)) }
+                _state.value.device?.deviceId?.let { id -> if (ev.mode != EdgeMode.UNKNOWN) scope.launch { dao.setLastMode(id, ev.mode.wire) } }
+            }
+            is EdgeEvent.MeshRx, is EdgeEvent.MeshTx, is EdgeEvent.MeshNodeHeard, is EdgeEvent.MeshRoute,
+            is EdgeEvent.MeshWaypointHeard, is EdgeEvent.MeshRemote, is EdgeEvent.MeshTakHeard -> _meshEvents.tryEmit(ev)
             else -> Unit
         }
     }
