@@ -176,6 +176,7 @@ internal fun NowContent(
     val edge = state.edge
     ScreenColumn(top = SotreusTheme.spacing.screenH) {
         Header(state, onPlace, onRoute)
+        snap.lowBatteryPct?.let { CaveatBox(stringResource(R.string.now_radio_conditions), stringResource(R.string.now_low_battery, it)) }
         snap.conditionNotes.forEach { note -> CaveatBox(stringResource(R.string.now_radio_conditions), note) }
         if (snap.conditionNotes.any { it.contains("flood", true) }) GhostButton(stringResource(R.string.now_hide_burst), onHideBurst)
         Column(verticalArrangement = Arrangement.spacedBy(SotreusTheme.spacing.xl)) {
@@ -236,7 +237,7 @@ private fun Header(state: NowUiState, onPlace: () -> Unit, onRoute: () -> Unit) 
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             MonoLabel(
-                if (areaText != null && !animate && state.hereCode != null) stringResource(R.string.now_place_kicker_with_code, state.hereCode!!)
+                if (areaText != null && !animate && state.hereCode != null) stringResource(R.string.now_place_kicker_with_code, state.hereCode)
                 else stringResource(
                     when {
                         areaText != null && animate -> R.string.now_place_kicker_unsaved

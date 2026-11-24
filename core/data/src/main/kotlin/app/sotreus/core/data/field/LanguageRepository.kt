@@ -6,6 +6,7 @@ import android.content.res.Configuration
 import android.content.res.Resources
 import app.sotreus.core.data.di.ApplicationScope
 import app.sotreus.core.data.settings.SettingsRepository
+import app.sotreus.core.model.AppBuildInfo
 import app.sotreus.intelligence.fieldwatch.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
@@ -20,7 +21,7 @@ import javax.inject.Singleton
 @Serializable
 data class SotreusLanguageFile(
     val format: String = "sotreus-language", val formatVersion: Int = 1,
-    val language: String, val languageTag: String = "en", val writtenFor: String = "1.1.1",
+    val language: String, val languageTag: String = "en", val writtenFor: String = "",
     val strings: Map<String, String>,
 )
 data class AppliedLanguage(val tag: String = "en", val name: String = "English", val count: Int = 0, val revision: Int = 0, val localeTag: String = "en")
@@ -30,6 +31,7 @@ data class AppliedLanguage(val tag: String = "en", val name: String = "English",
 class LanguageRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val settings: SettingsRepository,
+    private val build: AppBuildInfo,
     @ApplicationScope scope: CoroutineScope,
 ) {
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = true; encodeDefaults = true }
@@ -64,7 +66,7 @@ class LanguageRepository @Inject constructor(
         lines.size
     }
 
-    fun template(): String = json.encodeToString(SotreusLanguageFile(language = "English template — replace with your language", strings = english))
+    fun template(): String = json.encodeToString(SotreusLanguageFile(language = "English template — replace with your language", writtenFor = build.versionName, strings = english))
 
     fun text(resources: Resources, id: Int, raw: CharSequence, quantity: Int? = null): CharSequence {
         if (overlay.isEmpty()) return raw

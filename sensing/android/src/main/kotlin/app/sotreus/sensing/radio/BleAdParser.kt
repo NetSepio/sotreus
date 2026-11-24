@@ -1,7 +1,8 @@
 /*
  * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit e71b9b2).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
- * Modified for Sotreus: package renamed; lint suppression documented on facts().
+ * Modified for Sotreus: package renamed; lint suppression documented on facts(). Structured facts from
+ * upstream commit 60c8ecc, shared with the Edge's advertisements by structured().
  */
 package app.sotreus.sensing.radio
 
@@ -11,9 +12,13 @@ import android.bluetooth.le.ScanRecord
 import android.bluetooth.le.ScanResult
 import android.os.Build
 import android.util.SparseArray
+import app.sotreus.intelligence.fieldwatch.AdvPayloadDecoder
+import app.sotreus.intelligence.fieldwatch.Bthome
+import app.sotreus.intelligence.fieldwatch.Matter
 import app.sotreus.intelligence.fieldwatch.MfgRecord
 import app.sotreus.intelligence.fieldwatch.RadioFacts
 import app.sotreus.intelligence.fieldwatch.ServiceDataRecord
+import app.sotreus.intelligence.fieldwatch.Sidewalk
 import app.sotreus.intelligence.fieldwatch.toHexUpper
 import java.util.UUID
 
@@ -49,8 +54,16 @@ object BleAdParser {
             deviceClass = deviceClass,
             mfgRecords = mfg,
             serviceData = serviceData,
-        )
+        ).structured(parsed.uuids)
     }
+
+    /** [RadioFacts] with what the advertisement's structured data says (HomeKit, Matter, Sidewalk, BTHome). */
+    fun RadioFacts.structured(serviceUuids: List<String>): RadioFacts = copy(
+        homekit = AdvPayloadDecoder.homekitFacts(mfgRecords),
+        matter = Matter.read(serviceData),
+        sidewalk = Sidewalk.read(mfgRecords, serviceUuids),
+        bthome = Bthome.read(serviceData),
+    )
 
     data class Parsed(
         val flags: Int? = null,
@@ -139,9 +152,6 @@ object BleAdParser {
         if (flags and 0x10 != 0) add("Simultaneous LE + BR/EDR (Host)")
         if (isEmpty()) add("0x%02X".format(flags))
     }.joinToString(", ")
-
-    fun mfgDecodedFields(record: MfgRecord): List<Pair<String, String>> =
-        app.sotreus.intelligence.fieldwatch.AdvPayloadDecoder.decodeManufacturer(record).map { it.label to it.value }
 
     private fun manufacturerRecords(record: ScanRecord?): List<MfgRecord> {
         val data: SparseArray<ByteArray> = record?.manufacturerSpecificData ?: return emptyList()

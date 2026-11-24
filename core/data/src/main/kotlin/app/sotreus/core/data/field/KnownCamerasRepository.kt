@@ -42,7 +42,7 @@ enum class CameraList(val url: String, val fileName: String, val approxBytes: Lo
     /** United States license plate readers, from the FlockHopper / DeFlock export. */
     PLATES("https://data.dontgetflocked.com/cameras.geojson.gz", "plates.bin", 37_748_018L),
     /** Speed, red-light, gunshot and other cameras, published by Fieldwatch. */
-    OTHERS("https://raw.githubusercontent.com/OffGridPete/Fieldwatch/main/dist/fieldwatch-sensors.geojson.gz", "sensors.bin", 616_965L),
+    OTHERS("https://raw.githubusercontent.com/OffGridPete/Fieldwatch/main/dist/fieldwatch-sensors.geojson.gz", "sensors.bin", 627_143L),
 }
 
 data class CameraListState(

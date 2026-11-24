@@ -1,5 +1,5 @@
 /*
- * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit e71b9b2).
+ * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit 60c8ecc).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
  * Modified for Sotreus: package renamed.
  */
@@ -251,6 +251,26 @@ object SignatureCandidates {
             "$prefix*"
         }
     }
+
+    /**
+     * House, phone, and computer names that are not a product. DESKTOP-, LAPTOP-,
+     * and WIN- sit with the Direct / Android / Guest prefixes.
+     */
+    internal fun reservedNameHead(name: String): Boolean {
+        val raw = name.trim().uppercase()
+        if (raw.startsWith("DESKTOP-") || raw.startsWith("LAPTOP-") || raw.startsWith("WIN-")) return true
+        val head = raw.takeWhile { it.isLetterOrDigit() }
+        return head in SKIP_PREFIX || isOverbroadCreateName(raw)
+    }
+
+    /** Service id for a catalog draft. Generic GATT and beacon UUIDs are left out. */
+    internal fun usefulServiceShort(uuid: String): String? {
+        val key = serviceUuidRule(uuid) ?: return null
+        if (key in GENERIC_UUID) return null
+        return key
+    }
+
+    internal fun broadCompany(id: Int): Boolean = id in BROAD_COMPANY
 
     /** Create-from-device used to emit DIRECT* / ANDROID* globs. Those are every Direct AP. */
     internal fun isOverbroadCreateName(text: String): Boolean {
@@ -539,7 +559,7 @@ object SignatureCandidates {
     }
 
     private fun colorFor(kind: SignatureClass): Int = when (kind) {
-        SignatureClass.MESH -> 0
+        SignatureClass.MESH, SignatureClass.TWO_WAY -> 0
         SignatureClass.SURVEILLANCE, SignatureClass.DRONE -> 1
         SignatureClass.HACKING -> 2
         SignatureClass.WEARABLE, SignatureClass.BODYWORN, SignatureClass.BEACON, SignatureClass.FINDER -> 3
@@ -549,7 +569,7 @@ object SignatureCandidates {
         SignatureClass.SIGNAGE, SignatureClass.THERMOSTAT, SignatureClass.LOCK,
         SignatureClass.OTHER,
         -> 6
-        SignatureClass.LAW_ENFORCEMENT, SignatureClass.VEHICLE -> 7
+        SignatureClass.LAW_ENFORCEMENT, SignatureClass.VEHICLE, SignatureClass.MILITARY -> 7
         SignatureClass.HEALTH -> 8
     }
 
@@ -565,15 +585,7 @@ object SignatureCandidates {
     private fun distinctRadios(members: List<LogRadio>): List<LogRadio> =
         members.distinctBy { it.key }
 
-    private fun uuidShort(raw: String): String? {
-        val hex = raw.filter { it.isLetterOrDigit() }.uppercase()
-        val short = when {
-            hex.length == 4 -> hex
-            hex.length >= 8 -> hex.substring(4, 8)
-            else -> return null
-        }
-        return short
-    }
+    private fun uuidShort(raw: String): String? = serviceUuidRule(raw)
 
     private fun isSkippedPrefix(prefix: String): Boolean {
         val p = prefix.trim().uppercase().removePrefix("[").removeSuffix("]")

@@ -2,6 +2,59 @@
 
 All notable changes to Sotreus Android. Versions follow `versionName` in `app/build.gradle.kts`.
 
+## 1.3.1 — 2026-11-24
+
+Brings the signature catalog, the matching engine and the advertisement decoders up to Fieldwatch
+1.2.2 (upstream commit `60c8ecc`).
+
+### Added
+
+- Signature catalog 118 (from 98): about 110 new device families, including two-way radios, dash
+  cameras, TVs, appliances, vehicles and hearing aids, and corrected ones (Find My, Pebblebee,
+  Brilliant and Even glasses, Meta Quest apart from Meta glasses, DJI's older DroneID beacon). Two
+  new kinds: two-way radios and military equipment.
+- Read what more advertisements say: HomeKit category and pairing, Matter setup, BTHome sensor
+  readings, Amazon Sidewalk, Exposure Notification, whether a SmartTag is with its owner, and what a
+  Wi-Fi network says about itself (kind, internet, venue). A radio's page lists them, and Now shows
+  the short ones.
+- Remote ID: operational status, an emergency an aircraft declares, the authentication type it
+  claims (never checked) and the French Direct Remote ID plate. Makers from more serial numbers.
+- Separated finder tags (Field tools, off by default): an Attention item when a tag that says it is
+  away from its owner is heard for 30 minutes at three places at least 100 m apart. A SmartTag is
+  followed across address changes. Only the minutes and the number of places are kept.
+- Note groups of aircraft (Context sources, off by default): a line when five or more Remote ID
+  aircraft are first heard within 30 seconds.
+- Battery saver at low battery (Sensors, off by default): at 10, 15, 20 or 30% and not charging,
+  this phone scans in Battery saver and Now says so. The chosen scan intensity is kept.
+- Import and export signatures as RSI-1 files (`.rsi`). Signatures from other publishers stay apart
+  from the bundled ones, rules this version does not know are kept but never match, and a file made
+  for a newer version says so.
+
+### Fixed
+
+- A Bluetooth or Wi-Fi result without a signal reading was stored and ranked as the strongest radio
+  in range, and reached the proximity check. It now waits for a real reading.
+- A Journey, a Sit or the Edge link started while Sotreus was in the background could be refused by
+  Android 14 and newer because of the location service type. It now runs without location and asks
+  again when Sotreus is on screen; its notification says so.
+- Stop reporting 2402 MHz for Bluetooth: neither Android nor the Edge measures the channel.
+- Apple Continuity types were named one off (Handoff, Instant Hotspot, AirPlay); Find My and Find Hub
+  no longer claim more than their length says.
+- A Bluetooth service whose number only contains FFFA is no longer taken for Remote ID.
+- Keep Remote ID messages that only carry a status or an authentication type, and what an aircraft
+  said before it sent its ID.
+- A Wi-Fi Remote ID element from the Edge keeps the maker number the Edge sent.
+- Bluetooth-only signature rules no longer match Wi-Fi radios, and a hidden-network rule no longer
+  matches Bluetooth.
+
+### Changed
+
+- The English language template covers the Edge and Mesh screens added since 1.1.4; the 26 community
+  packs are rebuilt from Fieldwatch 1.2.2, from about 120 to about 210 lines each.
+- Exported signatures and language templates carry the real app version.
+- Move the database to schema 15 (from 14); existing data is kept. Bump the Android version to 1.3.1
+  (code 10). Build with Android Gradle Plugin 9.5.1.
+
 ## 1.3.0 — 2026-11-13
 
 ### Added

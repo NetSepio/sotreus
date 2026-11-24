@@ -9,6 +9,7 @@ import app.sotreus.core.database.dao.PlaceDao
 import app.sotreus.core.database.dao.SessionDao
 import app.sotreus.core.model.SotreusSettings
 import app.sotreus.core.model.SessionKind
+import app.sotreus.intelligence.LowBattery
 import app.sotreus.sensing.PermissionGroup
 import app.sotreus.sensing.RadioHub
 import app.sotreus.sensing.RadioPermissions
@@ -22,7 +23,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -34,6 +38,7 @@ import javax.inject.Singleton
  * under the foreground [app.sotreus.core.data.service.ObservationService]). Never in the background
  * otherwise. Scanning needs the radio permissions unless simulated radios are on.
  */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @Singleton
 class ObservationController @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
@@ -52,6 +57,7 @@ class ObservationController @Inject constructor(
     private val edgeTagger: app.sotreus.core.data.edge.EdgeLocationTagger,
     private val autoPlaces: AutoPlaceTracker,
     private val autoPlaceSorter: AutoPlaceSorter,
+    private val battery: app.sotreus.sensing.BatterySource,
     @ApplicationScope private val scope: CoroutineScope,
 ) {
     /** What runs the sensing: the phone's radios, the Edge, or nothing. */
@@ -87,6 +93,13 @@ class ObservationController @Inject constructor(
     fun setBoost(on: Boolean) {
         boost.value = on
     }
+    /** Battery saver at low battery (Sensors): the battery percentage while it applies, else null. */
+    private val lowBattery: kotlinx.coroutines.flow.Flow<Int?> = settingsRepository.settings.map { it.lowBatteryPct }.distinctUntilChanged().flatMapLatest { level ->
+        if (level == 0) flowOf(null) else battery.readings.scan(false to null as Int?) { (slowed, _), r ->
+            LowBattery.slowed(level, r.percent, r.charging, slowed) to r.percent
+        }.map { (slowed, percent) -> if (slowed) percent ?: level else null }
+    }.distinctUntilChanged()
+
     private val _observing = MutableStateFlow(false)
     val observing: StateFlow<Boolean> = _observing.asStateFlow()
     private var settings = SotreusSettings()
@@ -141,7 +154,7 @@ class ObservationController @Inject constructor(
                 val onEdge = source == app.sotreus.core.model.SensingSource.EDGE && d != null
                 val mesh = d != null && d.lastMode == app.sotreus.edge.protocol.EdgeMode.MESH.wire
                 // In Mesh mode the Edge hears no devices: there is nothing for travel tagging to tag.
-                Triple(onEdge, onEdge && !mesh && d!!.deployment == app.sotreus.core.model.EdgeDeployment.TRAVEL && d.phoneTagging, mesh)
+                Triple(onEdge, onEdge && !mesh && d.deployment == app.sotreus.core.model.EdgeDeployment.TRAVEL && d.phoneTagging, mesh)
             }.distinctUntilChanged().collect { (onEdge, travel, mesh) ->
                 // The link service runs while the Edge is the sensor, and in Mesh mode for the mesh (V3).
                 edgeSource.value = onEdge || mesh
@@ -233,7 +246,7 @@ class ObservationController @Inject constructor(
         }
         scope.launch {
             var wasSimulated = false
-            combine(settingsRepository.settings, combine(foreground, app.sotreus.core.data.service.ObservationService.running, app.sotreus.core.data.service.EdgeLinkService.running, travelTagging, meshLink) { fg, service, _, _, mesh -> Triple(fg, service, mesh) }, sessions.observeActive(), permissions.access, boost) { s, visibility, session, access, boosted ->
+            combine(settingsRepository.settings, combine(foreground, app.sotreus.core.data.service.ObservationService.running, app.sotreus.core.data.service.EdgeLinkService.running, travelTagging, meshLink) { fg, service, _, _, mesh -> Triple(fg, service, mesh) }, sessions.observeActive(), permissions.access, combine(boost, lowBattery) { b, low -> b to low }) { s, visibility, session, access, (boosted, low) ->
                 val (fg, service, mesh) = visibility
                 settings = s
                 sessionLocates = session != null && (session.geotag || (session.kind == SessionKind.JOURNEY && s.journeyMovement))
@@ -256,7 +269,15 @@ class ObservationController @Inject constructor(
                 val wanted = (fg || (session != null && service) || (useEdge && linkService)) && canSense
                 // The mesh needs the link whatever senses: while visible, in a session, or under the link service.
                 val link = (wanted && useEdge) || (mesh && !s.simulatedRadios && (fg || service || linkService) && access.canConnectEdge && access.bluetoothOn)
-                Plan(wanted, s.simulatedRadios, if (boosted) app.sotreus.core.model.ScanIntensity.PERFORMANCE else s.scanIntensity, useEdge, link)
+                // The proximity check the owner just opened comes first; otherwise low battery slows this phone's scans.
+                val saving = low != null && !boosted && !useEdge && !s.simulatedRadios && s.scanIntensity != app.sotreus.core.model.ScanIntensity.SAVER
+                pipeline.lowBatteryPct = if (saving) low else null
+                val intensity = when {
+                    boosted -> app.sotreus.core.model.ScanIntensity.PERFORMANCE
+                    saving -> app.sotreus.core.model.ScanIntensity.SAVER
+                    else -> s.scanIntensity
+                }
+                Plan(wanted, s.simulatedRadios, intensity, useEdge, link)
             }.distinctUntilChanged().collectLatest { (wanted, simulated, intensity, useEdge, link) ->
                 // Location first: the place must reflect where the phone is before anything is tagged.
                 // Cancelled (by collectLatest) if the app leaves the foreground while waiting for a fix.
@@ -300,7 +321,7 @@ class ObservationController @Inject constructor(
                 sessions.observeActive(),
             ) { fg, observing, s, access, session ->
                 val serviceLocates = session != null && (session.geotag || (session.kind == SessionKind.JOURNEY && s.journeyMovement))
-                val wanted = fg && observing && !serviceLocates && (s.placeByLocation || s.plusCodeTags || s.trackerStopHistory || s.livePath) &&
+                val wanted = fg && observing && !serviceLocates && (s.placeByLocation || s.plusCodeTags || s.trackerStopHistory || s.separatedTags || s.livePath) &&
                     PermissionGroup.LOCATION in access.granted && access.locationOn
                 wanted to s.livePath
             }.distinctUntilChanged().collectLatest { (on, fast) ->

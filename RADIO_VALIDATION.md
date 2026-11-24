@@ -80,7 +80,7 @@ updating the prior e71b9b2 import selectively rather than replacing Sotreus' rad
 
 | Priority | Recommendation implemented | Sotreus integration |
 |---|---|---|
-| High | Catalog and recognition corrections | Catalog 98 (since 1.1.4), narrowed Flock tests, current Chipolo matching, Polar/GoPro disambiguation, richer payload decoders |
+| High | Catalog and recognition corrections | Catalog 118 (since 1.3.1), narrowed Flock tests, current Chipolo matching, Polar/GoPro disambiguation, richer payload decoders |
 | High | Scanner recovery and callback isolation | Radio/provider broadcasts, Location off/on quiet window, malformed record/callback guards, foreground session restoration |
 | Medium | Local crash recovery | Java/native exit notes where available, redaction, copy/Continue gate, no automatic upload |
 | Medium | Seven-day tracker stops | Separate opt-in, public finder address or explicit UAS ID, two samples, accurate nonmock fixes, eight stops/400 identifiers, deletion and retention |
@@ -130,6 +130,38 @@ controlled interference trials were not performed. Partial translations need hum
 ATAK packages are structurally checked; interoperability needs an actual ATAK client trial.
 The live map displays the phone's path, not the positions of nearby radios, and can reveal that
 path even while coordinate text is masked.
+
+## Version 1.3.1 integration
+
+Synced from Fieldwatch `24562fb` (1.1.41, catalog 98) to `60c8ecc` (1.2.2, catalog 118).
+
+| Area | Sotreus integration |
+|---|---|
+| Catalog and engine | Catalog 118; Bluetooth-only and hidden-network rules; unknown rules kept but never match; RSI-1 files |
+| Decoders | HomeKit, Matter, BTHome, Sidewalk, Exposure Notification, SmartTag, Wi-Fi Interworking, Find My and Find Hub lengths |
+| Remote ID | Status, declared emergency (held 10 s), authentication type (not checked), French Direct Remote ID |
+| Readings | No-reading packets stay out of trails, evidence, encounters and averages; no Bluetooth frequency |
+| Opt-in, off by default | Separated finder tags, groups of aircraft, Battery saver at low battery |
+| Services | Location service type falls back to connected device when Android refuses it, and is asked for again on screen |
+
+The upstream decoder and engine tests came across with the files they cover. **1,015 Gradle test
+executions** and **10 Python tests** passed with zero failures, with lint, both debug APKs and the
+generic release R8 step. The schema 14→15 migration was checked against the exported schemas.
+
+Checked on the Seeker (Android 16) on 2026-11-24, with the solanaMobile debug build installed over an
+earlier debug build (labelled 1.2.0, schema 14) and its data kept:
+
+| Check | Observed result |
+|---|---|
+| Actual schema 14→15 upgrade | Database check ok; no observation, encounter or entity missing; 86,919 Edge records kept |
+| Start and browsing | No crash; phone scanning resumed |
+| Stored readings | None at 0 dBm or above, or at −127 dBm or below |
+| Signatures, Sensors, Field tools, Context sources | Catalog 118 with 364 signatures, schema v15, the three new choices off |
+| Decoded rows | A Wi-Fi network's page lists its elements |
+| Location "Used for" line | Read "Scan APIs only · Places"; corrected afterwards, the correction not yet seen on the phone |
+
+Not checked: an upgrade from the released 1.3.0 package, the other decoders against known devices,
+Remote ID, the opt-in features in use, the location-type fallback, and the Edge (out of reach).
 
 ## Field test matrix before release
 

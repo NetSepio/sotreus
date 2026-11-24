@@ -46,6 +46,7 @@ import app.sotreus.core.ui.WarningBanner
 import app.sotreus.core.ui.ageShort
 import app.sotreus.core.ui.clockTime
 import app.sotreus.core.ui.dayLabel
+import app.sotreus.intelligence.fieldwatch.Rssi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -301,8 +302,9 @@ private fun RemoteIdTab(state: ContextUiState, navigate: (Any) -> Unit) {
                 InfoRow(
                     title = remoteIdTitle(d.maker, d.selfId, d.uasId),
                     subtitle = listOfNotNull(
+                        d.emergency?.let { stringResource(R.string.ctx_rid_emergency) },
                         stringResource(if (d.radio == app.sotreus.intelligence.fieldwatch.RadioKind.WIFI) R.string.ctx_rid_wifi else R.string.ctx_rid_ble),
-                        stringResource(R.string.ctx_rssi, d.rssi),
+                        d.rssi.takeIf(Rssi::measured)?.let { stringResource(R.string.ctx_rssi, it) },
                         altitude(d.altM),
                         stringResource(R.string.ctx_heard_ago, ageShort(state.now - d.lastSeenMs)),
                     ).joinToString(" · "),
@@ -319,7 +321,10 @@ private fun RemoteIdTab(state: ContextUiState, navigate: (Any) -> Unit) {
             earlier.forEach { r ->
                 InfoRow(
                     title = remoteIdTitle(r.title.ifBlank { null }, null, r.subjectId),
-                    subtitle = stringResource(R.string.ctx_rid_recent_row, r.source, dayLabel(r.atMs, state.now), clockTime(r.endMs ?: r.atMs)),
+                    subtitle = listOfNotNull(
+                        stringResource(R.string.ctx_rid_emergency).takeIf { declaredEmergency(r) },
+                        stringResource(R.string.ctx_rid_recent_row, r.source, dayLabel(r.atMs, state.now), clockTime(r.endMs ?: r.atMs)),
+                    ).joinToString(" · "),
                     onClick = { navigate(RemoteIdRoute(r.subjectId)) },
                 ) { ProvenanceChip(Provenance.SENSED) }
             }

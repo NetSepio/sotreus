@@ -1,10 +1,12 @@
 /*
- * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit e71b9b2).
+ * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit 60c8ecc).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
+ * Modified for Sotreus: package renamed.
  */
 package app.sotreus.intelligence.fieldwatch
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SignatureListSortTest {
@@ -31,10 +33,34 @@ class SignatureListSortTest {
         )
         val groups = fleets.groupedByClass()
         assertEquals(
-            listOf("Home IoT", "Public safety", "Vehicle"),
+            SignatureClass.visible.map { it.label() }.sortedBy { it.lowercase() },
             groups.map { it.first.label() },
         )
-        assertEquals(listOf("AirLink", "Axon"), groups[1].second.map { it.name })
+        assertTrue(groups.none { it.first == SignatureClass.BODYWORN })
+        assertEquals(listOf("Amazon"), groups.single { it.first == SignatureClass.HOME }.second.map { it.name })
+        assertEquals(
+            listOf("AirLink", "Axon"),
+            groups.single { it.first == SignatureClass.LAW_ENFORCEMENT }.second.map { it.name },
+        )
+        assertEquals(emptyList<String>(), groups.single { it.first == SignatureClass.MILITARY }.second.map { it.name })
+    }
+
+    @Test
+    fun emptyCatalogStillListsEveryClass() {
+        val groups = emptyList<Fleet>().groupedByClass()
+        assertEquals(SignatureClass.visible.size, groups.size)
+        assertTrue(groups.all { it.second.isEmpty() })
+        assertEquals(
+            SignatureClass.visible.map { it.label() }.sortedBy { it.lowercase() },
+            groups.map { it.first.label() },
+        )
+    }
+
+    @Test
+    fun bodyWornRowFoldsIntoWearables() {
+        val groups = listOf(fleet("fleet-old", "Old body-worn", SignatureClass.BODYWORN)).groupedByClass()
+        assertEquals(listOf("Old body-worn"), groups.single { it.first == SignatureClass.WEARABLE }.second.map { it.name })
+        assertTrue(groups.none { it.first == SignatureClass.BODYWORN })
     }
 
     @Test
@@ -117,8 +143,8 @@ class SignatureListSortTest {
     @Test
     fun testWatchPhraseMatchesFinderExample() {
         assertEquals("finder tags", testWatchPhrase(AlertVoiceWhat.CLASS))
-        assertEquals("Apple AirTags", testWatchPhrase(AlertVoiceWhat.SIGNATURE))
-        assertEquals("finder tags, Apple AirTags", testWatchPhrase(AlertVoiceWhat.BOTH))
+        assertEquals("Find My (AirTag or other Apple)", testWatchPhrase(AlertVoiceWhat.SIGNATURE))
+        assertEquals("finder tags, Find My (AirTag or other Apple)", testWatchPhrase(AlertVoiceWhat.BOTH))
     }
 
     private fun sampleDevice(fleetIds: Set<String>) = Sighting(

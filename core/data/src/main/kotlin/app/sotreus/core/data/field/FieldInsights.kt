@@ -22,6 +22,8 @@ import javax.inject.Singleton
 class FieldInsights @Inject constructor(private val stops: TrackerStopDao, private val sessions: SessionDao, private val classifier: app.sotreus.intelligence.SignatureClassifier) {
     private val pairing = PairingFlood()
     private val wifi = WifiBeaconFlood()
+    private val groups = RemoteIdSwarm()
+    private var droneFleets: Pair<Long, Map<String, String>> = -1L to emptyMap()
     private val seen = LinkedHashMap<String, Long>()
     private val mutex = Mutex()
     private var lastEvent = 0L
@@ -62,6 +64,27 @@ class FieldInsights @Inject constructor(private val stops: TrackerStopDao, priva
         if (now - lastPrune >= 60_000) {
             stops.prune(now - PlaceMemory.WINDOW_MS); stops.pruneMemory(now - PlaceMemory.WINDOW_MS); stops.capAll(); lastPrune = now
             synchronized(this) { seen.entries.removeAll { now - it.value > 15 * 60_000 } }
+        }
+    }
+
+    /** Many Remote ID aircraft first heard at once (opt-in): a line while it lasts, and a session note. */
+    val groupNotice: String? get() = groups.notice.value?.line()
+
+    /** Aircraft already on the air when observing starts are not a new group. */
+    fun startRemoteIds(known: List<String>) = groups.beginSession(known)
+    fun stopRemoteIds() = groups.endSession()
+
+    suspend fun remoteIds(live: List<Sighting>, now: Long, sessionId: Long?, enabled: Boolean) {
+        if (droneFleets.first != classifier.revision) {
+            droneFleets = classifier.revision to classifier.fleets.filter { it.kind == SignatureClass.DRONE }.associate { it.id to it.name }
+        }
+        val out = groups.pass(
+            live, droneFleets.second.keys, now, enabled, RemoteIdSwarm.DEFAULT_MIN_IDS,
+            RemoteIdSwarm.DEFAULT_WINDOW_SEC * 1_000L, RemoteIdSwarm.DEFAULT_QUIET_MIN * 60_000L, droneFleets.second,
+        )
+        val line = groupNotice
+        if (out.beep && sessionId != null && line != null) {
+            sessions.insertEvent(SessionEventEntity(sessionId = sessionId, atMs = now, kind = SessionEventKind.SYSTEM_NOTE, text = line))
         }
     }
 

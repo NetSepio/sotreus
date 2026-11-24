@@ -24,6 +24,8 @@
     <string name="family_smart_home">Smart home</string>
     <string name="family_router">Router</string>
     <string name="family_mesh_radio">Mesh radio</string>
+    <string name="family_two_way_radio">Two-way radio</string>
+    <string name="family_military">Military equipment</string>
     <string name="family_phone_pc">Phone / PC</string>
     <string name="family_other">Other</string>
     <!-- Adjective forms for "%1$s-family …" -->
@@ -44,6 +46,8 @@
     <string name="family_adj_smart_home">Smart-home</string>
     <string name="family_adj_router">Router</string>
     <string name="family_adj_mesh_radio">Mesh-radio</string>
+    <string name="family_adj_two_way_radio">Two-way-radio</string>
+    <string name="family_adj_military">Military-equipment</string>
     <string name="family_adj_phone_pc">Phone/PC</string>
     <string name="family_adj_other">Other</string>
     <!-- "Finder tag family" -->
@@ -156,6 +160,9 @@
     <string name="export_action_raw">Export raw data</string>
     <string name="export_share">Share export</string>
     <string name="headline_journey_movement">Radio observed during your journey</string>
+    <string name="headline_separated_tag">Separated finder tag stayed with this phone</string>
+    <string name="reason_separated">Says it is away from its owner</string>
+    <string name="reason_separated_detail">Heard with this phone for %1$s min at %2$s places</string>
     <string name="reason_movement">Observed while you moved</string>
     <string name="reason_movement_detail">%1$s separated locations over %2$s min · %3$s m apart · %4$s samples</string>
     <string name="reason_address_continuity">Address continuity</string>

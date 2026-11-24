@@ -22,6 +22,8 @@ import app.sotreus.core.model.AttentionReason
 import app.sotreus.core.model.UserEntityState
 import app.sotreus.intelligence.Baseline
 import app.sotreus.intelligence.PlaceGeofence
+import app.sotreus.intelligence.fieldwatch.DecodedFacts
+import app.sotreus.intelligence.fieldwatch.FactRow
 import app.sotreus.intelligence.fieldwatch.Sighting
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -73,6 +75,9 @@ class EntityRepository @Inject constructor(
     fun liveSighting(id: String): Sighting? = pipeline.sighting(id)
     fun decodedFields(id: String): List<app.sotreus.intelligence.fieldwatch.DecodedFieldValue> =
         pipeline.sighting(id)?.let { app.sotreus.intelligence.fieldwatch.SignatureFieldDecoder.decodeSighting(it, classifier.fleets) }.orEmpty()
+
+    /** What the live radio's structured advertisement says; [masked] hides its identifiers. */
+    fun decodedFacts(id: String, masked: Boolean): List<FactRow> = pipeline.sighting(id)?.let { DecodedFacts.rows(it, masked) }.orEmpty()
 
     fun observeHistory(): Flow<List<HistoryEntity>> = combine(
         entities.observeAll(),

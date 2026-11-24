@@ -25,4 +25,17 @@ class LiveSightingsTest {
         assertTrue(live.upsert("a", random).randomized)
         assertFalse(live.upsert("a", random.copy(facts = RadioFacts(addressType = "Public"))).randomized)
     }
+
+    @Test fun aPacketWithoutAReadingIsNeverTheLoudest() {
+        val live = LiveSightings()
+        val unread = live.upsert("a", observation(1_000).copy(rssi = Rssi.wifiLevel(0)))
+        assertFalse(Rssi.measured(unread.rssi))
+        assertTrue(unread.rssiHistory.isEmpty())
+        val first = live.upsert("a", observation(2_000))
+        assertEquals(listOf(-60, -60, -60), listOf(first.rssi, first.rssiMin, first.rssiMax))
+        val again = live.upsert("a", observation(3_000).copy(rssi = 127))
+        assertEquals(listOf(-60, -60, -60), listOf(again.rssi, again.rssiMin, again.rssiMax))
+        assertEquals(3_000L, again.lastSeen)
+        assertEquals(1, again.rssiHistory.size)
+    }
 }

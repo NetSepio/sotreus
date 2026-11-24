@@ -42,6 +42,8 @@ object AttentionEngine {
         val displayName: String,
         val movement: JourneyMovement.Evidence? = null,
         val linkConfidence: Confidence = Confidence.LOW,
+        /** A finder tag that says it is away from its owner stayed with the listener. */
+        val separated: SeparatedTags.Evidence? = null,
     )
 
     data class Assessment(
@@ -79,9 +81,12 @@ object AttentionEngine {
             (1 - W_NOVELTY * novelty) * (1 - W_KNOWN * known)
         val ordinaryScore = ((1 - miss) * (0.5 + 0.5 * freshness)).coerceIn(0.0, 1.0)
         // Shared movement is assessed independently of recognisable product/vendor signatures.
-        val score = if (c.movement != null) maxOf(ordinaryScore, 0.70 * (0.5 + 0.5 * freshness)) else ordinaryScore
+        val moved = if (c.movement != null) maxOf(ordinaryScore, 0.70 * (0.5 + 0.5 * freshness)) else ordinaryScore
+        // So is a tag's own statement that it is away from its owner, once it has stayed with this phone.
+        val score = if (c.separated != null) maxOf(moved, 0.75 * (0.5 + 0.5 * freshness)) else moved
 
         val reasons = buildList {
+            c.separated?.let { s -> add(AttentionReason(AttentionReasonKind.SEPARATED_TAG, listOf(s.minutes.toString(), s.places.toString()))) }
             c.movement?.let { m ->
                 add(AttentionReason(AttentionReasonKind.OBSERVED_DURING_MOVEMENT,
                     listOf(m.locations.toString(), (m.durationMs / 60_000).toString(), m.separationM.toString(), m.samples.toString())))
@@ -113,6 +118,7 @@ object AttentionEngine {
         if (reasons.isEmpty()) return null
 
         val headline = when {
+            c.separated != null -> AttentionHeadline.SEPARATED_TAG
             c.movement != null -> AttentionHeadline.JOURNEY_MOVEMENT
             c.otherPlaces.isNotEmpty() -> AttentionHeadline.CROSS_LOCATION_REENCOUNTER
             tag > 0 -> AttentionHeadline.TAGGED_REENCOUNTERED

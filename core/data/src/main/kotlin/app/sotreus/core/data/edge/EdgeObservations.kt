@@ -14,6 +14,7 @@ import app.sotreus.intelligence.fieldwatch.Observation
 import app.sotreus.intelligence.fieldwatch.RadioFacts
 import app.sotreus.intelligence.fieldwatch.VendorIeRecord
 import app.sotreus.sensing.radio.BleAdParser
+import app.sotreus.sensing.radio.BleAdParser.structured
 import app.sotreus.intelligence.fieldwatch.RadioKind as FwKind
 
 /**
@@ -59,14 +60,15 @@ object EdgeObservations {
             deviceClass = adv.deviceClass ?: rsp.deviceClass,
             mfgRecords = mfg,
             serviceData = serviceData,
-        )
+        ).structured(uuids)
         return Observation(
             kind = FwKind.BLE,
             mac = b.address,
             name = name,
             rssi = rssi,
+            // The Edge does not report the advertising channel either: 0 is "not measured".
             channel = 0,
-            frequencyMhz = 2402,
+            frequencyMhz = 0,
             hiddenSsid = false,
             serviceUuids = uuids,
             manufacturerId = mfg.firstOrNull()?.companyId,
@@ -79,9 +81,11 @@ object EdgeObservations {
     }
 
     private fun ap(a: WifiApSighting, at: Long, rssi: Int): Observation {
-        val rid = Hex.decode(a.remoteIdHex)
-        // Remote ID vendor element from the OUI onward: FA 0B BC <type> <data>.
-        val ridIe = rid?.takeIf { it.size >= 4 }?.let { VendorIeRecord("FA:0B:BC", it[3].toInt() and 0xFF, Hex.encode(it.copyOfRange(4, it.size))) }
+        // Remote ID vendor element from the OUI onward: FA 0B BC <type> <data>, or another plate's OUI.
+        val ridIe = Hex.decode(a.remoteIdHex)?.takeIf { it.size >= 4 }?.let { b ->
+            val oui = (0..2).joinToString(":") { i -> "%02X".format(b[i].toInt() and 0xFF) }
+            VendorIeRecord(oui, b[3].toInt() and 0xFF, Hex.encode(b.copyOfRange(4, b.size)))
+        }
         return Observation(
             kind = FwKind.WIFI,
             mac = a.address,

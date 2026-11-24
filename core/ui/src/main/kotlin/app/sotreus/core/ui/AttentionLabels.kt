@@ -12,6 +12,7 @@ import app.sotreus.core.model.DeviceFamily
 @Composable
 @ReadOnlyComposable
 fun attentionHeadline(headline: AttentionHeadline, family: DeviceFamily?): String = when (headline) {
+    AttentionHeadline.SEPARATED_TAG -> stringResource(R.string.headline_separated_tag)
     AttentionHeadline.JOURNEY_MOVEMENT -> stringResource(R.string.headline_journey_movement)
     AttentionHeadline.CROSS_LOCATION_REENCOUNTER -> stringResource(R.string.headline_cross_location)
     AttentionHeadline.FAMILY_SIGNATURE_OBSERVED -> family?.let { stringResource(R.string.headline_family, familySignature(it)) }
@@ -23,6 +24,8 @@ fun attentionHeadline(headline: AttentionHeadline, family: DeviceFamily?): Strin
 /** Reason row text: bold title and a muted data detail (screen 05). */
 @Composable
 fun attentionReasonItem(r: AttentionReason): ReasonItem = when (r.kind) {
+    AttentionReasonKind.SEPARATED_TAG -> ReasonItem(stringResource(R.string.reason_separated),
+        r.args.takeIf { it.size == 2 }?.let { stringResource(R.string.reason_separated_detail, it[0], it[1]) }, r.strong)
     AttentionReasonKind.OBSERVED_DURING_MOVEMENT -> ReasonItem(stringResource(R.string.reason_movement),
         r.args.takeIf { it.size == 4 }?.let { stringResource(R.string.reason_movement_detail, it[0], it[1], it[2], it[3]) }, r.strong)
     AttentionReasonKind.ADDRESS_CONTINUITY -> ReasonItem(stringResource(R.string.reason_address_continuity),

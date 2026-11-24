@@ -46,6 +46,8 @@ data class AttentionSummary(val eventId: Long, val count: Int, val headlineName:
 data class LiveSnapshot(
     val atMs: Long = 0,
     val conditionNotes: List<String> = emptyList(),
+    /** Set while low battery has this phone's scans in Battery saver: the battery percentage. */
+    val lowBatteryPct: Int? = null,
     val observing: Boolean = false,
     val simulated: Boolean = false,
     val radios: List<LiveRadio> = emptyList(),

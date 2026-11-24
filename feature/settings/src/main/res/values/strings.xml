@@ -74,9 +74,6 @@
     <string name="kv_scan_no">No</string>
     <string name="kv_used_for">Used for</string>
     <string name="kv_scan_apis">Scan APIs only</string>
-    <string name="kv_used_for_places">Scan APIs · places</string>
-    <string name="kv_used_for_codes">Scan APIs · plus codes</string>
-    <string name="kv_used_for_places_codes">Scan APIs · places · plus codes</string>
     <string name="kv_last_fix">Last fix</string>
     <string name="kv_locating">Getting a fix…</string>
     <string name="kv_session_geotag">Session geotag</string>
@@ -98,9 +95,16 @@
     <string name="kv_on_names_kept">On · names kept</string>
     <string name="wifi_note_edge">Your Edge listens to 2.4 GHz Wi-Fi on channels 1 to 13 in turn, so access points and probe requests show live.</string>
     <string name="wifi_note_edge_one_channel">While on Wi-Fi, your Edge listens to Wi-Fi on one channel only.</string>
+    <string name="used_scan_apis">Scan APIs</string>
     <string name="used_places">Places</string>
     <string name="used_codes">Plus codes</string>
     <string name="used_edge_tagging">Edge tagging</string>
+    <string name="used_finder_tags">Finder tags</string>
+    <string name="low_battery_title">Battery saver at low battery</string>
+    <string name="low_battery_off">Off</string>
+    <string name="low_battery_value">%1$d%%</string>
+    <string name="low_battery_sub">At or below this level, and not charging, scanning uses Battery saver.</string>
+    <string name="low_battery_now">Battery at %1$d%%: scanning in Battery saver now.</string>
     <string name="used_nothing">Not used</string>
     <string name="scan_intensity">Scan intensity</string>
     <string name="intensity_saver">Saver</string>
@@ -252,6 +256,8 @@
     <string name="privacy_clear_vendor_cache_body">Remove all saved online vendor results. Observations, labels and local identification stay.</string>
     <string name="field_tools_title">Field tools</string>
     <string name="field_tools_lead">Local evidence tools. Each location or network feature is a separate choice.</string>
+    <string name="field_separated">Separated finder tags</string>
+    <string name="field_separated_sub">Adds an Attention item when a tag that says it is away from its owner is heard for 30 minutes, at 3 places at least 100 m apart. Uses this phone’s location while Sotreus is open or a Journey uses it. Only the minutes and the number of places are kept.</string>
     <string name="field_stops">Remember tracker stops</string>
     <string name="field_stops_sub">Save where this phone heard a tracker with a confirmed stable identifier. Up to eight stops, for seven days. Coordinates are stored separately from routes. Unknown and rotating BLE addresses are skipped.</string>
     <string name="field_clear_stops">Clear tracker stop history</string>
@@ -304,14 +310,15 @@
     <string name="signatures_restore">Restore bundled signatures</string>
     <string name="signatures_import_title">Apply signature pack?</string>
     <string name="signatures_import_body">This changes device classifications. Existing observations, labels and the vendor database remain. Review the source of this file before importing.</string>
-    <string name="signatures_restore_body">Remove imported signature changes and restore bundled catalog 98. Labels, observations and vendor data remain.</string>
+    <string name="signatures_restore_body">Remove imported signature changes and restore bundled catalog %1$d. Labels, observations and vendor data remain.</string>
     <string name="field_open_path">Open live path</string>
     <string name="field_spoof">Additional spoofing checks</string>
     <string name="field_spoof_sub">Compare independent position, motion and system network-time evidence. A single mismatch does not establish spoofing.</string>
     <string name="field_low">Low</string>
     <string name="field_medium">Medium</string>
     <string name="field_high">High</string>
-    <string name="signatures_catalog">Fieldwatch catalog 98 · %1$d signatures</string>
+    <string name="signatures_catalog">Fieldwatch catalog %1$d · %2$d signatures</string>
+    <string name="signatures_newer">This file is newer than this version of Sotreus. Parts it does not know are left out.</string>
     <string name="signatures_preview_count">%1$d signatures · catalog %2$d</string>
     <!-- Known cameras (Fieldwatch lists, OpenStreetMap data) -->
     <string name="field_cameras_title">Known cameras</string>

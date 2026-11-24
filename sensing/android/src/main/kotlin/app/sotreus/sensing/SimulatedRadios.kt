@@ -94,7 +94,7 @@ class SimulatedRadios @Inject constructor(private val location: LocationSource) 
         name = r.name,
         rssi = rssi,
         channel = if (r.kind == RadioKind.WIFI) channelOf(r.freq) else 0,
-        frequencyMhz = if (r.kind == RadioKind.WIFI) r.freq else 2402,
+        frequencyMhz = if (r.kind == RadioKind.WIFI) r.freq else 0,
         hiddenSsid = false,
         serviceUuids = r.uuids,
         manufacturerId = r.companyId,
@@ -125,7 +125,7 @@ class SimulatedRadios @Inject constructor(private val location: LocationSource) 
             else -> remoteIdSystem(baseLat, baseLon)
         }.let { if (tick % 8 == 6) remoteIdSelf("Simulated survey flight") else it }
         return Observation(
-            kind = RadioKind.BLE, mac = DRONE_MAC, name = "", rssi = -74 + Random.nextInt(-3, 4), channel = 0, frequencyMhz = 2402,
+            kind = RadioKind.BLE, mac = DRONE_MAC, name = "", rssi = -74 + Random.nextInt(-3, 4), channel = 0, frequencyMhz = 0,
             hiddenSsid = false, serviceUuids = listOf("FFFA"), manufacturerId = null, manufacturerDataHex = "", rawHex = "", extras = "",
             at = at, fresh = true,
             facts = RadioFacts(

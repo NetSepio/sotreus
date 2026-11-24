@@ -302,6 +302,12 @@ data class ContextEventEntity(
     @ColumnInfo(name = "height_reference") val heightReference: Int? = null,
     @ColumnInfo(name = "eu_category") val euCategory: String? = null,
     @ColumnInfo(name = "eu_class") val euClass: String? = null,
+    /** Remote ID: the ASTM operational status broadcast (3 = emergency). */
+    val status: Int? = null,
+    /** Remote ID: the ASTM authentication type the aircraft claims; never checked. */
+    @ColumnInfo(name = "auth_type") val authType: Int? = null,
+    /** Remote ID: the words of an emergency self-ID, empty when it sent none; null when it sent no such message. */
+    @ColumnInfo(name = "emergency_text") val emergencyText: String? = null,
     @ColumnInfo(name = "distance_km") val distanceKm: Double? = null,
     @ColumnInfo(name = "session_id") val sessionId: Long? = null,
     @ColumnInfo(name = "entity_id") val entityId: String? = null,

@@ -38,9 +38,16 @@ import app.sotreus.intelligence.AttentionEngine
 import app.sotreus.intelligence.Classification
 import app.sotreus.intelligence.Fingerprint
 import app.sotreus.intelligence.PlusCode
+import app.sotreus.intelligence.SeparatedTags
 import app.sotreus.intelligence.SignatureClassifier
+import app.sotreus.intelligence.fieldwatch.FrenchRid
 import app.sotreus.intelligence.fieldwatch.Observation
+import app.sotreus.intelligence.fieldwatch.PayloadLocation
+import app.sotreus.intelligence.fieldwatch.Rssi
 import app.sotreus.intelligence.fieldwatch.Sighting
+import app.sotreus.intelligence.fieldwatch.TrackerWatch
+import app.sotreus.intelligence.fieldwatch.serviceUuidRule
+import app.sotreus.intelligence.fieldwatch.withLiveDecode
 import app.sotreus.sensing.RadioAccess
 import app.sotreus.sensing.RadioStatus
 import kotlinx.coroutines.CoroutineScope
@@ -99,6 +106,7 @@ class ObservationPipeline @Inject constructor(
     private val sessionEventKeys = HashSet<String>()
     private val attentionIds = HashMap<String, Long>()
     private val movement = JourneyMovement()
+    private val separated = SeparatedTags()
     private var movementEnabled = false
     private var stopHistoryEnabled = false
     private var placeChangedAtMs = 0L
@@ -126,6 +134,9 @@ class ObservationPipeline @Inject constructor(
 
     /** V2: set while the Edge is the sensor. Supplies origin and the Edge's location for live samples. */
     @Volatile var edgeLocator: EdgeLiveLocator? = null
+
+    /** Set while low battery has this phone's scans in Battery saver. */
+    @Volatile var lowBatteryPct: Int? = null
 
     /** Wi-Fi keys the Edge reported as clients asking for networks (probe requests). */
     private val wifiClients = HashSet<String>()
@@ -161,15 +172,20 @@ class ObservationPipeline @Inject constructor(
         insights.hear(observation, simulated, location.latest.value?.speedMps)
         val kind = if (observation.kind == FwKind.WIFI) RadioKind.WIFI else RadioKind.BLE
         val key = (if (simulated) SIMULATED_PREFIX else "") + Fingerprint.key(kind, observation.mac)
+        if (!simulated) separated.hear(key, observation)
         synchronized(lock) {
             val s = sightings.upsert(key, observation)
             if (simulated) simulatedIds += key
             if (observation.kind == FwKind.BLE || observation.fresh) {
-                val trail = trails.getOrPut(key) { ArrayDeque() }
-                val last = trail.peekLast()
-                if (last == null || s.lastSeen - last.first >= TRAIL_STEP_MS) trail.addLast(s.lastSeen to observation.rssi)
-                while (trail.isNotEmpty() && s.lastSeen - trail.first.first > TRAIL_WINDOW_MS) trail.removeFirst()
-                dirty += key
+                // A packet without a signal reading is heard, but it has no loudness to follow.
+                if (Rssi.measured(observation.rssi)) {
+                    val trail = trails.getOrPut(key) { ArrayDeque() }
+                    val last = trail.peekLast()
+                    if (last == null || s.lastSeen - last.first >= TRAIL_STEP_MS) trail.addLast(s.lastSeen to observation.rssi)
+                    while (trail.isNotEmpty() && s.lastSeen - trail.first.first > TRAIL_WINDOW_MS) trail.removeFirst()
+                }
+                // Evidence, encounters and averages all carry a reading: a radio joins them once one packet had one.
+                if (Rssi.measured(s.rssi)) dirty += key
             }
         }
     }
@@ -184,6 +200,8 @@ class ObservationPipeline @Inject constructor(
 
     suspend fun onStart(now: Long) = mutex.withLock {
         movement.clear()
+        separated.clear()
+        insights.startRemoteIds(synchronized(lock) { sightings.live.values.mapNotNull { it.payloadUasId } })
         runStartMs = now
         windowStartMs = activeSession?.startedAtMs ?: now
         windowPresence.clear()
@@ -196,6 +214,8 @@ class ObservationPipeline @Inject constructor(
         placeTracker.touch(now)
         openEncounters.clear()
         movement.clear()
+        separated.clear()
+        insights.stopRemoteIds()
     }
 
     /** Selected place changed (or the pipeline is starting): load its name and baseline. */
@@ -218,6 +238,7 @@ class ObservationPipeline @Inject constructor(
             tagPlusCodes = settings.plusCodeTags
             locateAll = settings.autoPlaces == true
             stopHistoryEnabled = settings.trackerStopHistory
+            separated.turn(settings.separatedTags)
             insights.tick(now, activeSession?.id, location.latest.value?.speedMps)
             placeByLocation = settings.currentPlaceByLocation
             bindSession(now)
@@ -225,6 +246,10 @@ class ObservationPipeline @Inject constructor(
             if (movementEnabled != detectMovement) movement.clear()
             movementEnabled = detectMovement
             if (tickCount % 2 == 0L) flushLocked(now)
+            insights.remoteIds(
+                synchronized(lock) { sightings.live.values.filter { it.key !in simulatedIds && now - it.lastSeen <= REMOTE_ID_LIVE_MS } },
+                now, activeSession?.id, settings.remoteIdGroups && settings.remoteIdEnabled && settings.contextEnabled,
+            )
             if (tickCount % 15 == 0L) assessAttention(now, settings)
             if (now - baselineLoadedAt > BASELINE_REFRESH_MS) {
                 currentPlace?.let { baseline = placeTracker.baseline(it.id) }
@@ -254,8 +279,7 @@ class ObservationPipeline @Inject constructor(
         }
         batch = batch.map { row ->
             val matched = row.copy(fleetIds = classified[row.key]?.second?.signatureIds.orEmpty())
-            val decoded = app.sotreus.intelligence.fieldwatch.PayloadLocation.applySticky(matched, classifier.fleets)
-            val enriched = decoded.copy(liveDecode = app.sotreus.intelligence.fieldwatch.SignatureFieldDecoder.liveChips(decoded, classifier.fleets))
+            val enriched = PayloadLocation.applySticky(matched, classifier.fleets).withLiveDecode(classifier.fleets)
             synchronized(lock) { if (sightings.live[row.key]?.lastSeen == row.lastSeen) sightings.live[row.key] = enriched }
             enriched
         }
@@ -277,6 +301,7 @@ class ObservationPipeline @Inject constructor(
         } } }
 
         val edge = edgeLocator
+        if (separated.enabled) separated.pass(batch.filter { it.key !in simulatedIds }, setAside(), accurateSpot(now, edge), now)
         val located = ArrayList<Pair<String, TaggedLocation>>()
         for (s in batch) {
             val fix = location.at(s.lastSeen)
@@ -342,6 +367,20 @@ class ObservationPipeline @Inject constructor(
             )
         }
         if (session != null) recordSession(session, batch, brandNew.map { it.id }.toSet(), now)
+    }
+
+    /** Radios the owner labelled Mine, Expected or Ignore. */
+    private fun setAside(): Set<String> = labels.values.filter {
+        it.userState == UserEntityState.MINE || it.userState == UserEntityState.EXPECTED || it.userState == UserEntityState.IGNORE
+    }.mapTo(HashSet()) { it.id }
+
+    /** Where the listener is now, only from a fresh accurate fix that moves with the owner. */
+    private fun accurateSpot(now: Long, edge: EdgeLiveLocator?): TrackerWatch.Spot? {
+        if (edge != null) {
+            return edge.locate(now)?.takeIf { it.source != LocationSource.EDGE_FIXED && it.accuracyM <= SPOT_ACCURACY_M }?.let { TrackerWatch.Spot(it.lat, it.lon) }
+        }
+        val fix = location.at(now) ?: return null
+        return if (fix.mock || (fix.accuracyM ?: return null) > SPOT_ACCURACY_M) null else TrackerWatch.Spot(fix.lat, fix.lon)
     }
 
     /** [PlaceTracker.heldPlace] for the selected place now. */
@@ -569,7 +608,7 @@ class ObservationPipeline @Inject constructor(
     // --- Attention ------------------------------------------------------------------------
 
     private suspend fun assessAttention(now: Long, settings: SotreusSettings) {
-        val live = synchronized(lock) { sightings.live.values.toList() }
+        val live = synchronized(lock) { sightings.live.values.filter { Rssi.measured(it.rssi) } }
         val windowMinutes = (now - windowStartMs) / 60_000.0
         val placeName = currentPlace?.name
         val session = activeSession
@@ -597,6 +636,7 @@ class ObservationPipeline @Inject constructor(
                     staleAfterSeconds = settings.staleHoldSeconds.toDouble(),
                     displayName = label?.userName ?: s.name.ifBlank { c?.signatureName ?: "" },
                     movement = if (movementEnabled) movement.evidence(s.key, now) else null,
+                    separated = separated.evidence(s.key),
                     linkConfidence = rows[s.key]?.linkConfidence ?: Confidence.LOW,
                 ),
             ) ?: return@forEach
@@ -649,7 +689,7 @@ class ObservationPipeline @Inject constructor(
     private fun publish(now: Long, status: RadioStatus, access: RadioAccess?, settings: SotreusSettings, observing: Boolean) {
         val staleBleMs = settings.staleHoldSeconds * 1000L
         val wifiWindow = status.wifiScanIntervalMs * 2 + 5_000
-        val list = synchronized(lock) { sightings.live.values.toList() }
+        val list = synchronized(lock) { sightings.live.values.filter { Rssi.measured(it.rssi) } }
         val radios = list.mapNotNull { s ->
             val kind = if (s.kind == FwKind.WIFI) RadioKind.WIFI else RadioKind.BLE
             val age = now - s.lastSeen
@@ -688,13 +728,14 @@ class ObservationPipeline @Inject constructor(
                 vendor = s.vendor,
                 wifiRole = if (kind == RadioKind.WIFI) (if (synchronized(lock) { s.key in wifiClients }) WifiRole.CLIENT else WifiRole.AP) else null,
                 guessConfidence = c?.guessConfidence ?: Confidence.LOW,
-                hasRemoteId = s.facts.vendorIes.any { it.oui == "FA:0B:BC" } || s.serviceUuids.any { it.contains("FFFA", ignoreCase = true) },
+                hasRemoteId = s.facts.vendorIes.any { it.oui == "FA:0B:BC" || FrenchRid.isPlate(it) } || s.serviceUuids.any { serviceUuidRule(it) == "FFFA" },
             )
         }
         val confirmedPlace = currentPlace?.takeIf { it.id == heldPlace(now) }
         _snapshot.value = LiveSnapshot(
             atMs = now,
-            conditionNotes = listOfNotNull(insights.notice.value?.line(), gnss.state.value.notice?.line),
+            conditionNotes = listOfNotNull(insights.notice.value?.line(), gnss.state.value.notice?.line, insights.groupNotice),
+            lowBatteryPct = lowBatteryPct.takeIf { observing },
             observing = observing,
             simulated = status.simulated,
             radios = radios,
@@ -728,6 +769,7 @@ class ObservationPipeline @Inject constructor(
         }
         rows.clear()
         movement.clear()
+        separated.clear()
         classified.clear()
         openEncounters.clear()
         visitFirstSeen.clear()
@@ -754,6 +796,10 @@ class ObservationPipeline @Inject constructor(
         private const val WIFI_EVENT_SPACING_MS = 2 * 60_000L
         private const val REPEAT_WINDOW_MS = 6 * 60 * 60_000L
         private const val BASELINE_REFRESH_MS = 5 * 60_000L
+
+        /** A place for a separated tag needs a fix this good: places count from 100 m apart. */
+        private const val SPOT_ACCURACY_M = 25f
+        private const val REMOTE_ID_LIVE_MS = 2 * 60_000L
 
         fun isSimulated(entityId: String) = entityId.startsWith(SIMULATED_PREFIX)
     }

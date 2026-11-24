@@ -1,5 +1,5 @@
 /*
- * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit e71b9b2).
+ * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit 60c8ecc).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
  * Modified for Sotreus: package renamed.
  */
@@ -763,11 +763,6 @@ internal object ApVendorOuis {
     /** 3 MA-L — Compex Systems Pte Ltd; COMPEX INCORPORATED; Compex */
     val COMPEX = listOf(
         "00:40:29", "00:80:48", "04:F0:21",
-    )
-
-    /** 1 MA-L — Inseego Wireless, Inc (ex-Novatel Wireless) */
-    val NOVATEL = listOf(
-        "28:80:A2",
     )
 
     /** 2 MA-L — Utility, Inc */

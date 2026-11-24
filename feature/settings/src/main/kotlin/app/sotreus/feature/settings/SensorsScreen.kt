@@ -45,6 +45,7 @@ import app.sotreus.core.ui.shareFile
 import app.sotreus.feature.settings.diagnostics.DeviceInfo
 import app.sotreus.feature.settings.diagnostics.DeviceInfoSource
 import app.sotreus.sensing.PermissionGroup
+import app.sotreus.intelligence.LowBattery
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -85,6 +86,7 @@ class SensorsViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SensorsUiState(device = device, build = build))
 
     fun setIntensity(i: ScanIntensity) = viewModelScope.launch { settings.setScanIntensity(i) }
+    fun setLowBattery(pct: Int) = viewModelScope.launch { settings.setLowBatteryPct(pct) }
 
     /** Redacted by default (handoff §26, §34): no addresses, SSIDs, coordinates, tokens or wallet. */
     fun exportDiagnostics(onReady: (android.net.Uri) -> Unit) = viewModelScope.launch {
@@ -103,6 +105,7 @@ class SensorsViewModel @Inject constructor(
             put("observing", s.snapshot.observing)
             put("simulatedRadios", s.settings.simulatedRadios)
             put("scanIntensity", s.settings.scanIntensity.name)
+            put("lowBatterySlowed", s.snapshot.lowBatteryPct != null)
             put("bleRunning", st.bleRunning)
             put("bleResultsPerMinute", st.bleResultsPerMinute)
             put("bleLastResultAgeMs", st.bleLastResultMs.takeIf { it > 0 }?.let { s.snapshot.atMs - it })
@@ -211,14 +214,12 @@ internal fun SensorsScreen(onBack: () -> Unit, vm: SensorsViewModel = hiltViewMo
                         },
                     ).joinToString(" · ").ifEmpty { stringResource(R.string.used_nothing) }
                 } else {
-                    stringResource(
-                        when {
-                            state.settings.placeByLocation && state.settings.plusCodeTags -> R.string.kv_used_for_places_codes
-                            state.settings.placeByLocation -> R.string.kv_used_for_places
-                            state.settings.plusCodeTags -> R.string.kv_used_for_codes
-                            else -> R.string.kv_scan_apis
-                        },
-                    )
+                    listOfNotNull(
+                        stringResource(R.string.used_scan_apis),
+                        stringResource(R.string.used_places).takeIf { state.settings.placeByLocation },
+                        stringResource(R.string.used_codes).takeIf { state.settings.plusCodeTags },
+                        stringResource(R.string.used_finder_tags).takeIf { state.settings.separatedTags || state.settings.trackerStopHistory },
+                    ).let { used -> if (used.size == 1) stringResource(R.string.kv_scan_apis) else used.joinToString(" · ") }
                 },
                 stringResource(R.string.kv_last_fix) to when {
                     snap.locating -> stringResource(R.string.kv_locating)
@@ -245,6 +246,16 @@ internal fun SensorsScreen(onBack: () -> Unit, vm: SensorsViewModel = hiltViewMo
                     ),
                     state.settings.scanIntensity,
                     vm::setIntensity,
+                )
+                MonoLabel(stringResource(R.string.low_battery_title))
+                SegmentedToggle(
+                    LowBattery.CHOICES.map { it to if (it == 0) stringResource(R.string.low_battery_off) else stringResource(R.string.low_battery_value, it) },
+                    state.settings.lowBatteryPct,
+                    vm::setLowBattery,
+                )
+                Text(
+                    snap.lowBatteryPct?.let { stringResource(R.string.low_battery_now, it) } ?: stringResource(R.string.low_battery_sub),
+                    style = SotreusTheme.typography.bodyS, color = SotreusTheme.colors.textMuted,
                 )
             }
             Text(stringResource(R.string.stale_after, state.settings.staleHoldSeconds), style = SotreusTheme.typography.bodyS, color = SotreusTheme.colors.textMuted)
@@ -285,7 +296,7 @@ private fun EdgeSensorCards(live: app.sotreus.core.data.edge.EdgeLive, lastResul
         ),
     )
     val sniffing = wifi?.sniffing == true
-    val oneChannel = sniffing && wifi?.hopping == false
+    val oneChannel = sniffing && wifi.hopping == false
     SensorCard(
         title = stringResource(R.string.sensor_wifi),
         status = stringResource(
@@ -304,7 +315,7 @@ private fun EdgeSensorCards(live: app.sotreus.core.data.edge.EdgeLive, lastResul
         attention = oneChannel,
         rows = if (!sniffing) emptyList() else listOfNotNull(
             stringResource(R.string.kv_channels) to
-                if (oneChannel) stringResource(R.string.kv_channel_only, wifi!!.channel) else stringResource(R.string.kv_channels_all),
+                if (oneChannel) stringResource(R.string.kv_channel_only, wifi.channel) else stringResource(R.string.kv_channels_all),
             cfg?.let { stringResource(R.string.kv_access_points) to stringResource(if (it.wifiAps) R.string.kv_on else R.string.kv_off) },
             cfg?.let {
                 stringResource(R.string.kv_probe_requests) to stringResource(

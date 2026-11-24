@@ -1,12 +1,15 @@
 /*
  * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit e71b9b2).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
- * Modified for Sotreus: package renamed; NewApi suppression documented on ieBytes().
+ * Modified for Sotreus: package renamed; NewApi suppression documented on ieBytes(). Interworking and
+ * French Remote ID plates from upstream commit 60c8ecc.
  */
 package app.sotreus.sensing.radio
 
 import android.net.wifi.ScanResult
 import android.os.Build
+import app.sotreus.intelligence.fieldwatch.FrenchRid
+import app.sotreus.intelligence.fieldwatch.Interworking
 import app.sotreus.intelligence.fieldwatch.VendorIeRecord
 import app.sotreus.intelligence.fieldwatch.toHexUpper
 
@@ -16,6 +19,7 @@ object WifiIeParser {
         val security: String? = null,
         val vendorIes: List<VendorIeRecord> = emptyList(),
         val channelFromDs: Int? = null,
+        val interworking: Interworking? = null,
     )
 
     /** One raw information element: element id + payload bytes. */
@@ -42,6 +46,7 @@ object WifiIeParser {
         val vendor = ArrayList<VendorIeRecord>(4)
         val sec = ArrayList<String>(4)
         var ds: Int? = null
+        var interworking: Interworking? = null
         ies.forEach { ie ->
             val id = ie.id
             val bytes = ie.bytes
@@ -49,6 +54,10 @@ object WifiIeParser {
                 1, 50 -> rates += decodeRates(bytes)
                 3 -> if (bytes.isNotEmpty()) ds = bytes[0].toInt() and 0xFF
                 48 -> rsnSummary(bytes)?.let { sec += it }
+                107 -> interworking = Interworking.merge(
+                    interworking,
+                    runCatching { Interworking.parse(bytes) }.getOrNull(),
+                )
                 221 -> if (bytes.size >= 3) {
                     val oui = "%02X:%02X:%02X".format(
                         bytes[0].toInt() and 0xFF,
@@ -73,9 +82,33 @@ object WifiIeParser {
         return Parsed(
             rates = rates.distinct().joinToString(" ").ifBlank { null },
             security = sec.distinct().joinToString(" · ").ifBlank { cap.ifBlank { null } },
-            vendorIes = vendor.distinctBy { it.oui to it.type }.take(12),
+            vendorIes = collapseVendorIes(vendor),
             channelFromDs = ds,
+            interworking = interworking,
         )
+    }
+
+    /**
+     * One slot per OUI and type. The first copy stays, except a French plate:
+     * the later element in the same beacon replaces it.
+     */
+    private fun collapseVendorIes(vendor: List<VendorIeRecord>): List<VendorIeRecord> {
+        val out = ArrayList<VendorIeRecord>(minOf(12, vendor.size))
+        var frenchAt = -1
+        for (ie in vendor) {
+            if (FrenchRid.isPlate(ie)) {
+                if (frenchAt >= 0) {
+                    out[frenchAt] = ie
+                } else if (out.size < 12) {
+                    frenchAt = out.size
+                    out += ie
+                }
+                continue
+            }
+            if (out.any { it.oui == ie.oui && it.type == ie.type }) continue
+            if (out.size < 12) out += ie
+        }
+        return out
     }
 
     fun wifiStandardLabel(result: ScanResult): String? {

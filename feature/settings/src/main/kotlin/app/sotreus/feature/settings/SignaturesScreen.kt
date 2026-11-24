@@ -20,7 +20,7 @@ import app.sotreus.core.data.field.readImport
 import app.sotreus.core.designsystem.theme.SotreusTheme
 import app.sotreus.core.ui.*
 import app.sotreus.intelligence.SignatureClassifier
-import app.sotreus.intelligence.fieldwatch.SignaturePack
+import app.sotreus.intelligence.fieldwatch.ParsedSignaturePack
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +36,7 @@ class SignaturesViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
     val error = MutableStateFlow<String?>(null)
-    val pending = MutableStateFlow<SignaturePack?>(null)
+    val pending = MutableStateFlow<ParsedSignaturePack?>(null)
     private var pendingText = ""
     fun preview(uri: Uri) = viewModelScope.launch {
         error.value = null
@@ -52,7 +52,7 @@ class SignaturesViewModel @Inject constructor(
     fun cancel() { pendingText = ""; pending.value = null }
     fun restore() = viewModelScope.launch { runCatching { catalog.restore() }.onFailure { error.value = it.message } }
     fun export(ready: (Uri) -> Unit) = viewModelScope.launch {
-        runCatching { withContext(Dispatchers.IO) { exports.writeText("signatures.json", catalog.export()) } }
+        runCatching { withContext(Dispatchers.IO) { exports.writeText(SignatureCatalogRepository.EXPORT_NAME, catalog.export()) } }
             .onSuccess(ready).onFailure { error.value = it.message }
     }
 }
@@ -60,6 +60,7 @@ class SignaturesViewModel @Inject constructor(
 @Composable
 internal fun SignaturesScreen(onBack: () -> Unit, vm: SignaturesViewModel = hiltViewModel()) {
     val fleets by vm.catalog.fleets.collectAsStateWithLifecycle()
+    val version by vm.catalog.version.collectAsStateWithLifecycle()
     val error by vm.error.collectAsStateWithLifecycle()
     val pending by vm.pending.collectAsStateWithLifecycle()
     var restoring by remember { mutableStateOf(false) }
@@ -69,9 +70,9 @@ internal fun SignaturesScreen(onBack: () -> Unit, vm: SignaturesViewModel = hilt
     ScreenColumn(top = SotreusTheme.spacing.screenH) {
         BackTopBar(onBack = onBack)
         ScreenTitle(stringResource(R.string.signatures_title), lead = stringResource(R.string.signatures_lead))
-        MonoLabel(stringResource(R.string.signatures_catalog, fleets.size))
+        MonoLabel(stringResource(R.string.signatures_catalog, version, fleets.size))
         error?.let { WarningBanner(it) }
-        GhostButton(stringResource(R.string.signatures_import), { picker.launch(arrayOf("application/json", "text/plain")) })
+        GhostButton(stringResource(R.string.signatures_import), { picker.launch(SIGNATURE_TYPES) })
         GhostButton(stringResource(R.string.signatures_export), { vm.export { shareFile(context, it, "Sotreus signatures") } })
         GhostButton(stringResource(R.string.signatures_restore), { restoring = true })
         Column {
@@ -82,10 +83,14 @@ internal fun SignaturesScreen(onBack: () -> Unit, vm: SignaturesViewModel = hilt
             }
         }
     }
-    if (pending != null) ConfirmDialog(stringResource(R.string.signatures_import_title),
-        stringResource(R.string.signatures_import_body) + "\n" + stringResource(R.string.signatures_preview_count, pending!!.fleets.size, pending!!.catalogVersion),
-        stringResource(R.string.signatures_import), stringResource(app.sotreus.core.ui.R.string.core_ui_cancel), { vm.apply() }, vm::cancel)
-    if (restoring) ConfirmDialog(stringResource(R.string.signatures_restore), stringResource(R.string.signatures_restore_body),
+    pending?.let { p -> ConfirmDialog(stringResource(R.string.signatures_import_title),
+        stringResource(R.string.signatures_import_body) + "\n" + stringResource(R.string.signatures_preview_count, p.pack.fleets.size, p.pack.catalogVersion) +
+            if (p.newer) "\n" + stringResource(R.string.signatures_newer) else "",
+        stringResource(R.string.signatures_import), stringResource(app.sotreus.core.ui.R.string.core_ui_cancel), { vm.apply() }, vm::cancel) }
+    if (restoring) ConfirmDialog(stringResource(R.string.signatures_restore), stringResource(R.string.signatures_restore_body, SignatureCatalogRepository.STOCK_VERSION),
         stringResource(R.string.signatures_restore), stringResource(app.sotreus.core.ui.R.string.core_ui_cancel),
         { restoring = false; vm.restore() }, { restoring = false })
 }
+
+/** JSON, or an `.rsi` file, which file providers hand over as plain bytes. */
+private val SIGNATURE_TYPES = arrayOf("application/json", "text/plain", "application/octet-stream")

@@ -2,6 +2,7 @@
  * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit e71b9b2).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
  * Modified for Sotreus: package renamed; TAK default constants inlined (TAK publishing not ported).
+ * Signature rules, classes, serializers, UUID forms and Remote ID fields from upstream commit 60c8ecc.
  */
 package app.sotreus.intelligence.fieldwatch
 
@@ -9,14 +10,55 @@ import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonObject
 
-@Serializable
+/**
+ * A signature pack named a value this app does not know.
+ * The file is not applied. The screen asks for an app update first.
+ */
+class CatalogNeedsNewerApp(val token: String) : SerializationException(token)
+
+internal fun Throwable.needsNewerApp(): CatalogNeedsNewerApp? {
+    var current: Throwable? = this
+    val seen = HashSet<Throwable>()
+    while (current != null && seen.add(current)) {
+        if (current is CatalogNeedsNewerApp) return current
+        val message = current.message.orEmpty()
+        val marker = "does not contain element with name '"
+        val at = message.indexOf(marker)
+        if (at >= 0) {
+            val start = at + marker.length
+            val end = message.indexOf('\'', start)
+            val token = if (end > start) message.substring(start, end) else message
+            return CatalogNeedsNewerApp(token)
+        }
+        current = current.cause
+    }
+    return null
+}
+
+@Serializable(with = RadioKindSerializer::class)
 enum class RadioKind { WIFI, BLE }
+
+internal object RadioKindSerializer : KSerializer<RadioKind> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("RadioKind", PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: RadioKind) {
+        encoder.encodeString(value.name)
+    }
+
+    override fun deserialize(decoder: Decoder): RadioKind {
+        val raw = decoder.decodeString()
+        return RadioKind.entries.firstOrNull { it.name == raw } ?: throw CatalogNeedsNewerApp(raw)
+    }
+}
 
 @Serializable
 enum class ViewMode {
@@ -42,7 +84,7 @@ enum class LogFormat { CSV, JSON }
 enum class FilterLogic { AND, OR }
 
 /** Live filter / Signatures bulk on-off. Independent of [Fleet.colorIndex]. */
-@Serializable
+@Serializable(with = SignatureClassSerializer::class)
 enum class SignatureClass {
     FINDER,
     BEACON,
@@ -63,6 +105,8 @@ enum class SignatureClass {
     HOME,
     ISP,
     MESH,
+    TWO_WAY,
+    MILITARY,
     PHONE,
     OTHER,
     ;
@@ -87,6 +131,8 @@ enum class SignatureClass {
         HOME -> "Home IoT"
         ISP -> "ISP / routers"
         MESH -> "Mesh"
+        TWO_WAY -> "Two-way radios"
+        MILITARY -> "Military"
         PHONE -> "Phones / PCs"
         OTHER -> "Other"
     }
@@ -112,6 +158,8 @@ enum class SignatureClass {
         HOME -> "home I O T"
         ISP -> "I S P routers"
         MESH -> "mesh"
+        TWO_WAY -> "two-way radios"
+        MILITARY -> "military"
         PHONE -> "phones"
         OTHER -> "other"
     }
@@ -126,6 +174,20 @@ enum class SignatureClass {
     companion object {
         val visible: List<SignatureClass>
             get() = entries.filter { it != BODYWORN }
+    }
+}
+
+internal object SignatureClassSerializer : KSerializer<SignatureClass> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("SignatureClass", PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: SignatureClass) {
+        encoder.encodeString(value.name)
+    }
+
+    override fun deserialize(decoder: Decoder): SignatureClass {
+        val raw = decoder.decodeString()
+        return SignatureClass.entries.firstOrNull { it.name == raw } ?: SignatureClass.OTHER
     }
 }
 
@@ -188,8 +250,8 @@ fun spokenWatchPhrase(
 /** Test alert uses a Finder-tags / AirTags example so you can hear the mix without a live hit. */
 fun testWatchPhrase(what: AlertVoiceWhat): String = when (what) {
     AlertVoiceWhat.CLASS -> SignatureClass.FINDER.speechLabel()
-    AlertVoiceWhat.SIGNATURE -> speakableWatchName("Apple AirTags")
-    AlertVoiceWhat.BOTH -> "${SignatureClass.FINDER.speechLabel()}, ${speakableWatchName("Apple AirTags")}"
+    AlertVoiceWhat.SIGNATURE -> speakableWatchName("Find My (AirTag or other Apple)")
+    AlertVoiceWhat.BOTH -> "${SignatureClass.FINDER.speechLabel()}, ${speakableWatchName("Find My (AirTag or other Apple)")}"
 }
 
 @Serializable
@@ -220,7 +282,7 @@ enum class ListLine {
 
 enum class RssiTrend { UP_FAST, UP, FLAT, DOWN, DOWN_FAST, UNKNOWN }
 
-@Serializable
+@Serializable(with = RuleKindSerializer::class)
 enum class RuleKind {
     OUI,
     MAC_PREFIX,
@@ -235,7 +297,21 @@ enum class RuleKind {
     VENDOR_IE_OUI,
 }
 
-@Serializable
+internal object RuleKindSerializer : KSerializer<RuleKind> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("RuleKind", PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: RuleKind) {
+        encoder.encodeString(value.name)
+    }
+
+    override fun deserialize(decoder: Decoder): RuleKind {
+        val raw = decoder.decodeString()
+        return RuleKind.entries.firstOrNull { it.name == raw } ?: throw CatalogNeedsNewerApp(raw)
+    }
+}
+
+@Serializable(with = MatchRuleSerializer::class)
 data class MatchRule(
     val kind: RuleKind,
     val text: String = "",
@@ -243,6 +319,8 @@ data class MatchRule(
     val dataPrefixHex: String = "",
     val radio: RadioKind? = null,
     val enabled: Boolean = true,
+    /** Original object when [kind] or [radio] is not one this phone applies. */
+    val foreign: JsonObject? = null,
 )
 
 @Serializable
@@ -265,6 +343,12 @@ data class Fleet(
     /** Optional BLE cleartext field map. Null = no signature decode. */
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val decode: FleetDecode? = null,
+    /** Empty until a file names a publisher. A built-in row can be filled with fieldwatch. */
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val publisher: String = "",
+    /** Class token this phone does not know. Display uses [kind], which is then Other. */
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val kindRaw: String = "",
 ) {
     /** Decode fields only apply to BLE ads. Hide the editor on Wi-Fi-only signatures. */
     fun canHaveBleDecode(): Boolean {
@@ -273,12 +357,57 @@ data class Fleet(
     }
 }
 
-fun MatchRule.couldMatchBle(): Boolean = when (kind) {
-    RuleKind.HIDDEN_SSID, RuleKind.VENDOR_IE_OUI -> false
-    RuleKind.SERVICE_UUID, RuleKind.SERVICE_DATA, RuleKind.MANUFACTURER_ID, RuleKind.MANUFACTURER_DATA -> true
-    RuleKind.RADIO_KIND -> radio != RadioKind.WIFI
-    else -> radio != RadioKind.WIFI
+fun MatchRule.couldMatchBle(): Boolean {
+    if (foreign != null) return false
+    return when (kind) {
+        RuleKind.HIDDEN_SSID, RuleKind.VENDOR_IE_OUI -> false
+        RuleKind.SERVICE_UUID, RuleKind.SERVICE_DATA, RuleKind.MANUFACTURER_ID, RuleKind.MANUFACTURER_DATA -> true
+        RuleKind.RADIO_KIND -> radio != RadioKind.WIFI
+        else -> radio != RadioKind.WIFI
+    }
 }
+
+/**
+ * Omitted radio on a service or company rule is Bluetooth only.
+ * Omitted radio on a hidden network or a vendor IE is Wi-Fi only.
+ * Omitted radio on a name or address applies to both. An unknown radio does not apply.
+ */
+fun MatchRule.appliesTo(kind: RadioKind): Boolean {
+    if (foreign != null) return false
+    if (this.kind == RuleKind.RADIO_KIND) return radio == null || radio == kind
+    if (radio != null) return radio == kind
+    return when (this.kind) {
+        RuleKind.SERVICE_UUID, RuleKind.SERVICE_DATA,
+        RuleKind.MANUFACTURER_ID, RuleKind.MANUFACTURER_DATA,
+        -> kind == RadioKind.BLE
+        RuleKind.HIDDEN_SSID, RuleKind.VENDOR_IE_OUI -> kind == RadioKind.WIFI
+        else -> true
+    }
+}
+
+/** This phone can show and edit the signature. Hidden rows stay in the file. */
+fun Fleet.visibleOnPhone(): Boolean {
+    val enabledRules = rules.filter { it.enabled }
+    if (enabledRules.none { it.foreign == null }) return false
+    if (!matchAny && enabledRules.any { it.foreign != null }) return false
+    return true
+}
+
+/** Id written to a file. A second publisher is stored as publisher:id so the list stays unique. */
+fun Fleet.exportId(): String {
+    val prefix = "$publisher:"
+    return if (publisher.isNotEmpty() && id.startsWith(prefix)) id.removePrefix(prefix) else id
+}
+
+/** Phone export. Built-in rows with no publisher yet are fieldwatch. Custom rows stay blank. */
+fun Fleet.forExport(): Fleet = copy(
+    id = exportId(),
+    publisher = when {
+        publisher.isNotEmpty() -> publisher
+        builtIn -> SignaturePack.PUBLISHER
+        else -> ""
+    },
+)
 
 @Serializable(with = DecodeSourceSerializer::class)
 enum class DecodeSource {
@@ -403,6 +532,7 @@ data class FleetDecode(
      */
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val includeCompanyId: Boolean = false,
+    @Serializable(with = DecodeFieldListSerializer::class)
     val fields: List<DecodeField> = emptyList(),
 )
 
@@ -432,11 +562,16 @@ fun List<Fleet>.sortedForCatalog(sort: SignatureListSort): List<Fleet> = when (s
     )
 }
 
-fun List<Fleet>.groupedByClass(): List<Pair<SignatureClass, List<Fleet>>> =
-    groupBy { it.kind }
-        .toList()
-        .sortedBy { it.first.label().lowercase() }
-        .map { (kind, rows) -> kind to rows.sortedBy { it.name.lowercase() } }
+/**
+ * Signatures → Class A–Z. Every visible class is present, including one with
+ * no signatures. Body-worn folds into Wearables.
+ */
+fun List<Fleet>.groupedByClass(): List<Pair<SignatureClass, List<Fleet>>> {
+    val byKind = groupBy { it.kind.folded() }
+    return SignatureClass.visible
+        .sortedBy { it.label().lowercase() }
+        .map { kind -> kind to byKind[kind].orEmpty().sortedBy { it.name.lowercase() } }
+}
 
 /** Signature name + Extra attention text for every matched signature on this radio that has one. */
 fun Sighting.attentionNotes(fleets: List<Fleet>): List<Pair<String, String>> {
@@ -756,13 +891,50 @@ data class Sighting(
     val payloadHeading: Double? = null,
     val payloadSpeed: Double? = null,
     val payloadVspeed: Double? = null,
+    /** ASTM Auth. A later page keeps the page-0 header. A Location message leaves it. */
+    val payloadAuth: RemoteIdAuth? = null,
     /** Advertised fixes kept by the sit. Empty on a live radio that has not been saved into one. */
     val payloadTrail: List<PayloadFix> = emptyList(),
     /** Decoded labels a signature asked to show on the live row. Empty for every other radio. */
     val liveDecode: List<LiveDecodeChip> = emptyList(),
+    /** When the last packet that carried an aircraft latitude was read. */
+    val payloadAt: Long? = null,
+    /** Where this phone was at [payloadAt]. Null when that packet had no phone fix. */
+    val payloadPhoneLat: Double? = null,
+    val payloadPhoneLon: Double? = null,
+    /** When the last packet that carried an operator location was read. */
+    val payloadOpAt: Long? = null,
+    /** Where this phone was at [payloadOpAt]. */
+    val payloadOpPhoneLat: Double? = null,
+    val payloadOpPhoneLon: Double? = null,
+    /**
+     * Location status from this advertisement only.
+     * Null when this advertisement had no Location message. 0 is Undeclared, not missing.
+     * A later Basic ID clears it. It does not stick the way latitude does.
+     */
+    val payloadStatus: Int? = null,
+    /**
+     * Emergency self-ID text from this advertisement.
+     * Null when this advertisement did not send description type 1.
+     * Empty when that type arrived with no words. A later packet clears it.
+     */
+    val payloadEmergencyText: String? = null,
+    /**
+     * Samsung SmartTag privacy ID while the latest FD5A frame is separated.
+     * Not a device key. Null for with owner, unlabeled, and rejected frames.
+     */
+    val smartTagId: String? = null,
 ) {
     val displayName: String
         get() = name.ifBlank { if (hiddenSsid) "<hidden>" else mac }
+
+    /**
+     * Bluetooth row the detail page calls a random address.
+     * The local bit, or an address type of Random. Wi-Fi is never this.
+     */
+    fun randomBleAddress(): Boolean =
+        kind == RadioKind.BLE &&
+            (randomized || facts.addressType.equals("Random", ignoreCase = true))
 
     /** Custom name from Named radios, else advertised / hidden / MAC. */
     fun reportName(customNames: Map<String, String>): String {
@@ -845,7 +1017,8 @@ data class Sighting(
     }
 
     fun heardRssi(sort: StrengthSort, windowMs: Long, now: Long = System.currentTimeMillis()): Double {
-        return if (sort == StrengthSort.AVERAGE) averageRssi(windowMs, now) else rssi.toDouble()
+        if (sort == StrengthSort.AVERAGE) return averageRssi(windowMs, now)
+        return Rssi.rank(rssi)
     }
 
     fun sortRssi(
@@ -1024,21 +1197,56 @@ fun uuidShortOrFull(raw: String): String {
     }
 }
 
+private const val BT_BASE_TAIL = "00001000800000805F9B34FB"
+
 fun uuidAliases(raw: String): Set<String> {
     val hex = raw.filter { it.isLetterOrDigit() }.uppercase()
     val out = mutableSetOf(raw.uppercase(), hex)
     if (hex.length == 4) {
         out += "0x$hex"
+        out += "0000$hex"
         out += "0000$hex-0000-1000-8000-00805F9B34FB"
-        out += "0000${hex}00001000800000805F9B34FB"
+        out += "0000$hex$BT_BASE_TAIL"
         return out
     }
-    // 16-bit alias only for Bluetooth SIG base UUIDs (0000XXXX-0000-1000-8000-00805F9B34FB).
-    if (hex.length == 32 && hex.startsWith("0000") && hex.endsWith("00001000800000805F9B34FB")) {
-        val short = hex.substring(4, 8)
-        out += short
-        out += "0x$short"
-        out += "0000$short-0000-1000-8000-00805F9B34FB"
+    // 32-bit form is 8 hex. It maps onto the Bluetooth base. The 16-bit short
+    // is only the low half when the high half is 0000.
+    if (hex.length == 8) {
+        out += "$hex-0000-1000-8000-00805F9B34FB"
+        out += "$hex$BT_BASE_TAIL"
+        if (hex.startsWith("0000")) addBluetooth16(out, hex.substring(4, 8))
+        return out
+    }
+    if (hex.length == 32 && hex.endsWith(BT_BASE_TAIL)) {
+        val uuid32 = hex.substring(0, 8)
+        out += uuid32
+        out += "$uuid32-0000-1000-8000-00805F9B34FB"
+        if (hex.startsWith("0000")) addBluetooth16(out, hex.substring(4, 8))
     }
     return out
+}
+
+/**
+ * Text for a service-UUID rule. A Bluetooth 16-bit UUID becomes the 4-hex short.
+ * A 32-bit UUID whose top half is not 0000 stays 8 hex. Any other 128-bit UUID
+ * stays the full 32 hex. A proprietary UUID is not sliced down to four digits.
+ */
+fun serviceUuidRule(raw: String): String? {
+    val hex = raw.filter { it.isLetterOrDigit() }.uppercase()
+    return when {
+        hex.length == 4 -> hex
+        hex.length == 8 && hex.startsWith("0000") -> hex.substring(4, 8)
+        hex.length == 8 -> hex
+        hex.length == 32 && hex.startsWith("0000") && hex.endsWith(BT_BASE_TAIL) -> hex.substring(4, 8)
+        hex.length == 32 && hex.endsWith(BT_BASE_TAIL) -> hex.substring(0, 8)
+        hex.length == 32 -> hex
+        else -> null
+    }
+}
+
+private fun addBluetooth16(out: MutableSet<String>, short: String) {
+    out += short
+    out += "0x$short"
+    out += "0000$short-0000-1000-8000-00805F9B34FB"
+    out += "0000$short$BT_BASE_TAIL"
 }

@@ -36,6 +36,9 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
     private object Keys {
         val onboardingDone = booleanPreferencesKey("onboarding_done")
         val trackerStopHistory = booleanPreferencesKey("tracker_stop_history")
+        val separatedTags = booleanPreferencesKey("separated_tags")
+        val remoteIdGroups = booleanPreferencesKey("remote_id_groups")
+        val lowBatteryPct = intPreferencesKey("low_battery_pct")
         val gnssSpoofChecks = booleanPreferencesKey("gnss_spoof_checks")
         val gnssSensitivity = stringPreferencesKey("gnss_sensitivity")
         val gnssMonitoring = booleanPreferencesKey("gnss_monitoring")
@@ -109,6 +112,9 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         SotreusSettings(
             onboardingDone = p[Keys.onboardingDone] ?: d.onboardingDone,
             trackerStopHistory = p[Keys.trackerStopHistory] ?: d.trackerStopHistory,
+            separatedTags = p[Keys.separatedTags] ?: d.separatedTags,
+            remoteIdGroups = p[Keys.remoteIdGroups] ?: d.remoteIdGroups,
+            lowBatteryPct = p[Keys.lowBatteryPct]?.takeIf { it in app.sotreus.intelligence.LowBattery.CHOICES } ?: d.lowBatteryPct,
             gnssMonitoring = p[Keys.gnssMonitoring] ?: d.gnssMonitoring,
             gnssSpoofChecks = p[Keys.gnssSpoofChecks] ?: d.gnssSpoofChecks,
             gnssSensitivity = p[Keys.gnssSensitivity] ?: d.gnssSensitivity,
@@ -162,6 +168,9 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
 
     suspend fun current(): SotreusSettings = settings.first()
     suspend fun setTrackerStopHistory(on: Boolean) { store.edit { it[Keys.trackerStopHistory] = on } }
+    suspend fun setSeparatedTags(on: Boolean) { store.edit { it[Keys.separatedTags] = on } }
+    suspend fun setRemoteIdGroups(on: Boolean) { store.edit { it[Keys.remoteIdGroups] = on } }
+    suspend fun setLowBatteryPct(pct: Int) { if (pct in app.sotreus.intelligence.LowBattery.CHOICES) store.edit { it[Keys.lowBatteryPct] = pct } }
     suspend fun setGnssSpoofChecks(on: Boolean) { store.edit { it[Keys.gnssSpoofChecks] = on } }
     suspend fun setGnssSensitivity(level: String) { require(level in setOf("LOW", "MEDIUM", "HIGH")); store.edit { it[Keys.gnssSensitivity] = level } }
     suspend fun setGnssMonitoring(on: Boolean) { store.edit { it[Keys.gnssMonitoring] = on } }

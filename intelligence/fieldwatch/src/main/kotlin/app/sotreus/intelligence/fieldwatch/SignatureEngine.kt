@@ -1,7 +1,7 @@
 /*
- * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit ddc0d8c).
+ * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit 60c8ecc).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
- * Modified for Sotreus: package renamed; adapted to Sotreus modules.
+ * Modified for Sotreus: package renamed.
  */
 package app.sotreus.intelligence.fieldwatch
 
@@ -38,8 +38,10 @@ class SignatureEngine {
             dropProtocolIBeacon(hits, compiled)
             dropDjiWhenSpecificRow(hits)
             dropGoProWhenPolar(hits)
+            dropMetaGlassesWhenQuest(hits)
             dropAirTagsWhenAppleDevice(hits, device)
             dropCiscoWhenMeraki(hits)
+            dropAmazonWhenSidewalk(hits)
             byKey[device.key] = hits
         }
         applyClusters(devices, compiled, byKey, now)
@@ -60,10 +62,8 @@ class SignatureEngine {
             }
         }
         device.serviceUuids.take(3).forEach { uuid ->
-            val short = uuid.filter { it.isLetterOrDigit() }.uppercase().let { hex ->
-                if (hex.length >= 8) hex.substring(4, 8) else hex.take(4)
-            }
-            if (short.isNotBlank()) rules += MatchRule(RuleKind.SERVICE_UUID, text = short)
+            val id = serviceUuidRule(uuid) ?: return@forEach
+            rules += MatchRule(RuleKind.SERVICE_UUID, text = id)
         }
         device.manufacturerId?.let { id ->
             val prefix = device.manufacturerDataHex.take(2)
@@ -118,7 +118,8 @@ class SignatureEngine {
         val wifiPlans = ArrayList<Int>(fleets.size)
         val blePlans = ArrayList<Int>(fleets.size)
         fleets.forEachIndexed { idx, fleet ->
-            val active = fleet.rules.filter { it.enabled }
+            val blocked = !fleet.matchAny && fleet.rules.any { it.enabled && it.foreign != null }
+            val active = fleet.rules.filter { it.enabled && it.foreign == null }
             val other = ArrayList<FastRule>(8)
             active.forEach { rule ->
                 when (rule.kind) {
@@ -138,13 +139,16 @@ class SignatureEngine {
                 matchAny = fleet.matchAny,
                 otherRules = other,
                 rawRules = active,
+                blocked = blocked,
             )
-            when (radioScope(active)) {
-                RadioKind.WIFI -> wifiPlans += idx
-                RadioKind.BLE -> blePlans += idx
-                null -> {
-                    wifiPlans += idx
-                    blePlans += idx
+            if (!blocked && active.isNotEmpty()) {
+                when (radioScope(active)) {
+                    RadioKind.WIFI -> wifiPlans += idx
+                    RadioKind.BLE -> blePlans += idx
+                    null -> {
+                        wifiPlans += idx
+                        blePlans += idx
+                    }
                 }
             }
         }
@@ -234,12 +238,12 @@ class SignatureEngine {
         RuleKind.NAME_GLOB ->
             if (rule.text.isBlank()) null else FastRule.Glob(compileGlob(rule.text), rule.radio)
         RuleKind.SERVICE_UUID ->
-            if (rule.text.isBlank()) null else FastRule.Uuid(uuidAliases(rule.text), rule.radio)
+            if (rule.text.isBlank()) null else FastRule.Uuid(uuidAliases(rule.text), rule.radio ?: RadioKind.BLE)
         RuleKind.MANUFACTURER_ID ->
-            FastRule.MfgId(rule.companyId, rule.radio)
+            FastRule.MfgId(rule.companyId, rule.radio ?: RadioKind.BLE)
         RuleKind.MANUFACTURER_DATA -> {
             val prefix = hexOnly(rule.dataPrefixHex)
-            if (prefix.isEmpty()) null else FastRule.MfgData(rule.companyId, prefix, rule.radio)
+            if (prefix.isEmpty()) null else FastRule.MfgData(rule.companyId, prefix, rule.radio ?: RadioKind.BLE)
         }
         RuleKind.SERVICE_DATA -> {
             val prefix = hexOnly(rule.dataPrefixHex)
@@ -248,7 +252,7 @@ class SignatureEngine {
             else FastRule.SvcData(
                 aliases = aliases,
                 prefix = prefix,
-                radio = rule.radio,
+                radio = rule.radio ?: RadioKind.BLE,
                 contains = rule.text.isBlank() && prefix.isNotEmpty(),
             )
         }
@@ -273,10 +277,13 @@ class SignatureEngine {
     }
 
     private fun fleetHits(device: Sighting, plan: FleetPlan, ouiHit: Boolean): Boolean {
+        if (plan.blocked) return false
         if (plan.id == "fleet-ibeacon" && isTeslaPhoneKeyIBeacon(device)) return false
         if (plan.rawRules.isEmpty()) return false
         if (!plan.matchAny) {
-            return plan.rawRules.all { ruleHits(device, it) }
+            val applicable = plan.rawRules.filter { it.appliesTo(device.kind) }
+            if (applicable.isEmpty()) return false
+            return applicable.all { ruleHits(device, it) }
         }
         if (ouiHit) return true
         if (plan.otherRules.isEmpty()) return false
@@ -302,9 +309,22 @@ class SignatureEngine {
         if ("fleet-osmo" in hits || "fleet-dji-power" in hits) hits.remove("fleet-dji")
     }
 
+    /** Sidewalk uses Amazon's company ID plus the AMA UUID. Prefer that row over Amazon. */
+    private fun dropAmazonWhenSidewalk(hits: MutableSet<String>) {
+        if ("fleet-sidewalk" in hits) hits.remove("fleet-amazon")
+    }
+
     /** A Polar H10 advertises GoPro's heart-rate service FEA5. The strap stays Polar. */
     private fun dropGoProWhenPolar(hits: MutableSet<String>) {
         if ("fleet-polar" in hits) hits.remove("fleet-gopro")
+    }
+
+    /**
+     * Quest headsets advertise the same Meta company IDs and FEB8 as the glasses.
+     * A Quest name stays on the Quest row and does not take the glasses alert.
+     */
+    private fun dropMetaGlassesWhenQuest(hits: MutableSet<String>) {
+        if ("fleet-meta-quest" in hits) hits.remove("fleet-meta-glasses")
     }
 
     /**
@@ -346,9 +366,7 @@ class SignatureEngine {
     }
 
     private fun ruleHits(device: Sighting, rule: MatchRule): Boolean {
-        if (rule.kind != RuleKind.RADIO_KIND && rule.radio != null && device.kind != rule.radio) {
-            return false
-        }
+        if (!rule.appliesTo(device.kind)) return false
         return when (rule.kind) {
             RuleKind.OUI, RuleKind.MAC_PREFIX ->
                 MacUtil.matchesPrefix(device.mac, rule.text) ||
@@ -430,7 +448,10 @@ class SignatureEngine {
         now: Long,
     ) {
         compiled.plans.forEachIndexed { idx, plan ->
-            if (!plan.cluster) return@forEachIndexed
+            if (!plan.cluster || plan.blocked) return@forEachIndexed
+            if (plan.rawRules.isEmpty() && plan.fleet.rules.any { it.enabled && it.foreign != null }) {
+                return@forEachIndexed
+            }
             val fleet = plan.fleet
             val windowMs = (if (fleet.peerWindowSec <= 0) 60 else fleet.peerWindowSec) * 1000L
             val live = devices.filter { now - it.lastSeen <= windowMs }
@@ -526,6 +547,7 @@ class SignatureEngine {
         val matchAny: Boolean,
         val otherRules: List<FastRule>,
         val rawRules: List<MatchRule>,
+        val blocked: Boolean,
     )
 
     private class LongOui(
@@ -591,7 +613,8 @@ class SignatureEngine {
         }
 
         object Hidden : FastRule() {
-            override fun hits(device: Sighting): Boolean = device.hiddenSsid
+            override fun hits(device: Sighting): Boolean =
+                device.kind == RadioKind.WIFI && device.hiddenSsid
         }
 
         companion object {

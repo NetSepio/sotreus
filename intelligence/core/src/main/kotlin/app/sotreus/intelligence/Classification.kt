@@ -2,7 +2,6 @@ package app.sotreus.intelligence
 
 import app.sotreus.core.model.Confidence
 import app.sotreus.core.model.DeviceFamily
-import app.sotreus.intelligence.fieldwatch.DefaultCatalog
 import app.sotreus.intelligence.fieldwatch.DeviceExplain
 import app.sotreus.intelligence.fieldwatch.Fleet
 import app.sotreus.intelligence.fieldwatch.SignatureClass
@@ -26,7 +25,7 @@ data class Classification(
  * Wraps Fieldwatch's field-tested [SignatureEngine] and [DeviceExplain] with Sotreus families.
  * Catalog notes are not surfaced: Sotreus writes its own calm copy.
  */
-class SignatureClassifier(fleets: List<Fleet> = DefaultCatalog.fleets()) {
+class SignatureClassifier(fleets: List<Fleet> = StockCatalog.fleets) {
     @Volatile var fleets: List<Fleet> = fleets.filter { it.enabled }
         private set
     @Volatile var revision: Long = 0
@@ -82,6 +81,8 @@ class SignatureClassifier(fleets: List<Fleet> = DefaultCatalog.fleets()) {
             SignatureClass.HOME -> DeviceFamily.SMART_HOME
             SignatureClass.ISP -> DeviceFamily.ROUTER
             SignatureClass.MESH -> DeviceFamily.MESH_RADIO
+            SignatureClass.TWO_WAY -> DeviceFamily.TWO_WAY_RADIO
+            SignatureClass.MILITARY -> DeviceFamily.MILITARY
             SignatureClass.PHONE -> DeviceFamily.PHONE_PC
             SignatureClass.OTHER -> DeviceFamily.OTHER
         }

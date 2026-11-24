@@ -60,6 +60,7 @@ class ContextSourcesViewModel @Inject constructor(
         val cur = state.value.settings.satelliteGroups
         settings.setSatelliteGroups(if (on) cur + g else cur - g)
     }
+    fun setRemoteIdGroups(v: Boolean) = viewModelScope.launch { settings.setRemoteIdGroups(v) }
     fun setRemoteId(v: Boolean) = viewModelScope.launch { settings.setRemoteIdEnabled(v) }
     fun setEarthquakes(v: Boolean) = viewModelScope.launch { settings.setEarthquakesEnabled(v) }
     fun setEarthquakeRadius(v: Int) = viewModelScope.launch { settings.setEarthquakeRadiusKm(v) }
@@ -126,6 +127,7 @@ internal fun ContextSourcesScreen(onBack: () -> Unit, vm: ContextSourcesViewMode
 
         SectionHeader(stringResource(R.string.ctx_rid_section))
         SwitchRow(stringResource(R.string.ctx_rid_switch), s.remoteIdEnabled, { vm.setRemoteId(it) }, subtitle = stringResource(R.string.ctx_rid_switch_sub), enabled = on)
+        SwitchRow(stringResource(R.string.ctx_rid_groups), s.remoteIdGroups, { vm.setRemoteIdGroups(it) }, subtitle = stringResource(R.string.ctx_rid_groups_sub), enabled = on && s.remoteIdEnabled)
         CaveatBox(stringResource(R.string.ctx_rid_region_kicker), stringResource(R.string.ctx_rid_region_body))
 
         SectionHeader(stringResource(R.string.env_section))

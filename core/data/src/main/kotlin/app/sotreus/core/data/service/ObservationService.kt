@@ -16,10 +16,12 @@ import app.sotreus.core.data.R
 import app.sotreus.core.data.pipeline.PhoneLocation
 import app.sotreus.core.data.settings.SettingsRepository
 import app.sotreus.core.database.dao.SessionDao
+import app.sotreus.core.database.entity.SessionEntity
 import app.sotreus.core.database.entity.SessionLocationEntity
 import app.sotreus.core.model.SessionKind
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -39,6 +41,9 @@ class ObservationService : LifecycleService() {
 
     private var sessionJob: Job? = null
 
+    /** Android refused the location type to this start; asked again once Sotreus is on screen. */
+    private val locationRefused = MutableStateFlow(false)
+
     override fun onCreate() { super.onCreate(); running.value = true }
     override fun onDestroy() { running.value = false; super.onDestroy() }
 
@@ -52,7 +57,8 @@ class ObservationService : LifecycleService() {
 
         sessionJob?.cancel()
         sessionJob = lifecycleScope.launch {
-            combine(sessions.observeActive(), settings.settings) { active, s -> Triple(active, s.journeyMovement, s.livePath) }
+            val retry = combine(locationRefused, ForegroundGrant.visible()) { refused, visible -> refused && visible }
+            combine(sessions.observeActive(), settings.settings, retry) { active, s, again -> Wanted(active, s.journeyMovement, s.livePath, again) }
                 .distinctUntilChanged().collectLatest { (active, detectMovement, livePath) ->
                     if (active == null) {
                         stopSelf()
@@ -79,20 +85,24 @@ class ObservationService : LifecycleService() {
         val notification = NotificationCompat.Builder(this, Notifications.CHANNEL_OBSERVATION)
             .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
             .setContentTitle(getString(if (kind == SessionKind.JOURNEY) R.string.data_notification_journey else R.string.data_notification_sit))
-            .setContentText(getString(when {
-                geotag -> R.string.data_notification_session_geotag
-                moving -> R.string.data_notification_session_movement
-                else -> R.string.data_notification_session_text
-            }))
             .setOngoing(true)
             .setContentIntent(tap)
-            .build()
-        val type = if (Build.VERSION.SDK_INT >= 29) {
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or
-                (if (geotag || moving) ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION else 0)
-        } else 0 // Android 9 has foreground services without service types.
-        ServiceCompat.startForeground(this, Notifications.ID_SESSION, notification, type)
+        val wantsLocation = geotag || moving
+        val grant = ForegroundGrant.request(Build.VERSION.SDK_INT, wantsLocation) { type ->
+            // The notification says location is used only when Android granted it.
+            val located = wantsLocation && (Build.VERSION.SDK_INT < 29 || type and ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION != 0)
+            notification.setContentText(getString(when {
+                located && geotag -> R.string.data_notification_session_geotag
+                located -> R.string.data_notification_session_movement
+                else -> R.string.data_notification_session_text
+            }))
+            runCatching { ServiceCompat.startForeground(this, Notifications.ID_SESSION, notification.build(), type) }.isSuccess
+        }
+        locationRefused.value = wantsLocation && grant == ForegroundGrant.RADIOS
+        if (grant == ForegroundGrant.REFUSED) stopSelf()
     }
+
+    private data class Wanted(val active: SessionEntity?, val movement: Boolean, val livePath: Boolean, val askAgain: Boolean)
 
     private fun hasLocation() =
         ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED

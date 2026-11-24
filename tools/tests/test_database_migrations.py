@@ -193,12 +193,28 @@ class MigrationThirteenTest(unittest.TestCase):
         db, before = _create(12)
         _insert_minimal(db, before, 'edge_devices', device_id='9f3c00aa11bb22cc', name='Sotreus Edge', suffix='96FF', sync_cursor=4_813,
                         records_lost=7, data_link='BLUETOOTH', deployment='TRAVEL', phone_tagging=1, placement_pending=0)
-        sql = _migration_sql('MIGRATION_12_13', 'val ALL')
+        sql = _migration_sql('MIGRATION_12_13', 'val MIGRATION_13_14')
         self.assertEqual(2, len(sql))
         for statement in sql:
             db.execute(statement)
         self.assertEqual((7, None, 0), db.execute('SELECT records_lost,last_boot,restarts_not_known FROM edge_devices').fetchone())
         _assert_matches(self, db, 13)
+        db.close()
+
+class MigrationFifteenTest(unittest.TestCase):
+    """v15: Remote ID status, authentication type and emergency text; earlier records say nothing of them."""
+
+    def test_upgrade_keeps_records_and_matches_room_schema(self):
+        db, before = _create(14)
+        _insert_minimal(db, before, 'context_events', kind='REMOTE_ID', provenance='SENSED', source='Phone Bluetooth',
+                        subject_id='1581F3YTDJ1D0031Z530', title='DJI', at_ms=1_000, lat=28.78)
+        sql = _migration_sql('MIGRATION_14_15', 'val ALL')
+        self.assertEqual(3, len(sql))
+        for statement in sql:
+            db.execute(statement)
+        self.assertEqual(('1581F3YTDJ1D0031Z530', 28.78, None, None, None),
+                         db.execute('SELECT subject_id,lat,status,auth_type,emergency_text FROM context_events').fetchone())
+        _assert_matches(self, db, 15)
         db.close()
 
 if __name__ == '__main__':

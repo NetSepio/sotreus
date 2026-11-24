@@ -52,8 +52,8 @@ class EdgeLinkService : LifecycleService() {
         if (!watching) {
             watching = true
             lifecycleScope.launch {
-                combine(edge.state.map { it.connected }.distinctUntilChanged(), travelTagging, meshSharing) { connected, travel, sharing -> Triple(connected, travel, sharing) }
-                    .distinctUntilChanged()
+                val retry = combine(locationRefused, ForegroundGrant.visible()) { refused, visible -> refused && visible }
+                combine(edge.state.map { it.connected }.distinctUntilChanged(), travelTagging, meshSharing, retry) { connected, travel, sharing, _ -> Triple(connected, travel, sharing) }
                     .collect { (connected, travel, sharing) -> if (!promote(connected, travel, sharing)) stopSelf() }
             }
         }
@@ -62,13 +62,19 @@ class EdgeLinkService : LifecycleService() {
 
     @Volatile private var watching = false
 
+    /** Android refused the location type to a background start (the Edge came back in range); asked again once Sotreus is on screen. */
+    private val locationRefused = MutableStateFlow(false)
+
     /** (Re)states the foreground notification and service type. False when Android refuses it. */
     private fun promote(connected: Boolean, travel: Boolean, sharing: Boolean): Boolean {
         val location = (travel || sharing) && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        val type = if (Build.VERSION.SDK_INT >= 29) {
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or (if (location) ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION else 0)
-        } else 0
-        return runCatching { ServiceCompat.startForeground(this, Notifications.ID_EDGE, notification(connected, travel, sharing), type) }.isSuccess
+        val grant = ForegroundGrant.request(Build.VERSION.SDK_INT, location) { type ->
+            // Tagging is said only when Android granted location; sharing on the mesh is always said.
+            val located = location && (Build.VERSION.SDK_INT < 29 || type and ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION != 0)
+            runCatching { ServiceCompat.startForeground(this, Notifications.ID_EDGE, notification(connected, travel && located, sharing), type) }.isSuccess
+        }
+        locationRefused.value = location && grant == ForegroundGrant.RADIOS
+        return grant != ForegroundGrant.REFUSED
     }
 
     private fun notification(connected: Boolean, travel: Boolean, sharing: Boolean): Notification {

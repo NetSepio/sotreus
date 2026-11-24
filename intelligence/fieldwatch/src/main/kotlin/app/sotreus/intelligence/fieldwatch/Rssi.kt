@@ -1,5 +1,5 @@
 /*
- * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit e71b9b2).
+ * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit 60c8ecc).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
  * Modified for Sotreus: package renamed.
  */
@@ -10,7 +10,19 @@ package app.sotreus.intelligence.fieldwatch
  * “not available”; that is not transmit power and not a real hear.
  */
 object Rssi {
+    /** Sorts and paints quieter than any real dBm. RssiBar treats this as empty. */
+    const val QUIET_RANK = -200.0
+
     fun measured(rssi: Int): Boolean = rssi in -127..126
+
+    /**
+     * Android's Wi-Fi scan uses 0 when it did not set a level. That is not 0 dBm.
+     * Bluetooth already uses 127 for "not available".
+     */
+    fun wifiLevel(level: Int): Int = if (level == 0) 127 else level
+
+    /** Strongest-heard order. An unread value does not outrank a real dBm. */
+    fun rank(rssi: Int): Double = if (measured(rssi)) rssi.toDouble() else QUIET_RANK
 
     fun sessionRange(min: Int, max: Int, history: List<RssiSample> = emptyList()): String {
         val vals = ArrayList<Int>(history.size + 2)

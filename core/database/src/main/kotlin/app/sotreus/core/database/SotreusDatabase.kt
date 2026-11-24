@@ -81,7 +81,7 @@ abstract class SotreusDatabase : RoomDatabase() {
     abstract fun meshDao(): app.sotreus.core.database.dao.MeshDao
 
     companion object {
-        const val SCHEMA_VERSION = 14
+        const val SCHEMA_VERSION = 15
         const val NAME = "sotreus.db"
     }
 }

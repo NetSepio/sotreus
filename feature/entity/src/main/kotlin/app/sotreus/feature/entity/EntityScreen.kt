@@ -86,6 +86,7 @@ import app.sotreus.core.ui.isSameDay
 import app.sotreus.core.ui.shareFile
 import app.sotreus.core.ui.userLabel
 import app.sotreus.intelligence.Fingerprint
+import app.sotreus.intelligence.fieldwatch.FactRow
 import app.sotreus.intelligence.fieldwatch.RadioDb
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
@@ -117,6 +118,8 @@ data class EntityUiState(
     val proofsEnabled: Boolean = false,
     val onlineLookupEnabled: Boolean = false,
     val decoded: List<app.sotreus.intelligence.fieldwatch.DecodedFieldValue> = emptyList(),
+    /** HomeKit, Matter, BTHome, hotspot and similar facts the advertisement states. */
+    val facts: List<FactRow> = emptyList(),
     val stops: List<app.sotreus.core.database.entity.TrackerStopEntity> = emptyList(),
 )
 
@@ -168,6 +171,7 @@ class EntityViewModel @Inject constructor(
             proofsEnabled = caps.onChainProofStamping,
             onlineLookupEnabled = s.onlineVendorLookup,
             decoded = repository.decodedFields(entityId),
+            facts = repository.decodedFacts(entityId, s.maskCoordinates),
             stops = stops.filter { now - it.lastMs <= 7 * 24 * 60 * 60_000L },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EntityUiState())
@@ -339,12 +343,12 @@ internal fun EntityContent(
 
         var noteText by remember(e.id) { mutableStateOf(e.note.orEmpty()) }
         LaunchedEffect(e.id) { noteText = e.note.orEmpty() }
-        if (state.decoded.isNotEmpty()) {
+        if (state.decoded.isNotEmpty() || state.facts.isNotEmpty()) {
             MonoLabel(stringResource(R.string.entity_decoded))
             KeyValueTable(state.decoded.map { field ->
                 val coordinate = field.id.lowercase() in setOf("latitude", "longitude", "lat", "lon", "op_lat", "op_lon", "operator_lat", "operator_lon")
                 field.label to if (state.maskCoordinates && coordinate) stringResource(R.string.entity_masked) else field.display
-            })
+            } + state.facts.map { it.label to it.value })
             state.decoded.filter { it.note.isNotBlank() }.map { it.note }.distinct().forEach { note ->
                 Text(note, style = SotreusTheme.typography.caption, color = c.textMuted)
             }
@@ -527,7 +531,10 @@ private fun maskMac(mac: String): String {
 private fun EntityPreview() {
     SotreusTheme {
         EntityContent(
-            EntityUiState(loading = false, detail = FakeSotreusData.greyTagDetail, avgRssi30 = -61, now = FakeSotreusData.NOW + 1_000),
+            EntityUiState(
+                loading = false, detail = FakeSotreusData.greyTagDetail, avgRssi30 = -61, now = FakeSotreusData.NOW + 1_000,
+                facts = listOf(FactRow("SmartTag", "Separated from owner"), FactRow("Battery", "Medium"), FactRow("UWB", "UWB")),
+            ),
             {}, {}, {}, {}, {}, {}, {}, {},
         )
     }

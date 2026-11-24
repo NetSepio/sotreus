@@ -1,7 +1,7 @@
 /*
- * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit ddc0d8c).
+ * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit 60c8ecc).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
- * Modified for Sotreus: package renamed; adapted to Sotreus modules.
+ * Modified for Sotreus: package renamed.
  */
 package app.sotreus.intelligence.fieldwatch
 
@@ -354,7 +354,8 @@ internal object CatalogDecodes {
     )
 
     /**
-     * Google Find Hub Network on FEAA. Frame 0x40 nearby, 0x41 separated.
+     * Google Find Hub Network on FEAA. Frame 0x40 is normal mode (protection off).
+     * Frame 0x41 is unwanted-tracking protection, shown as separated.
      * Next 20 or 32 bytes are the rotating EID (not a serial).
      */
     val findHub: FleetDecode = FleetDecode(
@@ -364,19 +365,46 @@ internal object CatalogDecodes {
             u8(
                 "mode", "Mode", 0,
                 enumLabels = mapOf(
-                    "64" to "nearby",
+                    "64" to "not separated",
                     "65" to "separated",
                 ),
                 live = true,
                 liveEmphasis = listOf("65"),
                 enumNotes = mapOf(
                     "65" to "Separated from its owner. The address can hold still for about a day.",
-                    "64" to "Nearby its owner. With you the whole sit, this is often your own tag. First heard after the sit started, it is more often someone who joined with their own keys.",
+                    "64" to "Normal mode, not flagged separated. The address keeps rotating. This frame does not say the tag is with its owner.",
                 ),
             ),
-            hex("eid", "Ephemeral ID", 1, length = 20),
+            hex("eid", "Ephemeral ID", 1, length = 20, gate = lenEq(21)),
+            hex("eid", "Ephemeral ID", 1, length = 20, gate = lenEq(22)),
+            hex("eid", "Ephemeral ID", 1, length = 32, gate = lenEq(33)),
+            hex("eid", "Ephemeral ID", 1, length = 32, gate = lenEq(34)),
+            findHubFlags(present = false, gate = lenEq(21)),
+            findHubFlags(present = true, gate = lenEq(22)),
+            findHubFlags(present = false, gate = lenEq(33)),
+            findHubFlags(present = true, gate = lenEq(34)),
         ),
     )
+
+    /**
+     * Presence only. The byte is XOR'd with a hash, so battery and the
+     * protection bit inside it are not readable. The length says whether
+     * the tag included it. The cleartext flag stays the frame type.
+     */
+    private fun findHubFlags(present: Boolean, gate: DecodeWhen): DecodeField {
+        val word = if (present) "present" else "not present"
+        val note = if (present) {
+            "Encrypted. This line only says the byte is in the advertisement."
+        } else {
+            "The tag left this byte out."
+        }
+        return u8(
+            "hashed_flags", "Hashed flags", 0,
+            enumLabels = mapOf("64" to word, "65" to word),
+            enumNotes = mapOf("64" to note, "65" to note),
+            gate = gate,
+        )
+    }
 
     /**
      * IETF DULT location-enabled advertisement on FCB2.

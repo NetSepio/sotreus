@@ -7,6 +7,9 @@ import xml.etree.ElementTree as ET
 
 TOKENS = re.compile(r'%\d+\$[sdif]|%[sdif]')
 NAMED = re.compile(r'\{[A-Za-z][A-Za-z0-9_]*\}')
+# Single words that mean something else on a Sotreus screen than on the Fieldwatch one; they stay English.
+# Mesh stays apart from Network, which several packs call by the same word.
+AMBIGUOUS = {'set', 'when', 'you', 'poor', 'fair', 'mesh'}
 
 def canon(text):
     return re.sub(r'\s+', ' ', NAMED.sub('{}', TOKENS.sub('{}', text))).strip().casefold()
@@ -16,6 +19,7 @@ def main():
     parser.add_argument('--upstream', type=Path, required=True)
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
+    version = re.search(r'versionName = "([^"]+)"', (root / 'app/build.gradle.kts').read_text()).group(1)
     english = {}
     files = sorted(root.glob('**/src/main/res/values/*.xml'), key=lambda p: (p.parts[0] == 'app', str(p)))
     for path in files:
@@ -28,9 +32,9 @@ def main():
                 for item in node: english[name + '#' + item.get('quantity')] = text(item)
     domain = args.upstream / 'app/src/main/java/app/fieldwatch/domain'
     originals = {}
-    pattern = re.compile(r'en\("([^"]+)",\s*("(?:\\.|[^"\\])*")')
-    for filename in ['LanguageCopy.kt', 'ChromeLines.kt']:
-        for key, literal in pattern.findall((domain / filename).read_text()):
+    pattern = re.compile(r'en\(\s*"([^"]+)",\s*("(?:\\.|[^"\\])*")')
+    for source in [domain / 'LanguageCopy.kt', *sorted(domain.glob('*Lines.kt'))]:
+        for key, literal in pattern.findall(source.read_text()):
             try: value = json.loads(literal.replace("\\'", "'").replace('\\$', '$'))
             except json.JSONDecodeError: continue
             originals.setdefault(canon(value), (key, value))
@@ -38,14 +42,14 @@ def main():
     destination.mkdir(parents=True, exist_ok=True)
     def save(tag, name, strings):
         (destination / (tag + '.json')).write_text(json.dumps({'format': 'sotreus-language', 'formatVersion': 1, 'language': name,
-            'languageTag': 'en' if tag == 'english' else tag, 'writtenFor': '1.1.1', 'strings': strings}, ensure_ascii=False, indent=2) + '\n')
+            'languageTag': 'en' if tag == 'english' else tag, 'writtenFor': version, 'strings': strings}, ensure_ascii=False, indent=2) + '\n')
     save('english', 'English', english)
     counts = []
     for path in sorted((args.upstream / 'app/src/main/assets/lang').glob('*.json')):
         pack = json.loads(path.read_text())
         translated = {}
         for key, value in english.items():
-            hit = originals.get(canon(value))
+            hit = None if canon(value) in AMBIGUOUS else originals.get(canon(value))
             if not hit: continue
             fw_key, fw_english = hit
             target = pack['strings'].get(fw_key)
@@ -55,6 +59,7 @@ def main():
             if len(native_tokens) != len(fw_tokens): continue
             for old, new in zip(fw_tokens, native_tokens): target = target.replace(old, new)
             if NAMED.search(target) or sorted(TOKENS.findall(target)) != sorted(native_tokens): continue
+            if target == value: continue  # nothing translated: English already says it
             translated[key] = target
         save(path.stem, pack['language'], translated)
         counts.append(len(translated))

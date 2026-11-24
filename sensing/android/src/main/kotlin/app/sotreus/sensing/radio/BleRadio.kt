@@ -1,7 +1,7 @@
 /*
  * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit e71b9b2).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
- * Modified for Sotreus: package renamed.
+ * Modified for Sotreus: package renamed. Unmeasured frequency from upstream commit 60c8ecc.
  */
 package app.sotreus.sensing.radio
 
@@ -252,8 +252,10 @@ class BleRadio(
             mac = result.device?.address.orEmpty(),
             name = name,
             rssi = result.rssi,
+            // Android does not report the advertising channel. 0 is "not measured",
+            // not channel 0 and not a 2402 MHz reading.
             channel = 0,
-            frequencyMhz = 2402,
+            frequencyMhz = 0,
             hiddenSsid = false,
             serviceUuids = uuids,
             manufacturerId = mfg?.companyId,

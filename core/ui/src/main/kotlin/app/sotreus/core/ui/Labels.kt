@@ -38,6 +38,8 @@ fun familyName(family: DeviceFamily): String = stringResource(
         DeviceFamily.SMART_HOME -> R.string.family_smart_home
         DeviceFamily.ROUTER -> R.string.family_router
         DeviceFamily.MESH_RADIO -> R.string.family_mesh_radio
+        DeviceFamily.TWO_WAY_RADIO -> R.string.family_two_way_radio
+        DeviceFamily.MILITARY -> R.string.family_military
         DeviceFamily.PHONE_PC -> R.string.family_phone_pc
         DeviceFamily.OTHER -> R.string.family_other
     },
@@ -65,6 +67,8 @@ fun familyAdjective(family: DeviceFamily): String = stringResource(
         DeviceFamily.SMART_HOME -> R.string.family_adj_smart_home
         DeviceFamily.ROUTER -> R.string.family_adj_router
         DeviceFamily.MESH_RADIO -> R.string.family_adj_mesh_radio
+        DeviceFamily.TWO_WAY_RADIO -> R.string.family_adj_two_way_radio
+        DeviceFamily.MILITARY -> R.string.family_adj_military
         DeviceFamily.PHONE_PC -> R.string.family_adj_phone_pc
         DeviceFamily.OTHER -> R.string.family_adj_other
     },

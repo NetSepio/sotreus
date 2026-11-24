@@ -115,6 +115,15 @@
     <string name="ctx_rid_recent_header">Earlier today · %1$d</string>
     <string name="ctx_rid_recent_row">%1$s · %2$s %3$s</string>
     <string name="ctx_rid_unnamed">Remote ID broadcast</string>
+    <string name="ctx_rid_emergency">Declared an emergency</string>
+    <string name="ctx_rid_emergency_since">Declared at %1$s</string>
+    <string name="ctx_rid_emergency_since_text">Declared at %1$s: “%2$s”</string>
+    <string name="ctx_rid_status_ground">On the ground</string>
+    <string name="ctx_rid_status_airborne">Airborne</string>
+    <string name="ctx_rid_status_emergency">Emergency</string>
+    <string name="ctx_rid_status_failure">Remote ID system failure</string>
+    <string name="ctx_rid_auth_value">%1$s, not checked</string>
+    <string name="ctx_rid_plate_french">French Direct Remote ID</string>
     <string name="ctx_rid_caveat_kicker">Broadcast, not verified</string>
     <string name="ctx_rid_caveat_body">Positions and IDs are what the aircraft broadcast (ASTM F3411). Sotreus cannot verify them, and a drone that does not broadcast will not appear.</string>
     <string name="ctx_rid_detail_lead_live">Remote ID · heard now</string>
@@ -126,6 +135,10 @@
     <string name="ctx_kv_uas_id">UAS ID</string>
     <string name="ctx_kv_maker">Maker (from serial)</string>
     <string name="ctx_kv_self_id">Self ID</string>
+    <string name="ctx_kv_rid_status">Status</string>
+    <string name="ctx_kv_rid_emergency">Emergency</string>
+    <string name="ctx_kv_rid_auth">Authentication</string>
+    <string name="ctx_kv_rid_plate">Plate</string>
     <string name="ctx_kv_radio">Heard over</string>
     <string name="ctx_kv_signal">Signal</string>
     <string name="ctx_kv_address">Radio address</string>
@@ -150,6 +163,8 @@
     <string name="ctx_rid_section">Remote ID · beta</string>
     <string name="ctx_rid_switch">Decode Remote ID broadcasts</string>
     <string name="ctx_rid_switch_sub">Uses the Bluetooth and Wi-Fi scans Sotreus already runs. Nothing is sent.</string>
+    <string name="ctx_rid_groups">Note groups of aircraft</string>
+    <string name="ctx_rid_groups_sub">A line on Now, and in the session, when 5 or more aircraft are first heard within 30 seconds.</string>
     <string name="ctx_rid_region_kicker">Where it applies</string>
     <string name="ctx_rid_region_body">Broadcast Remote ID is required for most drones in the United States (FAA Part 89) and the EU. Elsewhere many drones do not broadcast it, and some phones cannot hear Wi-Fi Remote ID beacons.</string>
     <string name="ctx_sent_title">What leaves this phone</string>

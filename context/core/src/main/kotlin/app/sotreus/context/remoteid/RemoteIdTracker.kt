@@ -4,12 +4,16 @@ import app.sotreus.core.data.settings.SettingsRepository
 import app.sotreus.core.database.dao.ContextDao
 import app.sotreus.core.database.dao.SessionDao
 import app.sotreus.core.database.entity.ContextEventEntity
+import app.sotreus.core.database.entity.SessionEventEntity
 import app.sotreus.core.model.ContextKind
 import app.sotreus.core.model.Provenance
+import app.sotreus.core.model.SessionEventKind
+import app.sotreus.intelligence.fieldwatch.FrenchRid
 import app.sotreus.intelligence.fieldwatch.Observation
 import app.sotreus.intelligence.fieldwatch.OpenDroneId
 import app.sotreus.intelligence.fieldwatch.PayloadLocation
 import app.sotreus.intelligence.fieldwatch.RadioKind
+import app.sotreus.intelligence.fieldwatch.Rssi
 import app.sotreus.sensing.RadioHub
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -55,11 +59,40 @@ data class LiveRemoteId(
     val rssi: Int,
     val firstSeenMs: Long,
     val lastSeenMs: Long,
+    /** ASTM operational status broadcast: 0 undeclared, 1 ground, 2 airborne, 3 emergency, 4 Remote ID system failure. */
+    val status: Int? = null,
+    /** ASTM authentication type the aircraft claims. The signature is never checked. */
+    val authType: Int? = null,
+    /** While it declares an emergency; null otherwise. */
+    val emergency: RemoteIdEmergency? = null,
+    /** The words of its emergency self-ID; empty when it sent none. */
+    val emergencyText: String? = null,
+    /** It broadcasts the French Direct Remote ID plate. */
+    val french: Boolean = false,
 )
 
 /**
- * Decodes ASTM F3411 Remote ID (BLE service data FFFA, Wi-Fi beacon vendor IE FA:0B:BC type 0x0D)
- * from the phone's own radio observations with the ported Fieldwatch [OpenDroneId] decoder.
+ * An emergency an aircraft declares in its own broadcast (operational status or self-ID). The messages
+ * take turns, so it holds for [HOLD_MS] after the last one that said so.
+ */
+data class RemoteIdEmergency(val sinceMs: Long, val lastMs: Long) {
+    companion object {
+        const val HOLD_MS = 10_000L
+
+        fun next(prev: RemoteIdEmergency?, declared: Boolean, atMs: Long): RemoteIdEmergency? {
+            val held = prev?.takeIf { atMs - it.lastMs <= HOLD_MS }
+            return if (declared) RemoteIdEmergency(held?.sinceMs ?: atMs, atMs) else held
+        }
+
+        /** Operational status 3, or a self-ID of the emergency kind. */
+        fun declared(p: PayloadLocation): Boolean = p.status == OpenDroneId.STATUS_EMERGENCY || p.selfKind == OpenDroneId.SELF_EMERGENCY
+    }
+}
+
+/**
+ * Decodes ASTM F3411 Remote ID (BLE service data FFFA, Wi-Fi beacon vendor IE FA:0B:BC type 0x0D) and
+ * the French Direct Remote ID plate from the phone's own radio observations with the ported Fieldwatch
+ * [OpenDroneId] decoder.
  * Nothing is sent anywhere. Broadcast tracks are kept as SENSED context records.
  */
 @Singleton
@@ -71,7 +104,7 @@ class RemoteIdTracker @Inject constructor(
     private val sessions: SessionDao,
 ) {
     private val mutex = Mutex()
-    private val catalog = app.sotreus.intelligence.fieldwatch.DefaultCatalog.fleets()
+    private val catalog = app.sotreus.intelligence.StockCatalog.fleets.filter { it.id == REMOTE_ID_FLEET }
 
     private val byAddress = HashMap<String, PayloadLocation>()
     private val drones = LinkedHashMap<String, LiveRemoteId>()
@@ -111,42 +144,56 @@ class RemoteIdTracker @Inject constructor(
 
     internal suspend fun onObservation(obs: Observation, sessionId: Long?) {
         val decoded = OpenDroneId.fromFacts(obs.facts)
-        if (decoded.uasId == null && decoded.pin() == null && decoded.opLat == null && decoded.selfId == null) return
+        if (decoded == PayloadLocation()) return
+        val plate = FrenchRid.fromFacts(obs.facts)
+        var started: LiveRemoteId? = null
         val record = mutex.withLock {
             val merged = decoded.mergeSticky(byAddress[obs.mac])
             byAddress[obs.mac] = merged
             val subject = merged.uasId ?: obs.mac
-            if (merged.uasId != null) drones.remove(obs.mac) // the address-keyed entry becomes the UAS ID one
-            val prev = drones[subject]
-            val sighting = app.sotreus.intelligence.fieldwatch.observationSighting(obs).copy(fleetIds = setOf("fleet-remote-id"))
+            // The address-keyed entry becomes the UAS ID one, with what it said so far.
+            val unnamed = if (subject != obs.mac) drones.remove(obs.mac) else null
+            val prev = drones[subject] ?: unnamed
+            val sighting = app.sotreus.intelligence.fieldwatch.observationSighting(obs).copy(fleetIds = setOf(REMOTE_ID_FLEET))
             val fields = app.sotreus.intelligence.fieldwatch.SignatureFieldDecoder.decodeSighting(sighting, catalog)
             fun number(id: String) = fields.firstOrNull { it.id == id }?.number
             fun label(id: String) = fields.firstOrNull { it.id == id }?.display
 
             val pin = merged.pin()
+            val emergency = RemoteIdEmergency.next(prev?.emergency, RemoteIdEmergency.declared(decoded), obs.at)
             val next = LiveRemoteId(
                 subjectId = subject, uasId = merged.uasId, maker = merged.aircraft, selfId = merged.selfId,
                 lat = pin?.first, lon = pin?.second, altM = merged.alt,
                 operatorLat = merged.opLat, operatorLon = merged.opLon,
                 operatorKind = merged.opKind, operatorAltM = merged.opAlt,
-                heightM = number("height")?.takeIf { it > -1000 } ?: prev?.heightM,
-                heightReference = number("height_ref")?.toInt() ?: prev?.heightReference,
+                heightM = number("height")?.takeIf { it > -1000 } ?: plate.heightM?.toDouble() ?: prev?.heightM,
+                // The French plate gives its height above takeoff (0), ASTM says which.
+                heightReference = number("height_ref")?.toInt() ?: plate.heightM?.let { 0 } ?: prev?.heightReference,
                 euCategory = if (decoded.opKind != null) label("eu_category") else prev?.euCategory,
                 euClass = if (decoded.opKind != null) label("eu_class") else prev?.euClass,
                 speedMps = merged.speedMps, courseDeg = merged.headingDeg,
-                radio = obs.kind, address = obs.mac, rssi = obs.rssi,
+                radio = obs.kind, address = obs.mac, rssi = if (Rssi.measured(obs.rssi)) obs.rssi else prev?.rssi ?: obs.rssi,
                 firstSeenMs = prev?.firstSeenMs ?: obs.at, lastSeenMs = obs.at,
+                status = decoded.status ?: prev?.status,
+                authType = merged.auth?.type ?: prev?.authType,
+                emergency = emergency,
+                emergencyText = if (decoded.selfKind == OpenDroneId.SELF_EMERGENCY) decoded.selfId.orEmpty() else prev?.emergencyText?.takeIf { emergency != null },
+                french = plate.present || prev?.french == true,
             )
+            val flipped = (prev?.emergency == null) != (next.emergency == null)
+            if (flipped && next.emergency != null) started = next
             drones[subject] = next
             _live.value = drones.values.sortedByDescending { it.lastSeenMs }
             val last = lastWrite[subject]
             val moved = prev == null || prev.lat != next.lat || prev.lon != next.lon || prev.altM != next.altM
             when {
-                last == null || (moved && obs.at - last.first >= TRACK_INTERVAL_MS) -> Write.Insert(next)
+                last == null || flipped || (moved && obs.at - last.first >= TRACK_INTERVAL_MS) -> Write.Insert(next)
                 obs.at - last.first >= TRACK_INTERVAL_MS -> Write.Extend(last.second, next)
                 else -> null
             }
-        } ?: return
+        }
+        started?.let { d -> if (sessionId != null) sessions.insertEvent(emergencyNote(d, sessionId)) }
+        if (record == null) return
         when (record) {
             is Write.Insert -> {
                 val id = dao.insert(record.d.toEntity(sessionId, radios.status.value.simulated))
@@ -159,6 +206,12 @@ class RemoteIdTracker @Inject constructor(
             }
         }
     }
+
+    /** The session's timeline notes what the aircraft broadcast. */
+    private fun emergencyNote(d: LiveRemoteId, sessionId: Long) = SessionEventEntity(
+        sessionId = sessionId, atMs = d.lastSeenMs, kind = SessionEventKind.SYSTEM_NOTE,
+        text = "Remote ID " + listOfNotNull(d.maker, d.uasId).ifEmpty { listOf("aircraft") }.first() + " declared an emergency",
+    )
 
     private sealed interface Write {
         val d: LiveRemoteId
@@ -183,10 +236,12 @@ class RemoteIdTracker @Inject constructor(
         operatorLat = operatorLat, operatorLon = operatorLon,
         operatorKind = operatorKind, operatorAltM = operatorAltM, heightM = heightM,
         heightReference = heightReference, euCategory = euCategory, euClass = euClass,
+        status = status, authType = authType, emergencyText = emergencyText?.takeIf { emergency != null },
         sessionId = sessionId,
     )
 
     companion object {
+        private const val REMOTE_ID_FLEET = "fleet-remote-id"
         const val SOURCE_BLE = "Phone Bluetooth"
         const val SOURCE_WIFI = "Phone Wi-Fi"
         const val SOURCE_EDGE_BLE = "Edge Bluetooth"

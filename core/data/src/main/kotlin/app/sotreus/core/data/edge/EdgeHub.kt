@@ -41,7 +41,6 @@ import app.sotreus.intelligence.fieldwatch.Observation
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -195,7 +194,7 @@ class EdgeHub @Inject constructor(
         val l = link
         link = null
         tagger.linkDown(System.currentTimeMillis())
-        scope.launch(NonCancellable) { runCatching { l?.close() } }
+        scope.launch { runCatching { l?.close() } }
         _state.update { it.copy(link = EdgeLinkState.Idle, together = false, linkRssi = null) }
     }
 

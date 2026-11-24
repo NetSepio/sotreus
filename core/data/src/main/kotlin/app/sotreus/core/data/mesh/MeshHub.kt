@@ -336,7 +336,6 @@ class MeshHub @Inject constructor(
         l.meshRemoveNode(num, targetFields())
         dao.deleteNode(id, num)
         runCatching { storeNodes(l, id) }
-        Unit
     }
 
     /** Asks a store & forward router heard on the mesh for missed channel messages. */

@@ -1,6 +1,6 @@
 # Versions verified against Google Maven / Maven Central on 2026-10-06.
 [versions]
-agp = "9.4.1"
+agp = "9.5.1"
 kotlin = "2.4.20"
 ksp = "2.3.12"
 hilt = "2.60.1"

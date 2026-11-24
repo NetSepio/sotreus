@@ -25,6 +25,11 @@ Fieldwatch (https://github.com/OffGridPete/Fieldwatch)
   camera warning.
   Version 1.1.4 adds catalog 97 (Bitchat, upstream cf03b3c) and catalog 98 (SmartTag, upstream
   5bf0d43), and takes the GPS warning wording from upstream commit 24562fb (Fieldwatch 1.1.41).
+  Version 1.3.1 takes the signature catalog (118), engine, signature-file and advertisement-decoder
+  changes from upstream commit 60c8ecc (Fieldwatch 1.2.2), without its alerts, reports and map views.
+  Each ported file names the commit it follows.
+  Fieldwatch is a trademark of Off Grid Pete LLC (registration pending). Sotreus is a separate app and
+  is not made or reviewed by Off Grid Pete LLC.
   Partial community language packs in core/data/src/main/assets/languages are adapted from
   that revision with English fallback and are not reviewed/certified translations. The offline lookup tables in
   sensing/android/src/main/assets/lookups/radiodb.bin are packed from IEEE Registration Authority

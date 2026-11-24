@@ -42,6 +42,9 @@ import app.sotreus.core.ui.ageShort
 import app.sotreus.core.ui.clockTime
 import app.sotreus.core.ui.dateTime
 import app.sotreus.core.ui.dayLabel
+import app.sotreus.intelligence.fieldwatch.OpenDroneId
+import app.sotreus.intelligence.fieldwatch.RemoteIdAuth
+import app.sotreus.intelligence.fieldwatch.Rssi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
@@ -207,8 +210,14 @@ internal fun RemoteIdScreen(onBack: () -> Unit, vm: RemoteIdViewModel = hiltView
                 stringResource(R.string.ctx_kv_uas_id) to (live?.uasId ?: last?.subjectId ?: unknown),
                 live?.maker?.let { stringResource(R.string.ctx_kv_maker) to it },
                 live?.selfId?.let { stringResource(R.string.ctx_kv_self_id) to it },
+                (live?.status ?: last?.status)?.let { remoteIdStatus(it) }?.let { stringResource(R.string.ctx_kv_rid_status) to it },
+                emergencyValue(live, last)?.let { stringResource(R.string.ctx_kv_rid_emergency) to it },
+                (live?.authType ?: last?.authType)?.takeIf { it > 0 }?.let {
+                    stringResource(R.string.ctx_kv_rid_auth) to stringResource(R.string.ctx_rid_auth_value, RemoteIdAuth(type = it, page = 0).typeName())
+                },
+                live?.takeIf { it.french }?.let { stringResource(R.string.ctx_kv_rid_plate) to stringResource(R.string.ctx_rid_plate_french) },
                 stringResource(R.string.ctx_kv_radio) to (live?.let { stringResource(if (it.radio == app.sotreus.intelligence.fieldwatch.RadioKind.WIFI) R.string.ctx_rid_wifi else R.string.ctx_rid_ble) } ?: last?.source ?: unknown),
-                live?.let { stringResource(R.string.ctx_kv_signal) to stringResource(R.string.ctx_rssi, it.rssi) },
+                live?.rssi?.takeIf(Rssi::measured)?.let { stringResource(R.string.ctx_kv_signal) to stringResource(R.string.ctx_rssi, it) },
                 live?.let { stringResource(R.string.ctx_kv_address) to it.address },
                 stringResource(R.string.ctx_kv_altitude) to (altitude(live?.altM ?: last?.altM) ?: unknown),
                 stringResource(R.string.ctx_kv_speed) to (speed(live?.speedMps ?: last?.speedMps) ?: unknown),
@@ -237,6 +246,7 @@ internal fun RemoteIdScreen(onBack: () -> Unit, vm: RemoteIdViewModel = hiltView
                     InfoRow(
                         title = clockTime(t.atMs) + (t.endMs?.takeIf { it - t.atMs >= 60_000 }?.let { "–" + clockTime(it) } ?: ""),
                         subtitle = listOfNotNull(
+                            stringResource(R.string.ctx_rid_emergency).takeIf { declaredEmergency(t) },
                             if (t.lat != null && t.lon != null) "%.5f, %.5f".format(t.lat, t.lon) else null,
                             altitude(t.altM),
                             t.source,
@@ -248,6 +258,28 @@ internal fun RemoteIdScreen(onBack: () -> Unit, vm: RemoteIdViewModel = hiltView
         CaveatBox(stringResource(R.string.ctx_rid_caveat_kicker), stringResource(R.string.ctx_rid_caveat_body))
     }
 }
+
+/** The ASTM operational status the aircraft broadcasts; undeclared and reserved values say nothing. */
+@Composable
+private fun remoteIdStatus(status: Int): String? = when (status) {
+    1 -> stringResource(R.string.ctx_rid_status_ground)
+    2 -> stringResource(R.string.ctx_rid_status_airborne)
+    3 -> stringResource(R.string.ctx_rid_status_emergency)
+    4 -> stringResource(R.string.ctx_rid_status_failure)
+    else -> null
+}
+
+/** Since when it has declared an emergency, with its own words if it sent any. */
+@Composable
+private fun emergencyValue(live: LiveRemoteId?, last: ContextEventEntity?): String? {
+    val since = live?.emergency?.sinceMs ?: last?.takeIf { live == null && declaredEmergency(it) }?.atMs ?: return null
+    val words = (if (live != null) live.emergencyText else last?.emergencyText)?.takeIf { it.isNotBlank() }
+    return if (words == null) stringResource(R.string.ctx_rid_emergency_since, clockTime(since))
+    else stringResource(R.string.ctx_rid_emergency_since_text, clockTime(since), words)
+}
+
+/** A stored record of an aircraft that declared an emergency then. */
+internal fun declaredEmergency(r: ContextEventEntity): Boolean = r.status == OpenDroneId.STATUS_EMERGENCY || r.emergencyText != null
 
 /** Hands coordinates to the user's own maps app (geo: URI). Nothing is sent by Sotreus. */
 private fun openInMaps(context: Context, lat: Double, lon: Double, label: String) {

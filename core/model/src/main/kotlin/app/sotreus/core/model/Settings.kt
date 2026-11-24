@@ -61,6 +61,8 @@ data class SotreusSettings(
     /** Manual vendor-prefix requests only. No radio addresses or location are uploaded. */
     val onlineVendorLookup: Boolean = false,
     val scanIntensity: ScanIntensity = ScanIntensity.BALANCED,
+    /** At or below this battery percentage, and not charging, this phone scans in Battery saver. 0 is off. */
+    val lowBatteryPct: Int = 0,
     val staleHoldSeconds: Int = SotreusDefaults.BLE_STALE_HOLD_SECONDS_DEFAULT,
     val stampingMode: StampingMode = StampingMode.ASK_END_JOURNEY,
     val nearbyPresence: Boolean = false,
@@ -84,6 +86,8 @@ data class SotreusSettings(
     val satelliteGroups: Set<SatelliteGroup> = SatelliteGroup.entries.toSet(),
     /** Local Remote ID decoding (beta until validated across devices and regions). */
     val remoteIdEnabled: Boolean = true,
+    /** Note many Remote ID aircraft first heard at once. */
+    val remoteIdGroups: Boolean = false,
     /** USGS earthquakes: the world list is downloaded and filtered on the phone. Sends no location. */
     val earthquakesEnabled: Boolean = false,
     val earthquakeRadiusKm: Int = 300,
@@ -99,6 +103,8 @@ data class SotreusSettings(
     val openAqEnabled: Boolean = false,
     /** Independent opt-ins: stopping location storage does not disable Journey detection. */
     val trackerStopHistory: Boolean = false,
+    /** Attention item when a finder tag that says it is away from its owner stays with this phone. Keeps no coordinates. */
+    val separatedTags: Boolean = false,
     val gnssMonitoring: Boolean = false,
     val gnssSpoofChecks: Boolean = false,
     val gnssSensitivity: String = "MEDIUM",

@@ -150,6 +150,7 @@
     <string name="picker_ok">OK</string>
     <string name="picker_location_failed">The place was created without a location: no location fix was available.</string>
     <string name="now_live_path">Live path</string>
+    <string name="now_low_battery">Battery at %1$d%%: scanning in Battery saver.</string>
     <string name="now_radio_conditions">Radio conditions</string>
     <string name="now_hide_burst">Hide this burst</string>
     <string name="picker_radius_label">Place reaches</string>

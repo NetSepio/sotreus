@@ -2,6 +2,7 @@
  * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit e71b9b2).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
  * Modified for Sotreus: package renamed; init takes a stream opener instead of an Android Context.
+ * 32-bit service UUIDs from upstream commit 60c8ecc.
  */
 package app.sotreus.intelligence.fieldwatch
 
@@ -38,7 +39,7 @@ object RadioDb {
     var nameCount: Int = 0
         private set
 
-    /** [open] returns the packed  table (an Android asset in the app). */
+    /** [open] returns the packed table (an Android asset in the app). */
     fun init(open: () -> InputStream) {
         if (ready) return
         synchronized(lock) {
@@ -99,7 +100,7 @@ object RadioDb {
         val hex = uuid.filter { it.isLetterOrDigit() }.uppercase()
         val short = when {
             hex.length == 4 -> hex.toInt(16)
-            hex.length == 8 -> hex.takeLast(4).toInt(16)
+            hex.length == 8 && hex.startsWith("0000") -> hex.substring(4, 8).toInt(16)
             hex.length == 32 && hex.startsWith("0000") && hex.endsWith("00001000800000805F9B34FB") ->
                 hex.substring(4, 8).toInt(16)
             else -> return null

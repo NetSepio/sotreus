@@ -7,6 +7,7 @@ enum class AttentionHeadline {
     TAGGED_REENCOUNTERED,
     PERSISTENT_NEW_RADIO,
     JOURNEY_MOVEMENT,
+    SEPARATED_TAG,
 }
 
 enum class AttentionReasonKind {
@@ -17,6 +18,7 @@ enum class AttentionReasonKind {
     NEW_TO_PLACE,
     OBSERVED_DURING_MOVEMENT,
     ADDRESS_CONTINUITY,
+    SEPARATED_TAG,
 }
 
 /**

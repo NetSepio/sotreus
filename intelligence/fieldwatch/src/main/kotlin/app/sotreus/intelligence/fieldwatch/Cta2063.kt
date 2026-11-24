@@ -1,5 +1,5 @@
 /*
- * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit e71b9b2).
+ * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit 60c8ecc).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
  * Modified for Sotreus: package renamed.
  */
@@ -29,8 +29,11 @@ internal object Cta2063 {
         "1914" to "BRINC",
         "1839FTD" to "Teal 2",
         "1839" to "Teal",
-        // Declared stems. Bare 1748 and 1668 are not these makers.
+        // Declared stems. Bare 1748, 1668, 1581, 1701, and 1587 are not these makers.
         "1748C" to "Autel",
         "1668B" to "Skydio",
+        "1581F" to "DJI",
+        "1701A" to "Percepto",
+        "1587A" to "AgEagle",
     )
 }

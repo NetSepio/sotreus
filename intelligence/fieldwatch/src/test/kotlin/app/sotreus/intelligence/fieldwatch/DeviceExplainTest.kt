@@ -1,6 +1,7 @@
 /*
- * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit e71b9b2).
+ * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit 60c8ecc).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
+ * Modified for Sotreus: package renamed.
  */
 package app.sotreus.intelligence.fieldwatch
 
@@ -62,6 +63,30 @@ class DeviceExplainTest {
     }
 
     @Test
+    fun wifiZeroIsNotAReadingAndDoesNotOutrankARealSignal() {
+        assertEquals(127, Rssi.wifiLevel(0))
+        assertEquals(-42, Rssi.wifiLevel(-42))
+        assertFalse(Rssi.measured(Rssi.wifiLevel(0)))
+        val quiet = wifi("02:11:22:33:44:01", "Unset").copy(rssi = Rssi.wifiLevel(0))
+        val real = wifi("02:11:22:33:44:02", "Real").copy(rssi = -90)
+        val now = 1_000_000L
+        assertTrue(real.sortRssi(StrengthSort.INSTANT, 30_000L, now) > quiet.sortRssi(StrengthSort.INSTANT, 30_000L, now))
+        val text = DeviceDetailText.build(
+            quiet.copy(kind = RadioKind.BLE, channel = 0, frequencyMhz = 0),
+            emptyList(),
+            now = 1L,
+        )
+        assertFalse(text.contains("2402"))
+        assertFalse(text.contains("Channel / frequency"))
+        val wifiText = DeviceDetailText.build(
+            real.copy(channel = 6, frequencyMhz = 2437),
+            emptyList(),
+            now = 1L,
+        )
+        assertTrue(wifiText.contains("2437 MHz"))
+    }
+
+    @Test
     fun rssi127IsNotAvailableNotVeryStrong() {
         assertEquals("Not available", DeviceExplain.rssiExplain(127))
         assertEquals("not available", DeviceExplain.rssiBand(127))
@@ -70,6 +95,38 @@ class DeviceExplainTest {
             Rssi.sessionRange(-103, 127, listOf(RssiSample(1L, -86), RssiSample(2L, 127))),
         )
         assertEquals(-99, Rssi.lastMeasured(127, listOf(RssiSample(1L, -99), RssiSample(2L, 127))))
+    }
+
+    @Test
+    fun vehicleVenueStaysUnderAStrongerSignature() {
+        val device = wifi("00:00:00:11:22:33", "PS-CRADLEPOINT").copy(
+            facts = RadioFacts(
+                interworking = Interworking(
+                    accessType = 3,
+                    internet = true,
+                    emergencyReachable = false,
+                    venueGroup = 10,
+                    venueType = 1,
+                    hessid = "02:00:00:00:00:01",
+                ),
+            ),
+        )
+        val guess = DeviceExplain.guess(device, listOf("Cradlepoint"))
+        assertTrue(guess.headline, guess.headline.contains("Cradlepoint"))
+        assertFalse(guess.headline, guess.headline.contains("It says it is in a vehicle"))
+        assertTrue(
+            guess.because,
+            guess.because.contains("It says it is in a vehicle (Automobile or Truck)."),
+        )
+        val text = DeviceDetailText.build(device, listOf("Cradlepoint"), now = 1L, demo = true)
+        assertTrue(text, text.contains("What the access point says about itself"))
+        assertTrue(text, text.contains("The access point sets these. They are not checked."))
+        assertTrue(text, text.contains("Network type: Free public network"))
+        assertTrue(text, text.contains("Internet: Yes"))
+        assertTrue(text, text.contains("Venue: Vehicular · Automobile or Truck"))
+        assertTrue(text, text.contains("Hotspot ID: 02:00:00:**:**:**"))
+        assertFalse(text, text.contains("02:00:00:00:00:01"))
+        assertFalse(text, text.contains("Can reach emergency services"))
     }
 
     @Test

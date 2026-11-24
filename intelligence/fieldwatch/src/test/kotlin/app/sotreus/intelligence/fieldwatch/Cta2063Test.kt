@@ -1,6 +1,7 @@
 /*
- * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit e71b9b2).
+ * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit 60c8ecc).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
+ * Modified for Sotreus: package renamed.
  */
 package app.sotreus.intelligence.fieldwatch
 
@@ -24,15 +25,24 @@ class Cta2063Test {
         assertEquals("Teal 2", Cta2063.label("1839FTD5020001"))
         assertEquals("Teal", Cta2063.label("1839ABC0001"))
         assertNull(Cta2063.label("1596F33ABCDEF"))
-        assertNull(Cta2063.label("1581F3YTDJ1D0031Z530"))
+        assertEquals("DJI", Cta2063.label("1581F3YTDJ1D0031Z530"))
+        assertEquals("DJI", Cta2063.label("1581f3ytdj1d0031z530"))
         assertEquals("Autel", Cta2063.label("1748CHL7822390001"))
         assertEquals("Autel", Cta2063.label("1748chl7822390001"))
         assertEquals("Skydio", Cta2063.label("1668BE10JA000000"))
         assertEquals("Skydio", Cta2063.label("1668be10ja000000"))
+        assertEquals("Percepto", Cta2063.label("1701AXXXXXXXXX"))
+        assertEquals("AgEagle", Cta2063.label("1587AXXXXXXXXX"))
         assertNull(Cta2063.label("1748"))
         assertNull(Cta2063.label("1668"))
+        assertNull(Cta2063.label("1581"))
+        assertNull(Cta2063.label("1701"))
+        assertNull(Cta2063.label("1587"))
         assertNull(Cta2063.label("1748AHL7822390001"))
         assertNull(Cta2063.label("1668AE10JA000000"))
+        assertNull(Cta2063.label("1581E3YTDJ1D0031Z530"))
+        assertNull(Cta2063.label("1701BXXXXXXXXX"))
+        assertNull(Cta2063.label("1587BXXXXXXXXX"))
         assertEquals("Freefly Alta X Gen2", Cta2063.label("  18179132000209  "))
         assertEquals("Freefly Alta X Gen2", Cta2063.label("18179132000209".lowercase()))
         assertEquals("BRINC Lemur 2", Cta2063.label("1914cl2d230001"))

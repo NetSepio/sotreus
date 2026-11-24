@@ -48,6 +48,7 @@ class FieldToolsViewModel @Inject constructor(
     fun cancelArea() = offline.cancel()
     fun deleteArea() = offline.delete()
     val settings = preferences.settings.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), app.sotreus.core.model.SotreusSettings())
+    fun separated(on: Boolean) = viewModelScope.launch { preferences.setSeparatedTags(on) }
     fun stops(on: Boolean) = viewModelScope.launch { preferences.setTrackerStopHistory(on) }
     fun monitor(on: Boolean) = viewModelScope.launch { preferences.setGnssMonitoring(on) }
     fun spoof(on: Boolean) = viewModelScope.launch { preferences.setGnssSpoofChecks(on) }
@@ -75,6 +76,7 @@ internal fun FieldToolsScreen(onBack: () -> Unit, onMap: () -> Unit, vm: FieldTo
     ScreenColumn(top = SotreusTheme.spacing.screenH) {
         BackTopBar(onBack = onBack)
         ScreenTitle(stringResource(R.string.field_tools_title), lead = stringResource(R.string.field_tools_lead))
+        SwitchRow(stringResource(R.string.field_separated), settings.separatedTags, vm::separated, subtitle = stringResource(R.string.field_separated_sub))
         SwitchRow(stringResource(R.string.field_stops), settings.trackerStopHistory, vm::stops, subtitle = stringResource(R.string.field_stops_sub))
         GhostButton(stringResource(R.string.field_clear_stops), { clearing = true })
         SwitchRow(stringResource(R.string.field_live_path), settings.livePath, vm::path, subtitle = stringResource(R.string.field_live_path_sub))

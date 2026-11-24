@@ -1,7 +1,8 @@
 /*
  * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit e71b9b2).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
- * Modified for Sotreus: package renamed; IE bytes read as ByteBuffer only (API 37 typing).
+ * Modified for Sotreus: package renamed; IE bytes read as ByteBuffer only (API 37 typing). Interworking
+ * and the unset-level rule from upstream commit 60c8ecc.
  */
 package app.sotreus.sensing.radio
 
@@ -20,6 +21,7 @@ import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import app.sotreus.intelligence.fieldwatch.Observation
 import app.sotreus.intelligence.fieldwatch.RadioKind
+import app.sotreus.intelligence.fieldwatch.Rssi
 import java.util.ArrayDeque
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
@@ -197,12 +199,13 @@ class WifiRadio(
             supportedRates = ies.rates,
             security = ies.security,
             vendorIes = ies.vendorIes,
+            interworking = ies.interworking,
         )
         return Observation(
             kind = RadioKind.WIFI,
             mac = result.BSSID.orEmpty(),
             name = ssid,
-            rssi = result.level,
+            rssi = Rssi.wifiLevel(result.level),
             channel = channel,
             frequencyMhz = freq,
             hiddenSsid = hidden,

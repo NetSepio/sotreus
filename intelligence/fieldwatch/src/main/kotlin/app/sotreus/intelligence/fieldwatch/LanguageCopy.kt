@@ -1,7 +1,7 @@
 /*
  * Ported from Fieldwatch (https://github.com/OffGridPete/Fieldwatch, commit ddc0d8c).
  * Copyright (c) 2026 Off Grid Pete LLC. MIT License; see licenses/MIT-Fieldwatch.txt.
- * Modified for Sotreus: package renamed; adapted to Sotreus modules.
+ * Modified for Sotreus: package renamed; adapted to Sotreus modules. Decoder lines from upstream commit 60c8ecc.
  */
 package app.sotreus.intelligence.fieldwatch
 
@@ -98,7 +98,8 @@ object EnglishCopy {
     const val FORMAT = "fieldwatch-language"
     const val FORMAT_VERSION = 1
 
-    val lines: List<EnglishLine> = buildLines() + ChromeLines.all
+    val lines: List<EnglishLine> = buildLines() + ChromeLines.all + ExplainLines.all + FrenchRidLines.all + RidAuthLines.all +
+        HomekitLines.all + MatterLines.all + SidewalkLines.all + BthomeLines.all + ExposureLines.all + SotreusLines.all
     val byKey: Map<String, EnglishLine> = lines.associateBy { it.key }
     val placeholders: Map<String, Set<String>> = lines.associate { it.key to placeholderNames(it.text) }
 

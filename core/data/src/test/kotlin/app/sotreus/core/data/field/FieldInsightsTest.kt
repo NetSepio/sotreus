@@ -32,6 +32,22 @@ class FieldInsightsTest {
             1L, state, enabled, simulated)
     }
 
+    private fun drone(i: Int) = radio(base).copy(key = "ble:$i", fleetIds = setOf("fleet-remote-id"), payloadUasId = "UAS$i")
+
+    @Test fun aGroupOfRemoteIdAircraftIsNotedOnlyWhenTurnedOn() = runTest {
+        insights.startRemoteIds(emptyList())
+        insights.remoteIds((1..5).map(::drone), base, null, enabled = false)
+        assertNull(insights.groupNotice)
+        insights.startRemoteIds(listOf("UAS1"))
+        // Four new ones and one already on the air.
+        insights.remoteIds((1..5).map(::drone), base, null, enabled = true)
+        assertNull(insights.groupNotice)
+        insights.remoteIds((1..6).map(::drone), base + 5_000, null, enabled = true)
+        assertEquals("5 Remote ID aircraft first heard within 30 seconds", insights.groupNotice!!.substringBefore(" ("))
+        insights.stopRemoteIds()
+        assertNull(insights.groupNotice)
+    }
+
     @Test fun continuousMovementAndGpsOutageDoNotInventQuietReturns() = runTest {
         hear(0); hear(10)
         for (s in 20L..2_000L step 10) hear(s, lat = 12.02, gps = false)
